@@ -410,6 +410,20 @@ let rules (is_64 : bool)
           [ op_jtype rd (branch_delta node) ]
         )}
 
+    (* case 5: jalr D,I(S) / jmp I(S) -- indirect jump through a
+     * register plus a signed 12-bit offset (goken's `OP_I(classreg
+     * (to), r, v)`); generalizes the RET-only `JMP (IndirectJump _)`
+     * arm above (offset always 0, rd always REGZERO there) to an
+     * arbitrary offset and rd, now reachable directly from a .s file
+     * via "JMP I(S)"/"JALR D,I(S)" -- see Ast_asmi.ml's JALRI comment. *)
+    | JALRI (rd, rs, offset) ->
+        if not (fits_addi_imm offset)
+        then error node "TODO: jalr offset out of 12-bit range"
+        else
+          { size = 4; x = None; binary = (fun () ->
+            [ op_itype 0x67 (* JALR opcode *) 0 rs rd offset ]
+          )}
+
     (* case 3:	/* beq S,[R,]L */ *)
     (* claude: goken's own grammar (a.y) assigns operands
      * asymmetrically between the 1- and 2-register forms, *not* a

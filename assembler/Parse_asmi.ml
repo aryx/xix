@@ -118,7 +118,11 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
       | "BLT" -> TB (LT A.S) | "BGE" -> TB (GE A.S)
       | "BLTU" -> TB (LT A.U) | "BGEU" -> TB (GE A.U)
 
-      | "JMP" -> TJMP | "JAL" -> TJAL
+      (* claude: goken's own lex.c maps both "JAL" and "JALR" to the
+       * exact same AJAL token, dispatching on operand shape alone
+       * (see Ast_asmi.ml's JALRI comment) -- mirrored here by mapping
+       * both spellings to the same TJAL token. *)
+      | "JMP" -> TJMP | "JAL" -> TJAL | "JALR" -> TJAL
 
       (* claude: standalone case 8 -- goken's grammar shape is
        * `LUI $I,D` / `LUI name,D` (outcode's `from`=imm/name,

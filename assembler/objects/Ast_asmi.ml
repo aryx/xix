@@ -118,7 +118,23 @@ type instr =
   (* Control flow *)
   | JMP of A.branch_operand
   | JAL of A.branch_operand (* jump and link *)
-  | JALR of reg * A.branch_operand (* no Relative|LabelUse here *) 
+  | JALR of reg * A.branch_operand (* no Relative|LabelUse here *)
+  (* claude: case 5 -- "jalr D,I(S)" / "jmp I(S)" (indirect jump
+   * through a register plus a signed immediate offset, goken's
+   * `OP_I(classreg(to), r, v)`) -- a genuinely different operand
+   * shape from JALR above (which targets a *label*, A.branch_operand,
+   * not a computed register+offset address), even though goken's own
+   * grammar aliases both "JAL"/"JALR" to the identical AJAL token and
+   * dispatches on operand shape alone (a C_SOREG "to" reaches this
+   * case, a C_SBRA/C_LBRA one reaches case 4/18 = this port's own
+   * JAL/JALR above). `D` (the link/dest register) is always explicit
+   * here at the AST level -- goken's own grammar lets it default
+   * (REGLINK for "JAL"/"JALR", REGZERO for the true-jump "JMP"
+   * spelling) when omitted, but Parser_asmi.mly's two separate
+   * productions fill that default in at parse time instead, so
+   * Codegeni.ml never has to re-derive "which spelling implies which
+   * default" from context. *)
+  | JALRI of reg * reg * A.offset
   (* "left side must be register". claude: unlike MIPS (where Bxx is
    * only ever the vs-zero family, BEQ/BNE being separate 2-register
    * constructors), RISC-V's hardware branches (BEQ/BNE/BLT/BGE/
@@ -216,7 +232,7 @@ let branch_opd_of_instr (instr: instr) : A.branch_operand option =
   | Bxx (_, _, _, opd) -> Some opd
   | Arith _ | ArithF _ | ArithMul _ | LUI _
   | Move1 _ | Move2 _ | FENCE_I
-  | ECALL | SYS | BREAK | CSR _
+  | ECALL | SYS | BREAK | CSR _ | JALRI _
      -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
@@ -250,6 +266,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | Bxx (_, gen, _, b) ->
       mov_operand gen;
       A.visit_globals_branch_operand f b
+  | JALRI _
   | Arith _ | ArithMul _ | ArithF _ | LUI _
   | FENCE_I
-  | ECALL | SYS | BREAK | CSR _ -> () 
+  | ECALL | SYS | BREAK | CSR _ -> ()

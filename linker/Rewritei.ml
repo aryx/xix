@@ -122,9 +122,21 @@ let rewrite (is_64 : bool) (cg : instr T.code_graph) : instr T.code_graph =
 
     | T.I instr ->
         let env =
-          (* a JAL/JALR is a call -- clobbers RLINK, so not a leaf *)
+          (* a JAL/JALR is a call -- clobbers RLINK, so not a leaf.
+           * JALRI (case 5, "jalr D,I(S)"/"jmp I(S)") is the same
+           * AJAL-vs-AJMP mnemonic aliasing at the AST level (see
+           * Ast_asmi.ml's own comment) -- goken's noop.c only clears
+           * LEAF for the AJAL identity, never AJMP (a true jump,
+           * never saving a link), and since this port's grammar only
+           * ever produces a JALRI with rd<>rZERO for the "JALR
+           * D,I(S)" spelling (rZERO is always the JMP-spelled
+           * default, never user-overridable through the grammar),
+           * checking rd<>rZERO here is the exact same distinction. *)
           match instr with
           | JAL _ | JALR _ ->
+              curtext |> Option.iter (fun p -> Hashtbl.remove is_leaf p);
+              (curtext, Some n)
+          | JALRI (rd, _, _) when rd <> rZERO ->
               curtext |> Option.iter (fun p -> Hashtbl.remove is_leaf p);
               (curtext, Some n)
           | _ -> (curtext, Some n)
@@ -273,7 +285,7 @@ let rewrite (is_64 : bool) (cg : instr T.code_graph) : instr T.code_graph =
 
      | T.I (Arith _ | ArithMul _ | ArithF _ | LUI _
            | Move1 _ | Move2 _ | FENCE_I
-           | JMP _ | JAL _ | JALR _ | Bxx _
+           | JMP _ | JAL _ | JALR _ | JALRI _ | Bxx _
            | ECALL | BREAK | SYS | CSR _
            ) ->
         frame

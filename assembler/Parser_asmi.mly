@@ -210,6 +210,18 @@ instr:
  /*(* was just nireg here for branch *)*/
  | TJAL reg TC branch { JALR ($2, $4) }
 
+ /*(* case 5: "jmp I(S)" / "jalr D,I(S)" -- indirect jump through a
+    * register plus a signed offset (goken's own AJMP/AJAL aliasing,
+    * dispatched on operand shape, not mnemonic identity -- see
+    * Ast_asmi.ml's JALRI comment). "JMP" defaults D to REGZERO (a
+    * true jump, no return address saved); the explicit-D "JAL"/
+    * "JALR" spelling has no bare, D-less concrete syntax in goken's
+    * own grammar to mirror (same "no bare form" precedent as JAL's
+    * own label-target case above), so only the explicit-D form is
+    * wired for that spelling. *)*/
+ | TJMP con TOPAR reg TCPAR       { JALRI (rZERO, $4, $2) }
+ | TJAL reg TC con TOPAR reg TCPAR { JALRI ($2, $6, $4) }
+
  | TB gen TC rel             { Bxx ($1, $2, None, $4) }
  | TB gen TC reg TC rel      { Bxx ($1, $2, Some $4, $6) }
 

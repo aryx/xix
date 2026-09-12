@@ -24,6 +24,7 @@ CASES=(
     "tests/linker/riscv_diff/arith_imm_case2.s"
     "tests/linker/riscv_diff/mem_move_case6_7.s"
     "tests/linker/riscv_diff/system_csr_case22.s"
+    "tests/linker/riscv_diff/jalr_case5.s"
 )
 
 FAIL=0

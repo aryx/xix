@@ -220,10 +220,39 @@ Cases with a matching (* case N: *) comment already in Codegeni.ml:
    still pass.
 
 Not yet in Codegeni.ml at all:
-** TODO case 5  jalr [D,]I(S) (RET when not-leaf uses this shape too,
-   currently hardcoded inline in Codegeni.ml's JMP case instead of
-   going through a general case-5 encoder -- revisit if/when a
-   general JALR-with-offset is needed)
+** DONE case 5  jalr D,I(S) / jmp I(S). New `JALRI of reg * reg *
+   A.offset` (bumped Object_file.version 26->27), generalizing the
+   RET-only `JMP (IndirectJump _)` arm (offset always 0, rd always
+   REGZERO) to an arbitrary offset and rd. Wired "JALR" as an alias
+   keyword for the existing TJAL token (mirrors goken's own lex.c,
+   which maps both "JAL" and "JALR" to the identical AJAL token,
+   dispatching on operand shape alone) plus two new grammar
+   productions: "JMP I(S)" (rd defaults to REGZERO, a true jump) and
+   "JAL/JALR D,I(S)" (explicit D).
+   Found and fixed a real bug while testing this: Rewritei.ml's leaf
+   detection only cleared LEAF for `JAL`/`JALR` (the label-targeted
+   forms), never for the new `JALRI` -- so a function making a real
+   call via "JALR D,I(S)" was still misclassified as a leaf, missing
+   its RLINK-save prologue entirely (confirmed via byte-diff: goken's
+   own output had a 2-instruction prologue this port's output lacked
+   until fixed). Fixed by clearing LEAF for `JALRI (rd,_,_)` whenever
+   `rd <> rZERO` (rZERO is only ever the JMP-spelled default in this
+   port's own grammar, never user-overridable, so it's an exact proxy
+   for goken's own AJAL-vs-AJMP mnemonic-identity check).
+   Also found, but deliberately NOT fixed here (separate from case 5
+   itself): testing this case's fixture via "$proc(SB)" (address-of-
+   procedure) surfaced a real RV64-specific gap -- goken uses AUIPC
+   (PC-relative) for a procedure/STText2 address on RV64, this port
+   still emits an absolute LUI+ADDI pair there (functionally correct,
+   confirmed by matching exit codes, but not byte-identical). Worked
+   around in the fixture by reaching both test callees via the
+   already-verified case 4 JAL mechanism instead of an address-of-
+   procedure load. Revisit Codegeni.ml's case 9/20 (address-of-
+   global/procedure) AUIPC-vs-LUI dispatch for RV64 specifically if a
+   fixture ever needs "$proc(SB)" directly.
+   Added tests/linker/riscv_diff/jalr_case5.s (+ riscv64_diff copy):
+   PASS byte-identical + PASS same exit code (22) on both RV32 and
+   RV64.
 ** DONE case 8  lui I,D. New `LUI of int * reg` AST constructor
    (bumped Object_file.version 15->16) and `TLUI`/"LUI" grammar/
    lexer wiring for xix's own `LUI $I,D` syntax, plus a fast path in
@@ -277,7 +306,7 @@ Not yet in Codegeni.ml at all:
 ** TODO case 16 mov L(s),r => lui L1,T; add s,T,T; lb r,L0(T)
 ** TODO case 17 fcvt S,D
 ** TODO case 18 lui L1, T; jal [r,]L0(T)
-** TODO case 19 addiw $0, rs, rd. Investigated: goken's optab has a
+** DONE (confirmed dead in goken, not implemented) case 19 addiw $0, rs, rd. Investigated: goken's optab has a
    real `AMOVW C_REG C_REG` entry mapping to this (ADDIW, zero
    immediate, used to re-sign-extend a 32-bit value already sitting
    in a register on riscv64), but obj.c *rewrites* AMOVW/AMOVWU to

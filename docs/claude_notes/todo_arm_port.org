@@ -589,9 +589,20 @@ Not yet in Codegen5.ml at all:
    jump-table codegen) -- at that point the actual requirements would
    be concrete instead of guessed at, and might justify the shared-
    invariant changes on their own merits.
-** TODO case 64 mov/movb/movbu R,addr
-** TODO case 65 mov/movbu addr,R
-** TODO case 66 movh/movhu/movb addr,R
-** TODO case 67 movh/movhu R,addr -> sb, sb
-** TODO case 68 floating point store -> ADDR
-** TODO case 69 floating point load <- ADDR
+** TODO (investigated, deliberately not implemented) case 64
+   mov/movb/movbu R,addr / case 65 mov/movbu addr,R / case 66
+   movh/movhu/movb addr,R / case 67 movh/movhu R,addr -> sb, sb /
+   case 68 floating point store -> ADDR / case 69 floating point
+   load <- ADDR -- all six key off optab.c's C_ADDR operand class.
+   Confirmed in span.c's `aclass()`: C_ADDR is only ever returned
+   `if(dlm)`, both for the D_OREG-external-symbol path and the
+   D_ADDR/SDATA path. `dlm` (linkers/5l/globals.c) is a single global
+   set only by 5l's own `-u` flag ("produce dynamically loadable
+   module", main.c) -- i.e. this whole operand class only exists for
+   PIC/shared-library linking. This harness always links statically
+   (never passes `-u`), so C_ADDR can never be produced, making cases
+   64-69 dead code under this harness's permanent scope, not just
+   "not yet ported" -- same category as case 59-61/62-63 (real
+   codegen.c cases with no reachable path to a byte-identical
+   fixture), just gated by a linker flag instead of a missing
+   assembler grammar rule.

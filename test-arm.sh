@@ -45,6 +45,7 @@ CASES=(
     "tests/linker/arm_diff/float_mem_vfp_case50_51.s:-f"
     "tests/linker/arm_diff/float_mem_longoff_case52_53.s"
     "tests/linker/arm_diff/float_mem_vfp_longoff_case52_53.s:-f"
+    "tests/linker/arm_diff/fcr_move_case56_57.s"
 )
 
 FAIL=0

@@ -62,6 +62,12 @@ let rec vof_mov_operand =
     let v1 = vof_entity v1 in
     Ocaml.VSum (("Entity", [v1]))
   | FImsr v1 -> let v1 = vof_fregister v1 in Ocaml.VSum (("FImsr", [ v1 ]))
+  | FCRImsr v1 -> let v1 = vof_fcrreg v1 in Ocaml.VSum (("FCRImsr", [ v1 ]))
+
+and vof_fcrreg =
+  function
+  | FPSR -> Ocaml.VSum (("FPSR", []))
+  | FPCR -> Ocaml.VSum (("FPCR", []))
 
 and vof_entity = 
  function

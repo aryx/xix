@@ -119,7 +119,7 @@ let base_and_offset_of_indirect node symbols2 autosize x =
           error node (spf "use of procedure %s in indirect with offset"
                        (A.s_of_global global))
       )
-  | Imsr _ | Ximm _ | FImsr _ ->
+  | Imsr _ | Ximm _ | FImsr _ | FCRImsr _ ->
       raise (Impossible "should be called only for indirects")
 (*e: function [[Codegen5.base_and_offset_of_indirect]] *)
 
@@ -571,6 +571,17 @@ let gfsr_vfp (prec : A.floatp_precision) (offset : int) (R rbase) (R rf) : Bits.
   let (u_bit, mag) = if offset < 0 then (0, -offset) else (1, offset) in
   [(0xd, 24); (u_bit, 23); ((mag asr 2) land 0xff, 0);
    (rbase, 16); (rf, 12); (prec_nibble, 8)]
+
+(* claude: case 56 (write to FP[CS]R) / case 57 (read from FP[CS]R).
+ * Fixed coprocessor-1 register-transfer encoding (goken's codegen.c):
+ * bits[27:24]=0xe, bit8/bit4 set, the FCR selector (FPSR=1, FPCR=2 --
+ * goken's `(p->to.reg+1)`/`(p->from.reg+1)`, from lex.c's FPSR=0/
+ * FPCR=1) at bits[22:21], and the int register at bits[15:12]. The L
+ * bit (bit20, read vs write) is added by the caller, same convention
+ * as gfsr/gfsr_vfp above. *)
+let gfcr (fcr : fcrreg) (R rint) : Bits.t =
+  let fcr_val = match fcr with FPSR -> 1 | FPCR -> 2 in
+  [(0xe, 24); (1, 8); (1, 4); (fcr_val, 21); (rint, 12)]
 
 (*s: function [[Codegen5.gload_from_pool]] *)
 let gload_from_pool (nsrc : 'a T.node) cond rt =
@@ -1116,6 +1127,16 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             then raise (Impossible "pattern covered before")
             else error node "illegal combination"
         | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
+        (* case 57:	/* mov PSR,R */ -- FP[CS]R read (see the
+         * FCRImsr write side, case 56, just above/in the store
+         * arm). *)
+        | FCRImsr fcr ->
+            (match size with
+            | Word ->
+                { size = 4; x = None; binary = (fun () ->
+                  [ [gcond cond] @ gfcr fcr rt @ [(1, 20)] ]
+                )}
+            | Byte _ | HalfWord _ -> error node "MOV from FP[CS]R must be Word")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize from in
@@ -1157,6 +1178,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         (match from with
         | Imsr _ | Ximm _ -> error node "illegal combination?"
         | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
+        | FCRImsr _ -> raise (Impossible "FCRImsr is Word-MOVE-only")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize from in
@@ -1198,6 +1220,17 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | Imsr _ | Ximm _ -> 
             error node "illegal to store in an (extended) immediate"
         | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
+        (* case 56:	/* mov R,PSR */ -- wait, PSR is case 35-37;
+         * this is FP[CS]R (case 56), dispatched here since goken
+         * uses the same "MOVW" mnemonic for both int stores and
+         * FP[CS]R writes (see FCRImsr's own comment). *)
+        | FCRImsr fcr ->
+            (match size with
+            | Word ->
+                { size = 4; x = None; binary = (fun () ->
+                  [ [gcond cond] @ gfcr fcr rf ]
+                )}
+            | Byte _ | HalfWord _ -> error node "MOV to FP[CS]R must be Word")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize dest in
@@ -1235,6 +1268,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | Imsr _ | Ximm _ ->
             error node "illegal to store in an (extended) immediate"
         | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
+        | FCRImsr _ -> raise (Impossible "FCRImsr is Word-MOVE-only")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize dest in

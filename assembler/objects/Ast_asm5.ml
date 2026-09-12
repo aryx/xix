@@ -58,6 +58,12 @@ type freg = A.fregister (* between 0 and 15 *)
 type creg = C of int (* between 0 and 15 *)
 (*e: type [[Ast_asm5.creg]] *)
 
+(* claude: case 56/57 (move to/from FP[CS]R) -- FPA's status/control
+ * registers, goken's D_FPCR ("FPSR"/"FPCR" tokens, lex.c: FPSR=0,
+ * FPCR=1). *)
+type fcrreg = FPSR | FPCR
+[@@deriving show]
+
 (* reserved by linker *)
 (*s: constant [[Ast_asm5.rTMP]] *)
 let rTMP = R 11
@@ -121,6 +127,12 @@ type mov_operand =
    * via a plain *integer* base register + offset, only the data
    * register being loaded/stored is a float one. *)
   | FImsr of freg
+  (* claude: case 56/57 -- goken dispatches these through the exact
+   * same "MOVW" mnemonic/gen mechanism as ordinary int moves (see
+   * a.y's `gen: ... | LFCR | LPSR`), not a distinct mnemonic like
+   * MOVF/MOVD, so this is a mov_operand alternative (used with the
+   * existing MOVE instr) rather than a new instr constructor. *)
+  | FCRImsr of fcrreg
 (*e: type [[Ast_asm5.mov_operand]] *)
 
 [@@deriving show]
@@ -275,7 +287,7 @@ let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
     | Entity (A.Global (x, _)) -> f x
     | Entity (A.Param _ | A.Local _) -> ()
     | Ximm x -> A.visit_globals_ximm f x
-    | Imsr _ | Indirect _ | FImsr _ -> ()
+    | Imsr _ | Indirect _ | FImsr _ | FCRImsr _ -> ()
   in
   match fst i with
   | MOVE (_, _, m1, m2) -> mov_operand m1; mov_operand m2

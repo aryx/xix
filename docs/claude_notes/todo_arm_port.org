@@ -442,8 +442,26 @@ Not yet in Codegen5.ml at all:
    qemu-arm exit code, all four (FPA/VFP x short/long-offset).
    Verified: full ARM/MIPS/RISC-V baselines and make test (134/134)
    all still pass.
-** TODO case 56 move to FP[CS]R
-** TODO case 57 move from FP[CS]R
+** DONE case 56 move to FP[CS]R / case 57 move from FP[CS]R -- FPSR/
+   FPCR moves. Unlike case 50-53, goken dispatches these through the
+   exact same "MOVW" mnemonic/gen mechanism as an ordinary int move
+   (a.y's `gen: ... | LFCR`), not a distinct mnemonic -- so this is a
+   new mov_operand alternative (`FCRImsr of fcrreg`, `fcrreg = FPSR |
+   FPCR`) handled inside the existing MOVE(Word,...) match arms
+   (case 20's store and case 21's load), not a new instr constructor.
+   New `gfcr` helper (goken's fixed coprocessor-1 register-transfer
+   encoding; the L bit, read vs write, added by the caller like
+   gfsr/gfsr_vfp). No VFP variant exists for this in goken (no case
+   in the 70s range for it), so no `!Flags.vfp` dispatch needed here.
+   Added fcr_move_case56_57.s (FPSR write+read round-trip into the
+   exit code -- FPSR is genuinely accessible from user mode under
+   qemu-arm). FPCR (same encoding, fcr_val=2) verified via an ad-hoc,
+   non-committed test instead: byte-identical against goken, and
+   traps as "Illegal instruction" identically on both sides (not
+   emulated by qemu-arm) -- confirms gfcr's encoding but adds no
+   further coverage, so not added as its own fixture. PASS
+   byte-identical + PASS same qemu-arm exit code. Verified: full
+   ARM/MIPS/RISC-V baselines and make test (134/134) all still pass.
 ** TODO (investigated, deliberately not implemented) case 59 movw/bu
    R<<I(R),R -> ldr indexed / case 60 movb R(R),R -> ldrsb indexed /
    case 61 movw/b/bu R,R<<[IR](R) -> str indexed -- same story as

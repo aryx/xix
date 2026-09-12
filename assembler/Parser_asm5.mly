@@ -42,6 +42,7 @@ module L = Location_cpp
 %token <Ast_asm.floatp_precision> TCMPF
 %token <Ast_asm.floatp_precision> TMOVWF TMOVFW
 %token <Ast_asm.floatp_precision> TMOVF
+%token <Ast_asm5.fcrreg> TFCR
 %token TMVN
 %token <Ast_asm.move_size> TMOV TSWAP
 %token TB  TBL
@@ -270,6 +271,10 @@ gen:
     * on its own (as opposed to freg's other uses, e.g. ArithF, which
     * don't go through `gen` at all). *)*/
  | freg  { FImsr $1 }
+ /*(* case 56/57: "MOVW R0,FPSR" / "MOVW FPSR,R0" -- same MOVW
+    * mnemonic/gen mechanism as ordinary int moves, dispatched by
+    * operand shape in Codegen5.ml, not by grammar. *)*/
+ | TFCR  { FCRImsr $1 }
 
  | ioreg { $1 }
  | name                    { Entity $1 }

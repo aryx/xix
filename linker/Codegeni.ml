@@ -300,6 +300,23 @@ let branch_delta (node : 'a T.node) : int =
   | None -> raise (Impossible "resolving should have set the branch field")
   | Some ndst -> ndst.real_pc - node.real_pc
 
+(* claude: case 4's own J-type immediate is 21 bits wide but always
+ * even (imm[20|10:1|11|19:12], LSB implicitly 0) -- a signed
+ * -2^20..2^20-2 byte range. goken's own assembler picks case 18 (a
+ * far-branch fallback: materialize the absolute target via LUI/AUIPC
+ * into REGTMP, then JALR through it, same 2-instruction shape as
+ * case 9/20's own big-constant/address story) whenever a JAL/JMP/
+ * JALR-to-label target falls outside this range -- NOT implemented
+ * here (a genuine assembler-level "does this reach" decision, not
+ * just an isolated encoder function, closer in scope to ARM32/MIPS's
+ * own multi-pass branch-range stories than a single case). Given
+ * this port's own "loud error over silently-wrong bytes" policy,
+ * `fits_jal_range` guards case 4's 3 call sites so an out-of-range
+ * target errors instead of silently truncating -- see
+ * todo_riscv_port.org for the deferred case 18 writeup. *)
+let fits_jal_range (delta : int) : bool =
+  delta >= - (1 lsl 20) && delta < (1 lsl 20) && delta land 1 = 0
+
 (*****************************************************************************)
 (* The rules! *)
 (*****************************************************************************)
@@ -500,18 +517,36 @@ let rules (is_64 : bool)
      * so there's no matching goken source syntax to diff against;
      * it shares the exact same encoding path as the tested
      * JALR-with-Absolute arm below, just with a different r. *)
+    (* claude: the `fits_jal_range` check happens *inside* the lazy
+     * `binary` thunk, not eagerly here -- `node.real_pc`/the branch
+     * target's own `real_pc` aren't finalized yet during the sizing
+     * pass (`size_of_instruction` calls `rules` once before layout
+     * has run just to get instruction sizes), so computing
+     * `branch_delta` eagerly here would check a meaningless
+     * not-yet-resolved delta. Caught this the hard way: it broke an
+     * existing, previously-passing fixture (jal_case4.s) that has
+     * nothing to do with an actually-out-of-range branch at all. *)
     | JMP { contents = (Absolute _) } ->
         { size = 4; x = None; binary = (fun () ->
-          [ op_jtype rZERO (branch_delta node) ]
+          let delta = branch_delta node in
+          if not (fits_jal_range delta)
+          then error node "TODO: case 18 (far JMP, LUI+JALR fallback) not implemented"
+          else [ op_jtype rZERO delta ]
         )}
     | JAL { contents = (Absolute _) } ->
         { size = 4; x = None; binary = (fun () ->
-          [ op_jtype rLINK (branch_delta node) ]
+          let delta = branch_delta node in
+          if not (fits_jal_range delta)
+          then error node "TODO: case 18 (far JAL, LUI+JALR fallback) not implemented"
+          else [ op_jtype rLINK delta ]
         )}
     | JALR (rd, { contents = (Absolute _) }) ->
         { size = 4; x = None; binary = (fun () ->
-          [ op_jtype rd (branch_delta node) ]
-        )}
+          let delta = branch_delta node in
+          if not (fits_jal_range delta)
+          then error node "TODO: case 18 (far JALR, LUI+JALR fallback) not implemented"
+          else [ op_jtype rd delta ]
+          )}
 
     (* case 5: jalr D,I(S) / jmp I(S) -- indirect jump through a
      * register plus a signed 12-bit offset (goken's `OP_I(classreg

@@ -395,7 +395,29 @@ Not yet in Codegeni.ml at all:
    exercising all 4 of MOVWF/MOVFD/MOVDF/MOVFW (a round-trip through
    both float and double) plus MOVWD/MOVDW directly: PASS byte-
    identical + PASS same exit code on both RV32 and RV64.
-** TODO case 18 lui L1, T; jal [r,]L0(T)
+** INVESTIGATED (deferred, guarded rather than implemented) case 18 lui L1, T; jal [r,]L0(T)
+   goken's own assembler picks this (materialize the absolute branch
+   target via LUI/AUIPC into REGTMP, then JALR through it) as a
+   fallback whenever a JAL/JMP/JALR-to-label target falls outside the
+   direct J-type immediate's +-2^20-byte range (confirmed via
+   optab.c: AJAL/AJMP against C_LBRA, "long branch", reach case 18;
+   the already-done case 4 only ever covers C_SBRA, "short branch").
+   This is a genuine assembler-level "does this reach" decision, not
+   an isolated encoder function -- closer in scope to ARM32/MIPS's
+   own multi-pass branch-range stories than a single case, and no
+   current fixture's functions are anywhere near 1MB apart, so
+   deferred rather than rushed.
+   Not left silently unguarded, though: case 4's own encoder
+   previously had NO range check at all, meaning an out-of-range
+   target would have silently produced wrong bytes (a real, if
+   unlikely, correctness gap in already-shipped code). Added
+   `fits_jal_range` (checked inside the lazy `binary` thunk, not
+   eagerly during the sizing pass -- eagerly checking broke an
+   existing, previously-passing fixture the hard way, since
+   `real_pc` isn't finalized yet at sizing time) so an out-of-range
+   target now errors loudly instead, matching this port's own
+   "loud error over silently-wrong bytes" policy. Revisit if a real
+   program ever needs functions that far apart.
 ** DONE (confirmed dead in goken, not implemented) case 19 addiw $0, rs, rd. Investigated: goken's optab has a
    real `AMOVW C_REG C_REG` entry mapping to this (ADDIW, zero
    immediate, used to re-sign-extend a 32-bit value already sitting

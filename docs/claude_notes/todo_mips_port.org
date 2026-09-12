@@ -718,9 +718,18 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    weaker check). PASS byte-identical (case47_48_mips.s) + PASS
    functionally (both). Verified: full MIPS + ARM baselines and make
    test (134/134) all still pass.
+** DONE case 0  pseudo ops -- checked against goken directly (asm.c
+   line ~723): this is goken's own pass-1 (size computation) TEXT/
+   GLOBL bookkeeping, not a real machine-word-emitting case at all
+   (o1..o7 are never set to actual output there). Already fully
+   covered by the existing, already-tested shared machinery:
+   Rewritev.ml's TEXT-prologue rewrite (autosize computation, the
+   leaf/RLINK-save logic fixed in the case 26 entry above) and
+   Codegen.default_rules (T.TEXT/T.WORD, same shared path as case
+   40). Nothing left to port -- no new code, no new fixture beyond
+   what already exercises TEXT/GLOBL throughout this whole file.
 
 Not yet in Codegenv.ml at all:
-** TODO case 0  pseudo ops
 ** TODO case 45 case r
 ** TODO case 46 bcase $con,lbra
 

@@ -4,78 +4,54 @@
 # docs/claude_notes/todo_mips_port.org.
 #
 # Usage: ./test-mips.sh
+#
+# See tests/linker/README.md for the fixture-naming/"_check" conventions.
 
 set -e
 
 cd "$(dirname "$0")"
 
-# file:entry_symbol pairs -- entry defaults to _main (the linkers'
-# default) when not TEXT _start.
+# Every fixture here uses TEXT _start, so there's no entry_symbol
+# field -- just a bare list of .s files.
 CASES=(
-    "tests/linker/mips_diff/hello_linux_mips.s:_start"
-    "tests/linker/mips_diff/exit_linux_mips.s:_start"
-    "tests/linker/mips_diff/addr_mips.s:_start"
-    "tests/linker/mips_diff/kitchen_sink_mips.s:_start"
-    "tests/linker/mips_diff/case2_mips.s:_start"
-    "tests/linker/mips_diff/case9_mips.s:_start"
-    "tests/linker/mips_diff/movw_andcon_mips.s:_start"
-    "tests/linker/mips_diff/movbh_mips.s:_start"
-    "tests/linker/mips_diff/case16_mips.s:_start"
-    "tests/linker/mips_diff/mullohi_mips.s:_start"
-    "tests/linker/mips_diff/case22_mips.s:_start"
-    "tests/linker/mips_diff/movw_ucon_mips.s:_start"
-    "tests/linker/mips_diff/case23_25_mips.s:_start"
-    "tests/linker/mips_diff/lacon_mips.s:_start"
-    "tests/linker/mips_diff/case32_33_mips.s:_start"
-    "tests/linker/mips_diff/case30_31_mips.s:_start"
-    "tests/linker/mips_diff/case34_mips.s:_start"
-    "tests/linker/mips_diff/case7_8_mips.s:_start"
-    "tests/linker/mips_diff/case27_28_mips.s:_start"
-    "tests/linker/mips_diff/case37_38_mips.s:_start"
-    "tests/linker/mips_diff/case40_mips.s:_start"
-    "tests/linker/mips_diff/case41_42_mips.s:_start"
-    "tests/linker/mips_diff/case39_mips.s:_start"
-    "tests/linker/mips_diff/case47_48_mips.s:_start"
+    "tests/linker/mips_diff/hello_linux.s"
+    "tests/linker/mips_diff/exit_linux.s"
+    "tests/linker/mips_diff/addr.s"
+    "tests/linker/mips_diff/kitchen_sink.s"
+    "tests/linker/mips_diff/arith_rrr_case2.s"
+    "tests/linker/mips_diff/shift_reg_case9.s"
+    "tests/linker/mips_diff/movw_andcon_case3.s"
+    "tests/linker/mips_diff/movbh_case12_13.s"
+    "tests/linker/mips_diff/shift_imm_case16.s"
+    "tests/linker/mips_diff/mullohi_case20_21.s"
+    "tests/linker/mips_diff/mul_case22.s"
+    "tests/linker/mips_diff/movw_ucon_case24.s"
+    "tests/linker/mips_diff/add_bigimm_case23_25.s"
+    "tests/linker/mips_diff/lacon_case26.s"
+    "tests/linker/mips_diff/float_arith_case32_33.s"
+    "tests/linker/mips_diff/float_int_move_case30_31.s"
+    "tests/linker/mips_diff/float_const_case34.s"
+    "tests/linker/mips_diff/mem_move_case7_8.s"
+    "tests/linker/mips_diff/float_move_case27_28.s"
+    "tests/linker/mips_diff/cop0_move_case37_38.s"
+    "tests/linker/mips_diff/word_case40.s"
+    "tests/linker/mips_diff/fcr_move_case41_42.s"
+    "tests/linker/mips_diff/rfe_case39.s"
+    "tests/linker/mips_diff/atomic_case47_48.s"
 )
-# tests/linker/mips_diff/call_mips.s, case6_mips.s, immcon_mips.s,
-# movbh_check_mips.s, mullohi_check_mips.s, case30_31_check_mips.s,
-# case34_check_mips.s, case7_8_check_mips.s, case27_28_check_mips.s,
-# case37_38_check_mips.s, case41_42_check_mips.s and
-# case47_48_check_mips.s are deliberately NOT in this list: all
-# twelve produce the same qemu-mips behavior on both sides (an
-# actual exit-code match for the BEQ-based ones; an identical
-# illegal-instruction trap for case37_38_check_mips.s, since
-# MTC0/MFC0 are privileged) but are not byte-identical, because
-# goken's sched.c hoists real instructions into branch/call delay
-# slots (and, separately, pads NOPs around certain MUL-result HI/LO
-# read/write transitions, MTC1/MFC1 COP1-transfer read/write
-# transitions, plain load-delay-slot reads, i.e. case 8/27/36/48,
-# and the D_MREG/D_FCREG source 2-NOP hazard, i.e. case 38/42)
-# instead of what this port emits -- see
-# docs/claude_notes/todo_mips_port.org. immcon_mips.s and
-# movbh_check_mips.s use BEQ/JMP purely to self-check their own
-# arithmetic, so they inherit the same scheduler-only diff as
-# case6_mips.s (which has more branches than call_mips.s, hence a
-# bigger diff -- 16 bytes across several delay slots, not just 4);
-# mullohi_check_mips.s, case30_31_check_mips.s, case34_check_mips.s,
-# case7_8_check_mips.s, case27_28_check_mips.s,
-# case37_38_check_mips.s, case41_42_check_mips.s and
-# case47_48_check_mips.s each inherit *both* that BEQ/JMP gap *and*
-# their own respective hazard's NOP-padding gap (see
-# mullohi_mips.s's, case30_31_mips.s's, case34_mips.s's,
-# case7_8_mips.s's, case27_28_mips.s's, case37_38_mips.s's,
-# case41_42_mips.s's and case47_48_mips.s's own comments for what's
-# byte-identical there instead). The root cause and the decision not
-# to port the scheduler are identical in all twelve. Run any of them
-# manually with scripts/diff-mips.sh to see their (small, known,
-# scheduler-only) diffs.
+# The corresponding *_check.s fixtures (functional-only: same
+# qemu-mips behavior on both sides, but not byte-identical, because
+# goken's sched.c hoists real instructions into delay slots instead
+# of the plain NOP this port emits) are deliberately not in this
+# list -- see tests/linker/README.md for the "_check" convention,
+# and each such fixture's own header comment for its specific
+# hazard. Run one manually with scripts/diff-mips.sh to see its
+# (small, known, scheduler-only) diff.
 
 FAIL=0
-for c in "${CASES[@]}"; do
-    file=${c%%:*}
-    entry=${c##*:}
-    echo "### $file (entry $entry)"
-    if ! ./scripts/diff-mips.sh "$file" "$entry"; then
+for file in "${CASES[@]}"; do
+    echo "### $file"
+    if ! ./scripts/diff-mips.sh "$file" "_start"; then
         FAIL=1
     fi
     echo

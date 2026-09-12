@@ -3,8 +3,8 @@
 // byte-identical: this fixture inherits *two* known,
 // already-documented scheduler gaps -- goken's sched.c pads NOPs
 // around certain MUL-result HI/LO read/write transitions (see
-// mullohi_mips.s), and BEQ/JMP's own delay-slot scheduling (see
-// case6_mips.s) -- see docs/claude_notes/todo_mips_port.org.
+// mullohi_case20_21.s), and BEQ/JMP's own delay-slot scheduling (see
+// branch_case6.s) -- see docs/claude_notes/todo_mips_port.org.
 TEXT _start(SB), $0
     MOVW    $0, R4
     MOVW    $6, R1

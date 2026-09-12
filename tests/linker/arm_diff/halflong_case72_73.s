@@ -3,7 +3,7 @@
 // for plain word/byte, just using ghalfword's register-offset form
 // instead of gmem's). Each offset used exactly once (5000, 6000,
 // 7000) to avoid goken's literal-pool value deduplication (see
-// tests/linker/arm_diff/longoff_arm.s and
+// tests/linker/arm_diff/longoff_case30_31.s and
 // docs/claude_notes/todo_arm_port.org).
 TEXT _start(SB), $8192
     MOVW    $0x1234, R1

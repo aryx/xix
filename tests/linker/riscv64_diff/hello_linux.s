@@ -1,6 +1,6 @@
 // RISC-V64 Linux hello world.
 //
-// Identical source to tests/linker/riscv_diff/hello_linux_riscv.s -- goken's
+// Identical source to tests/linker/riscv_diff/hello_linux.s -- goken's
 // ja/jl are literally the same binaries as ia/il (thechar dispatches on
 // argv0 at runtime, see mkfiles/riscv64/mkfile), and none of xix's
 // Ast_asmi/Parse_asmi/Rewritei/Layouti/Codegeni reference Arch.t at all,

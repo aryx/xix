@@ -14,38 +14,40 @@
 # goken's 5a/5l and (when qemu-arm is available) actually run.
 #
 # Usage: ./test-arm.sh
+#
+# See tests/linker/README.md for the fixture-naming/"_check" conventions.
 
 set -e
 
 cd "$(dirname "$0")"
 
-# file:entry_symbol[:extra_flags] triples -- entry defaults to _main
-# (the linkers' default) when not TEXT _start; extra_flags (e.g. -f
-# for VFP) are optional and passed to both 5l and o5l identically.
+# file[:extra_flags] pairs -- every fixture here uses TEXT _start, so
+# the entry symbol itself isn't part of this list; extra_flags (e.g.
+# -f for VFP) are optional and passed to both 5l and o5l identically.
 CASES=(
-    "tests/linker/arm_diff/hello_linux_arm.s:_start"
-    "tests/linker/arm_diff/exit_linux_arm.s:_start"
-    "tests/linker/arm_diff/addr_arm.s:_start"
-    "tests/linker/arm_diff/call_arm.s:_start"
-    "tests/linker/arm_diff/kitchen_sink.s:_start"
-    "tests/linker/arm_diff/bigimm_arm.s:_start"
-    "tests/linker/arm_diff/lcon_arm.s:_start"
-    "tests/linker/arm_diff/halfword_arm.s:_start"
-    "tests/linker/arm_diff/longoff_arm.s:_start"
-    "tests/linker/arm_diff/lacon_arm.s:_start"
-    "tests/linker/arm_diff/halflong_arm.s:_start"
-    "tests/linker/arm_diff/swp_arm.s:_start"
-    "tests/linker/arm_diff/fpa_arm.s:_start"
-    "tests/linker/arm_diff/vfp_arm.s:_start:-f"
-    "tests/linker/arm_diff/fixfloat_fpa.s:_start"
-    "tests/linker/arm_diff/fixfloat_vfp.s:_start:-f"
+    "tests/linker/arm_diff/hello_linux.s"
+    "tests/linker/arm_diff/exit_linux.s"
+    "tests/linker/arm_diff/addr.s"
+    "tests/linker/arm_diff/call.s"
+    "tests/linker/arm_diff/kitchen_sink.s"
+    "tests/linker/arm_diff/bigimm_case12.s"
+    "tests/linker/arm_diff/lcon_case13.s"
+    "tests/linker/arm_diff/halfword_case70_71.s"
+    "tests/linker/arm_diff/longoff_case30_31.s"
+    "tests/linker/arm_diff/lacon_case4_12.s"
+    "tests/linker/arm_diff/halflong_case72_73.s"
+    "tests/linker/arm_diff/swp_case40.s"
+    "tests/linker/arm_diff/fpa_case54.s"
+    "tests/linker/arm_diff/vfp_case74_75.s:-f"
+    "tests/linker/arm_diff/fixfloat_fpa_case55.s"
+    "tests/linker/arm_diff/fixfloat_vfp_case76.s:-f"
 )
 
 FAIL=0
 for c in "${CASES[@]}"; do
-    IFS=':' read -r file entry flags <<< "$c"
-    echo "### $file (entry $entry)${flags:+ (flags: $flags)}"
-    if ! ./scripts/diff-arm.sh "$file" "$entry" "$flags"; then
+    IFS=':' read -r file flags <<< "$c"
+    echo "### $file${flags:+ (flags: $flags)}"
+    if ! ./scripts/diff-arm.sh "$file" "_start" "$flags"; then
         FAIL=1
     fi
     echo

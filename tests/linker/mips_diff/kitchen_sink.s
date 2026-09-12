@@ -3,7 +3,7 @@
 // delay slot isn't byte-identical to goken yet (goken's sched.c
 // hoists a real instruction from the call target instead of using
 // a plain NOP -- see docs/claude_notes/todo_mips_port.org and
-// call_mips.s), and mixing that in here would make it harder to
+// call.s), and mixing that in here would make it harder to
 // tell which gap a future byte diff is pointing at. This fixture's
 // actual purpose is two GLOBLs at different offsets, the same setup
 // that found ARM's BIG/immrot address-of-global bug.

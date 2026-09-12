@@ -3,10 +3,10 @@
 // byte-identical: chaining MTC1 straight into an MFC1 of the same
 // register makes goken's sched.c hoist a real instruction into the
 // MTC1 delay slot (and specifically avoid a second COP1 transfer
-// there) instead of this port's plain NOP -- see case30_31_mips.s's
+// there) instead of this port's plain NOP -- see float_int_move_case30_31.s's
 // comment, and Codegenv.ml's case 30/31 comment, for the byte-
 // identical, isolated case instead. Also inherits BEQ/JMP's own
-// delay-slot gap (see case6_mips.s).
+// delay-slot gap (see branch_case6.s).
 TEXT _start(SB), $0
     MOVW    $0, R4
     MOVW    $42, R1

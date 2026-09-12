@@ -4,7 +4,7 @@
 
 * Phase 0 -- harness
 ** DONE investigate (and fix): base_and_offset_of_entity's Param/Local
-   +4 split -- confirmed, via case 26's lacon_mips.s fixture, to be
+   +4 split -- confirmed, via case 26's lacon_case26.s fixture, to be
    the exact same bug as ARM's (see the case 26 entry further down
    for the full writeup and the goken `vl -a` numbers). Fixed by
    swapping the +4 onto Local instead of Param.
@@ -28,15 +28,15 @@
    134/134, unaffected by this generalization.
 
 * Phase 0.5 -- baseline corpus (constructs already ported)
-** DONE tests/linker/mips_diff/hello_linux_mips.s: cmp -l clean + qemu-mips
-   Copied from goken's tests/s/mini/hello_linux_mips.s (the simpler
-   version, without xix's own tests/assembler/hello_linux_mips.s's
+** DONE tests/linker/mips_diff/hello_linux.s: cmp -l clean + qemu-mips
+   Copied from goken's tests/s/mini/hello_linux.s (the simpler
+   version, without xix's own tests/assembler/hello_linux.s's
    extra nm/onm test block). PASS: byte-identical (4112 bytes both
    sides) on the first real run, once the endian bug above was fixed.
    Both sides print "Hello, world" and exit 0 under qemu-mips.
-** DONE tests/linker/mips_diff/exit_linux_mips.s: cmp -l clean + qemu-mips
-   Copied from goken's tests/s/exit/exit_linux_mips.s (no data
-   section, same reasoning as exit_linux_arm.s for keeping a
+** DONE tests/linker/mips_diff/exit_linux.s: cmp -l clean + qemu-mips
+   Copied from goken's tests/s/exit/exit_linux.s (no data
+   section, same reasoning as exit_linux.s for keeping a
    no-data fixture in the corpus). Caught a real bug: case 18's JMP
    (the expansion of a leaf RET) emitted just the jump, missing
    MIPS' mandatory branch-delay-slot instruction -- goken's noops()
@@ -49,7 +49,7 @@
    after. Verified: MIPS hello-world fixture, ARM baseline (5
    fixtures), and make test (134/134) all still pass.
 ** DONE fix JAL's (case 11) missing delay slot -- functional bug, not just bytes
-   Confirmed via tests/linker/mips_diff/call_mips.s (hand-written,
+   Confirmed via tests/linker/mips_diff/call.s (hand-written,
    no goken equivalent existed): missing delay-slot handling on JAL
    was a real correctness bug, not just a byte-cosmetic one. Without
    an explicit slot, the CALLER's next instruction (setting up the
@@ -61,7 +61,7 @@
    treatment as case 18 (shared `nop` constant, size=8, hoisted the
    NOP definition out of case 18 into a shared let). Exit codes now
    match on both sides.
-   Byte-equality is NOT fully reached for call_mips.s though (4 bytes
+   Byte-equality is NOT fully reached for call.s though (4 bytes
    still differ, offsets 180-184): goken's sched.c is a real
    instruction scheduler (dependency analysis via depend()/
    conflict()/offoverlap() in vl/sched.c) that hoists the callee's
@@ -70,7 +70,7 @@
    NOT to port this: it's a genuine scheduler implementation, much
    bigger than any single case so far, for a payoff limited to a few
    bytes on call-adjacent code that's already functionally correct.
-   call_mips.s is kept as a fixture but deliberately left out of
+   call.s is kept as a fixture but deliberately left out of
    test-mips.sh's CASES list for this reason (run it manually with
    scripts/diff-mips.sh to see the diff). Revisit only if a future
    fixture's byte-equality actually depends on it.
@@ -80,7 +80,7 @@
    did ("LATER? x - BIG optimisation"), and the dispatch code had two
    dead-end `failwith "TODO: ..."` branches for any nonzero
    R30-relative offset -- confirmed by tests/linker/mips_diff/
-   kitchen_sink_mips.s (hand-written, two GLOBLs at different
+   kitchen_sink.s (hand-written, two GLOBLs at different
    offsets, same setup that found the ARM bug), which crashed ovl
    outright rather than just producing wrong bytes.
    Root-caused by reading goken's actual span.c aclass() (the D_ADDR/
@@ -99,7 +99,7 @@
    with a comment pointing at this explanation. Heavily commented in
    Codegenv.ml itself too, since neither the ARM nor the MIPS version
    of this mechanism was well understood going in.
-   PASS: byte-identical (both addr_mips.s and kitchen_sink_mips.s,
+   PASS: byte-identical (both addr.s and kitchen_sink.s,
    the latter on the very first run after the fix) + matching
    qemu-mips behavior. Verified: full MIPS + ARM baselines and
    make test (134/134) all still pass.
@@ -123,9 +123,9 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    against goken directly (`vl -a`): 0x7fff uses ADDIU, 0x8000/
    0xffff use ORI. New movw_imm_opcode helper picks OR vs ADD(W,U)
    accordingly.
-   Added tests/linker/mips_diff/movw_andcon_mips.s (MOVW $32768 and
+   Added tests/linker/mips_diff/movw_andcon_case3.s (MOVW $32768 and
    $65535, the two ANDCON boundary values) -- no branches needed
-   here (unlike case 4/10's immcon_mips.s), so this one is fully
+   here (unlike case 4/10's immcon_case4_10.s), so this one is fully
    byte-identical, not just functionally correct. Added to
    test-mips.sh's CASES. Verified: full MIPS + ARM baselines and
    make test (134/134) all still pass.
@@ -143,7 +143,7 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    ("asl r1,[r2],r3") uses a *different*, swapped operand order for
    shifts and isn't ported yet; reusing this arm for shifts would
    silently emit wrong bytes. Added tests/linker/mips_diff/
-   case2_mips.s (ADD/SUB/AND chained into the exit code, avoiding
+   arith_rrr_case2.s (ADD/SUB/AND chained into the exit code, avoiding
    plain register-to-register MOVW which isn't ported yet either).
    PASS byte-identical + PASS same qemu-mips exit code.
 ** DONE case 9  asl r1,[r2],r3 -- shift-by-register (SLL/SRL/SRA),
@@ -152,7 +152,7 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    (goken's `OP_RRR(oprrr(p->as), r, p->from.reg, p->to.reg)` vs
    case 2's `OP_RRR(oprrr(p->as), p->from.reg, r, p->to.reg)`) --
    exactly the gap flagged when case 2 was ported. Added
-   tests/linker/mips_diff/case9_mips.s (SLL then SRL chained into
+   tests/linker/mips_diff/shift_reg_case9.s (SLL then SRL chained into
    the exit code: 1<<4=16, 16>>2=4). PASS byte-identical + PASS same
    qemu-mips exit code.
 ** DONE case 6  beq r1,[r2],sbra -- conditional branches: BEQ/BNE
@@ -181,23 +181,23 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    variant, `JAL {Absolute _}`; optab.c shows plain unconditional
    `JMP label` -- as opposed to case 18's `JMP (r)` indirect form --
    shares the exact same oprange 11, just without linking) since the
-   case6_mips.s fixture needs unconditional jumps for its control
+   branch_case6.s fixture needs unconditional jumps for its control
    flow anyway.
-   Added tests/linker/mips_diff/case6_mips.s (BEQ, BNE, BGTZ, BLTZ,
+   Added tests/linker/mips_diff/branch_case6.s (BEQ, BNE, BGTZ, BLTZ,
    each on its taken path, accumulating 1+2+4+8=15 into the exit
    code; the not-taken path sets an out-of-range wrong value so a
    real branch/delay-slot bug would show up in the qemu-mips exit
    code, not just in the byte diff). PASS functionally (exit code 15
    both sides) but NOT byte-identical (goken: 414 bytes, xix: 430
    bytes, diff spread across several delay slots) -- same root cause
-   as call_mips.s's known JAL diff: goken's sched.c hoists real
+   as call.s's known JAL diff: goken's sched.c hoists real
    instructions into branch delay slots instead of this port's plain
    NOPs, and with 8 branches/jumps in this fixture (4 conditional + 4
    unconditional JMP) there are more delay slots for it to fill than
-   call_mips.s's single JAL. Deliberately not chasing this (same
-   decision as call_mips.s: the scheduler is a real, much bigger
+   call.s's single JAL. Deliberately not chasing this (same
+   decision as call.s: the scheduler is a real, much bigger
    subsystem for a payoff limited to a few bytes on already-correct
-   code) -- case6_mips.s is kept as a fixture but left out of
+   code) -- branch_case6.s is kept as a fixture but left out of
    test-mips.sh's CASES list, run manually with scripts/diff-mips.sh.
    Verified: full MIPS + ARM baselines and make test (134/134) all
    still pass.
@@ -227,7 +227,7 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    yet -- case 4/10 here are ADD-only, matching the pre-existing
    pattern's own restriction to `ADD (W,_sign)`), so only the
    OR/positive half of case 10 is implemented.
-   Added tests/linker/mips_diff/immcon_mips.s: ADD at all four
+   Added tests/linker/mips_diff/immcon_case4_10.s: ADD at all four
    boundary corners (32767/-32768 for case 4, 32768/65535 for case
    10), each pair combined via ADD/SUB (case 2) into a small,
    self-checked delta via BEQ. Hit a genuine, unrelated quirk along
@@ -242,7 +242,7 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    case 4/10 arithmetic, not that separate MOVW quirk.
    PASS functionally (exit code 7 both sides) but NOT
    byte-identical, for the same already-documented reason as
-   case6_mips.s (this fixture uses BEQ/JMP to self-check, so it
+   branch_case6.s (this fixture uses BEQ/JMP to self-check, so it
    inherits the same delay-slot-scheduler diff) -- kept as a
    fixture but left out of test-mips.sh's CASES list, run manually
    with scripts/diff-mips.sh. Verified: full MIPS + ARM baselines
@@ -258,13 +258,13 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    OP_SRR(op,s,r2,r3) (shift-immediate encoding, shared with case
    16's still-unported sll $c,[r1],r2). Encoding confirmed against
    goken directly via `vl -a` before writing the fixtures.
-   Added tests/linker/mips_diff/movbh_mips.s (all four forms on the
+   Added tests/linker/mips_diff/movbh_case12_13.s (all four forms on the
    same -1 register value, combined via SUB into a branch-free,
-   fully byte-identical check) and movbh_check_mips.s (a BEQ-based
+   fully byte-identical check) and movbh_case12_13_check.s (a BEQ-based
    functional check of the sign-extend side specifically -- inherits
-   the same known delay-slot-scheduler diff as case6_mips.s/
-   immcon_mips.s, so kept out of test-mips.sh's CASES like those).
-   PASS byte-identical (movbh_mips.s) + PASS functionally (both,
+   the same known delay-slot-scheduler diff as branch_case6.s/
+   immcon_case4_10.s, so kept out of test-mips.sh's CASES like those).
+   PASS byte-identical (movbh_case12_13.s) + PASS functionally (both,
    qemu-mips exit codes match). Verified: full MIPS + ARM baselines
    and make test (134/134) all still pass.
 ** DONE case 16 sll $c,[r1],r2 -- shift-by-immediate, the natural
@@ -272,7 +272,7 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    for case 12 just above). Same scoping choice as case 9: only the
    W-sized (32-bit) SLL/SRL/SRA opcodes, not goken's V-sized/vshift()
    ALAST-aliased >=32 path. Added tests/linker/mips_diff/
-   case16_mips.s (SLL then SRL then SRA chained into the exit code:
+   shift_imm_case16.s (SLL then SRL then SRA chained into the exit code:
    1<<4=16, 16>>2=4, 4>>1=2). PASS byte-identical + PASS same
    qemu-mips exit code. Verified: full MIPS + ARM baselines and make
    test (134/134) all still pass.
@@ -314,15 +314,15 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    in the buffering. This is the same already-documented, out-of-
    scope scheduler subsystem as every branch/call delay slot this
    session (sched.c), just a different corner of it -- not chased
-   further, same reasoning as call_mips.s's JAL gap.
-   Added three fixtures: case22_mips.s (MUL alone, no HI/LO
-   readback, byte-identical), mullohi_mips.s (MTLO/MTHI/MFLO/MFHI
+   further, same reasoning as call.s's JAL gap.
+   Added three fixtures: mul_case22.s (MUL alone, no HI/LO
+   readback, byte-identical), mullohi_case20_21.s (MTLO/MTHI/MFLO/MFHI
    round-trip with *no* MUL at all, byte-identical), and
-   mullohi_check_mips.s (MUL immediately followed by MFLO,
+   mullohi_case20_22_check.s (MUL immediately followed by MFLO,
    self-checked with BEQ -- functionally correct but inherits *both*
    the MUL/HI-LO scheduler gap *and* BEQ/JMP's own delay-slot gap,
    so kept out of test-mips.sh's CASES like the other BEQ-based
-   fixtures). PASS byte-identical (case22_mips.s, mullohi_mips.s) +
+   fixtures). PASS byte-identical (mul_case22.s, mullohi_case20_21.s) +
    PASS functionally (all three, qemu-mips exit codes match).
    Verified: full MIPS + ARM baselines and make test (134/134) all
    still pass.
@@ -349,7 +349,7 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    that arm; a plain out-of-range literal now falls through to the
    pre-existing generic "not handled" error instead of emitting
    wrong bytes.
-   Added tests/linker/mips_diff/movw_ucon_mips.s (a positive and a
+   Added tests/linker/mips_diff/movw_ucon_case24.s (a positive and a
    negative UCON value). PASS byte-identical + PASS same qemu-mips
    exit code. Verified: full MIPS + ARM baselines and make test
    (134/134) all still pass.
@@ -366,7 +366,7 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    diags if p->to.reg or p->reg is REGTMP itself ("cant synthesize
    large constant") -- not replicated, a real assembler-error case
    no fixture exercises, not a byte-matching concern.
-   Added tests/linker/mips_diff/case23_25_mips.s (one ADD at each
+   Added tests/linker/mips_diff/add_bigimm_case23_25.s (one ADD at each
    boundary, combined via SUB -- case 2). PASS byte-identical + PASS
    same qemu-mips exit code. Verified: full MIPS + ARM baselines and
    make test (134/134) all still pass.
@@ -399,12 +399,12 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    $autosize,SP; JMP RLINK`, not this code's load-from-memory+
    restore+jmp) since no fixture exercises RET on a leaf-with-locals
    function yet.
-   Added tests/linker/mips_diff/lacon_mips.s (a named FP local and
+   Added tests/linker/mips_diff/lacon_case26.s (a named FP local and
    SP param, combined via SUB). PASS byte-identical (only after both
    fixes -- the base_and_offset_of_entity swap alone left an 8-byte
    diff from the spurious RLINK save) + PASS same qemu-mips exit
    code. Verified: full MIPS + ARM baselines and make test (134/134)
-   all still pass, including call_mips.s (non-leaf, run manually --
+   all still pass, including call.s (non-leaf, run manually --
    still its known, pre-existing, unrelated 4-byte scheduler diff).
 ** DONE case 32 fadd fr1,[fr2],fr3 (ADD_/SUB_/MUL_/DIV_ only) / case
    33 fabs fr1,fr3 (ABS_/NEG_) -- unlike case 27/28/30/31/34, these
@@ -420,7 +420,7 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    flag, not a normal freg, so it doesn't fit case 32's
    ArithF-with-a-real-dest shape as cleanly as ADD/SUB/MUL/DIV/ABS/
    NEG do; needs its own investigation rather than guessing.
-   Added tests/linker/mips_diff/case32_33_mips.s (ADDF/ADDD/SUBF/
+   Added tests/linker/mips_diff/float_arith_case32_33.s (ADDF/ADDD/SUBF/
    MULF/DIVF/ABSF/NEGD) -- byte-comparison only, since there's no
    way yet to load a meaningful value into a float register (that
    needs case 30/31/34, which DO require new AST -- a float-register
@@ -451,15 +451,15 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    scheduler gap as every other one this session -- emits a plain
    nop unconditionally (size=8), same pattern as case 6/11/18's
    branches.
-   Added two fixtures: case30_31_mips.s (MTC1 and MFC1 each right
+   Added two fixtures: float_int_move_case30_31.s (MTC1 and MFC1 each right
    before SYSCALL, nothing eligible to hoist, so goken pads a plain
-   NOP too -- byte-identical) and case30_31_check_mips.s (MTC1 then
+   NOP too -- byte-identical) and float_int_move_case30_31_check.s (MTC1 then
    MFC1 of the *same* register, round-tripping 42 and self-checking
    with BEQ -- functionally correct but inherits both the COP1-hazard
    NOP-padding gap and BEQ/JMP's own delay-slot gap, kept out of
    test-mips.sh's CASES like the other BEQ-based fixtures). PASS
-   byte-identical (case30_31_mips.s) + PASS functionally (both,
-   qemu-mips exit codes match -- case30_31_mips.s itself actually
+   byte-identical (float_int_move_case30_31.s) + PASS functionally (both,
+   qemu-mips exit codes match -- float_int_move_case30_31.s itself actually
    traps under qemu-mips on *both* sides identically, a `vl -a`-
    confirmed match rather than a real functional check, since
    nothing there sets up a valid syscall). Verified: full MIPS + ARM
@@ -483,13 +483,13 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    immediately reads the float register afterward, *that*
    instruction's own delay slot (case 31's nop) still produces the
    right total byte count.
-   Added two fixtures: case34_mips.s (both the ADDCON and ANDCON
+   Added two fixtures: float_const_case34.s (both the ADDCON and ANDCON
    halves, nothing reading the float registers back -- byte-
-   identical) and case34_check_mips.s (loads 42 into F0, reads it
+   identical) and float_const_case34_check.s (loads 42 into F0, reads it
    back via MFC1, self-checks with BEQ -- functionally correct but
    inherits both MFC1's own delay-slot gap and BEQ/JMP's, kept out
    of test-mips.sh's CASES like the other BEQ-based fixtures). PASS
-   byte-identical (case34_mips.s) + PASS functionally (both).
+   byte-identical (float_const_case34.s) + PASS functionally (both).
    Verified: full MIPS + ARM baselines and make test (134/134) all
    still pass.
 ** DONE case 7 mov r,soreg ==> sw o(r) (fixed a real, previously
@@ -550,11 +550,11 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
      had *also* never been exercised via real assembly source before
      now, only ever reachable through Rewritev.ml's own internally-
      synthesized instructions.
-   Added tests/linker/mips_diff/case7_8_mips.s (int store, ZOREG +
-   LOREG, byte-identical) and case7_8_check_mips.s (functional
+   Added tests/linker/mips_diff/mem_move_case7_8.s (int store, ZOREG +
+   LOREG, byte-identical) and mem_move_case7_8_check.s (functional
    load round-trip, self-checked with BEQ, excluded from CASES for
    the usual scheduler-gap reasons). PASS byte-identical
-   (case7_8_mips.s) + PASS functionally (both). Verified: full MIPS
+   (mem_move_case7_8.s) + PASS functionally (both). Verified: full MIPS
    + ARM baselines and make test (134/134) all still pass.
 ** DONE case 27 mov [sl]ext/auto/oreg,fr ==> lwc1 o(r) (F__ only) /
    case 28 mov fr,[sl]ext/auto/oreg ==> swc1 o(r) (F__ only) --
@@ -570,14 +570,14 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    C also diags if the base register is REGTMP itself for the
    slow-path arms; not replicated, a real assembler-error case no
    fixture exercises.
-   Added tests/linker/mips_diff/case27_28_mips.s (float store,
+   Added tests/linker/mips_diff/float_move_case27_28.s (float store,
    ZOREG + LOREG -- the Entity/GLOBL variant is NOT covered by a
    fixture: a GLOBL with no DATA statement produces a very different
    total file size between goken and xix, 4104 vs 358 bytes in one
    attempt, seemingly an unrelated pre-existing BSS-layout
    difference, not investigated further here -- see the next entry)
-   and case27_28_check_mips.s (functional float load round-trip
-   through MFC1). PASS byte-identical (case27_28_mips.s) + PASS
+   and float_move_case27_28_check.s (functional float load round-trip
+   through MFC1). PASS byte-identical (float_move_case27_28.s) + PASS
    functionally (both). Verified: full MIPS + ARM baselines and make
    test (134/134) all still pass.
 ** TODO investigate: GLOBL-without-DATA total file size mismatch --
@@ -586,7 +586,7 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    different total executable sizes between goken (~4300 bytes) and
    xix (~350-4100 bytes across two attempts) -- likely a BSS/data-
    segment layout difference unrelated to case 27/28 itself (every
-   *working* GLOBL+DATA fixture, e.g. kitchen_sink_mips.s, matches
+   *working* GLOBL+DATA fixture, e.g. kitchen_sink.s, matches
    fine), but not root-caused. Check Layoutv.ml/Datagen.ml's BSS
    handling against goken's `dodata()` before trusting a GLOBL-only
    symbol's layout on MIPS.
@@ -616,12 +616,12 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    identically on both goken's and xix's output (same as any other
    matching-behavior check this session, just via an illegal-
    instruction trap instead of a real exit code).
-   Added tests/linker/mips_diff/case37_38_mips.s (case 37 writes
-   only, byte-identical) and case37_38_check_mips.s (case 37+38
+   Added tests/linker/mips_diff/cop0_move_case37_38.s (case 37 writes
+   only, byte-identical) and cop0_move_case37_38_check.s (case 37+38
    chained, same shape as every other _check fixture though not a
    true functional check here since qemu can't run it -- excluded
    from test-mips.sh's CASES like the others). PASS byte-identical
-   (case37_38_mips.s) + PASS same qemu-mips behavior (both). Left
+   (cop0_move_case37_38.s) + PASS same qemu-mips behavior (both). Left
    case 41/42 (FCR/floating-point control register moves) as a
    follow-up: case 41 specifically needs a 2-instruction dummy-read-
    then-write sequence (a real MIPS I FCR hazard workaround) that's
@@ -630,7 +630,7 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    handled generically by Codegen.default_rules (shared across all
    archs, matched at the very top of `rules` via `T.WORD`), no
    MIPS-specific code needed. Added tests/linker/mips_diff/
-   case40_mips.s just to confirm that shared path produces
+   word_case40.s just to confirm that shared path produces
    byte-identical output on MIPS too (it does). PASS byte-identical
    + PASS same qemu-mips behavior (an intentional segfault on both
    sides -- the raw word sits in the TEXT stream right at the entry
@@ -656,12 +656,12 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    accessible from user mode -- confirmed to actually run correctly
    under qemu-mips (exit code 0/1 as expected), not just trap
    identically.
-   Added tests/linker/mips_diff/case41_42_mips.s (write only,
-   byte-identical) and case41_42_check_mips.s (write+read round
+   Added tests/linker/mips_diff/fcr_move_case41_42.s (write only,
+   byte-identical) and fcr_move_case41_42_check.s (write+read round
    trip, self-checked with BEQ -- functionally correct but inherits
    case 42's 2-NOP gap and BEQ/JMP's own, kept out of
    test-mips.sh's CASES like the other scheduler-gap fixtures). PASS
-   byte-identical (case41_42_mips.s) + PASS functionally (both).
+   byte-identical (fcr_move_case41_42.s) + PASS functionally (both).
    Verified: full MIPS + ARM baselines and make test (134/134) all
    still pass.
 ** DONE case 39 rfe ==> jmp+rfe -- kernel-only "return from
@@ -686,9 +686,9 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    feature) -- fixed by just not putting anything after RFE in the
    fixture, matching how real Plan9 kernel code uses it anyway (RFE
    last in an exception handler).
-   Added tests/linker/mips_diff/case39_mips.s (byte-comparison only,
+   Added tests/linker/mips_diff/rfe_case39.s (byte-comparison only,
    RFE being privileged and illegal under qemu-mips user-mode
-   emulation same as case37_38_mips.s's MTC0/MFC0). PASS
+   emulation same as cop0_move_case37_38.s's MTC0/MFC0). PASS
    byte-identical + PASS same qemu-mips trap on both sides. Verified:
    full MIPS + ARM baselines and make test (134/134) all still pass.
 ** DONE case 47 sc r,soreg / case 48 ll soreg,r -- atomic
@@ -706,16 +706,16 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    reachable. SC (store) has no delay slot; LL (load) gets the same
    mandatory 1-NOP load-delay-slot hazard as case 8/27/36 (confirmed
    via `vl -a`).
-   Added tests/linker/mips_diff/case47_48_mips.s (LL kept right
+   Added tests/linker/mips_diff/atomic_case47_48.s (LL kept right
    before SYSCALL, nothing eligible to hoist -- byte-identical) and
-   case47_48_check_mips.s (the real LL-then-SC protocol, followed by
+   atomic_case47_48_check.s (the real LL-then-SC protocol, followed by
    a plain load to confirm the value landed, self-checked with BEQ
    -- functionally correct but inherits both LL's delay-slot gap and
    BEQ/JMP's, kept out of test-mips.sh's CASES like the other
    scheduler-gap fixtures). Both fixtures use the stack pointer as
    the memory operand (a garbage/uninitialized register address
    just segfaults or traps identically on both sides, which is a
-   weaker check). PASS byte-identical (case47_48_mips.s) + PASS
+   weaker check). PASS byte-identical (atomic_case47_48.s) + PASS
    functionally (both). Verified: full MIPS + ARM baselines and make
    test (134/134) all still pass.
 ** DONE case 0  pseudo ops -- checked against goken directly (asm.c
@@ -735,7 +735,7 @@ Not yet in Codegenv.ml at all:
 
 * Notes for later
 ** Expect a BIG/immrot-equivalent story for address-of-global (R30 bias)
-   hello_linux_mips.s's `MOVW $setR30(SB), R30` is MIPS' analogue of
+   hello_linux.s's `MOVW $setR30(SB), R30` is MIPS' analogue of
    ARM's `MOVW $setR12(SB), R12`. When a fixture with multiple GLOBLs
    at nonzero offsets gets added (mirroring kitchen_sink.s), expect
    to need the MIPS equivalent of the ARM BIG-bias + immrot fix in

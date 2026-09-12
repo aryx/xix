@@ -2,8 +2,8 @@
 // then read it back via MFC1 (case 31) and self-check with BEQ.
 // Not byte-identical: the MFC1 read immediately after the float-
 // constant load needs its own mandatory delay slot (case 31's nop,
-// see case30_31_mips.s), and this also inherits BEQ/JMP's own
-// delay-slot gap (see case6_mips.s).
+// see float_int_move_case30_31.s), and this also inherits BEQ/JMP's own
+// delay-slot gap (see branch_case6.s).
 TEXT _start(SB), $0
     MOVW    $0, R4
     MOVW    $42, F0

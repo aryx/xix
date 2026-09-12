@@ -5,7 +5,7 @@
 // -- when something eligible sits right after, sched.c hoists it
 // into the slot instead of a plain NOP, same as every other
 // scheduler gap this session -- and this also inherits BEQ/JMP's
-// own delay-slot gap (see case6_mips.s).
+// own delay-slot gap (see branch_case6.s).
 TEXT _start(SB), $0
     MOVW    $0, R4
     MOVW    $42, R1

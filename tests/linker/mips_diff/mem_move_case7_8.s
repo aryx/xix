@@ -6,7 +6,7 @@
 // address-of; only offset==0 (C_ZOREG) actually reaches the
 // single-instruction path. Confirmed via `vl -a` directly. Stores
 // have no load-delay-slot hazard (unlike case 8's loads -- see
-// case7_8_check_mips.s for a load-based functional check that
+// mem_move_case7_8_check.s for a load-based functional check that
 // accepts that separate, already-documented scheduler gap), so this
 // stays byte-identical. Writes below the current stack pointer
 // (still valid, unused stack memory) to avoid a segfault under

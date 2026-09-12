@@ -11,7 +11,7 @@
 // exception handler anyway. Byte-comparison only: RFE is
 // privileged, illegal under qemu-mips user-mode emulation, so this
 // isn't runnable as a meaningful functional check (goken's own
-// output would trap identically, same as case37_38_mips.s's
+// output would trap identically, same as cop0_move_case37_38.s's
 // MTC0/MFC0).
 TEXT _start(SB), $0
     RFE     (R5)

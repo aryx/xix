@@ -1,5 +1,5 @@
 // Exercises BL (branch-and-link, i.e. a CALL) to a defined symbol
-// through both the assembler and the linker. hello_arm.s only uses
+// through both the assembler and the linker. hello_linux.s only uses
 // MOVW/SWI, so the BL-to-symbol relocation and the branch instruction
 // encoding in 5l were never covered by the arm variants tests -- a gap
 // that let a linker issue on BL hide until the full pi build. Here

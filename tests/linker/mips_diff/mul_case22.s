@@ -1,5 +1,5 @@
 // MUL (case 22), byte-comparison only -- no HI/LO readback here on
-// purpose (see mullohi_mips.s/mullohi_check_mips.s for why: reading
+// purpose (see mullohi_case20_21.s/mullohi_case20_22_check.s for why: reading
 // a MUL's result triggers a scheduler-dependent NOP-padding gap
 // this port doesn't replicate). Confirms MUL R1,R2's own encoding
 // in isolation.

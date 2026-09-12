@@ -60,7 +60,7 @@ instead of hardcoding Little. Datagen.ml was already correctly
 parametrized by endian -- Execgen.ml's text-section writer was the
 only hardcoded spot found so far.
 
-Verified: tests/linker/mips_diff/hello_linux_mips.s is byte-identical
+Verified: tests/linker/mips_diff/hello_linux.s is byte-identical
 against goken and runs correctly under qemu-mips (prints "Hello,
 world", exits 0) on both sides. make test still 134/134 after (the
 compiler's codegen tests exercise Arch.Mips too, via Test_compiler.ml
@@ -95,12 +95,12 @@ folder's rationale in the ARM doc -- same applies here: mostly
 assembler codegen + minimal exec-layout being exercised, still filed
 under tests/linker/ since it's ova+ovl's combined output).
 
-First fixture: tests/linker/mips_diff/hello_linux_mips.s, copied from
-goken's tests/s/mini/hello_linux_mips.s (the simpler version -- xix's
-own tests/assembler/hello_linux_mips.s adds an extra "never_executed"
+First fixture: tests/linker/mips_diff/hello_linux.s, copied from
+goken's tests/s/mini/hello_linux.s (the simpler version -- xix's
+own tests/assembler/hello_linux.s adds an extra "never_executed"
 TEXT+JAL+WORD block for nm/onm testing, not needed for this baseline
 and skipped for now to keep the first fixture minimal, same "start
-small" reasoning as hello_linux_arm.s). Registers: R2=$v0 (syscall
+small" reasoning as hello_linux.s). Registers: R2=$v0 (syscall
 number and return value), R4-R10=$a0-$a6 (syscall args), R30=$sp-ish
 SB-bias register (MIPS' equivalent of ARM's R12/BIG mechanism --
 `MOVW $setR30(SB), R30` is the MIPS analogue of `MOVW $setR12(SB),

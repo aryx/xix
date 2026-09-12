@@ -4,7 +4,7 @@
 // start), plus a compare to exercise case 75's 2-instruction form
 // (VFP compare + MRS to move flags into CPSR for the branch).
 // Unlike FPA (case 54), VFP is real, still-relevant hardware
-// (qemu-arm actually emulates it) -- so unlike fpa_arm.s, this one
+// (qemu-arm actually emulates it) -- so unlike fpa_case54.s, this one
 // should genuinely run, not just byte-compare.
 TEXT _start(SB), $0
     ADDF    F0, F0, F1     // F1 = F0+F0 = 0.0 (F0 starts at 0.0)

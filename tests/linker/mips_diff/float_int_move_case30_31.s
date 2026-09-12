@@ -4,7 +4,7 @@
 // right before SYSCALL here with nothing else around: SYSCALL isn't
 // hoistable into the slot, so goken pads a plain NOP too (confirmed
 // via `vl -a`), keeping this fixture byte-identical. See
-// case30_31_check_mips.s for a functional check that chains MTC1
+// float_int_move_case30_31_check.s for a functional check that chains MTC1
 // into a same-register MFC1 (real hoisting happens there, so it's
 // not byte-identical).
 TEXT _start(SB), $0

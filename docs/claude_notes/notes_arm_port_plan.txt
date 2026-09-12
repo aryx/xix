@@ -85,9 +85,9 @@ Given (3), the right starting fixture is a *Linux* hello world (real
 Linux ARM EABI convention) rather than tests/linker/helloworld.s
 (which uses Plan 9's native EXITS/PWRITE syscall numbers and only
 makes sense with `-H2`/native Plan 9 headers, not something qemu-arm
-on Linux can run). tests/assembler/hello_linux_arm.s already is that
+on Linux can run). tests/assembler/hello_linux.s already is that
 program; it's now also copied to
-tests/linker/arm_diff/hello_linux_arm.s (see "Test corpus sources"
+tests/linker/arm_diff/hello_linux.s (see "Test corpus sources"
 below for why it's its own subfolder there) as the designated
 starting-point fixture for the harness. It needs one adjustment
 either toolchain-side: it defines TEXT `_start`,
@@ -167,7 +167,7 @@ Phase 0 -- build the differential harness (one-time)
    output as "stripped" -- these need to agree structurally before any
    codegen case can byte-match, independent of codegen correctness.
 
-4. First concrete run: tests/linker/arm_diff/hello_linux_arm.s (copied from
+4. First concrete run: tests/linker/arm_diff/hello_linux.s (copied from
    tests/assembler/, same content). Small, self-contained (TEXT
    _start + write + exit, one data GLOBL), and -- crucially -- an
    actual runnable Linux ELF binary rather than a Plan-9-native one,
@@ -196,7 +196,7 @@ from scratch when extending tests/linker/arm_diff/'s phase-0.5 baseline
 corpus and the per-case fixtures in phase 1. They're already
 known-good inputs to the C reference, and goken's tests/s/variants/
 in particular are curated regression tests for specific past bugs
-(e.g. addr_arm.s for the $sym(SB) operand path, call_arm.s for BL),
+(e.g. addr.s for the $sym(SB) operand path, call.s for BL),
 which makes them good fixtures on our side too. Prefer ones that use
 real Linux syscalls with a Linux-friendly entry point, so qemu-arm can
 double-check them too; the Plan-9-native ones (hello.s/world.s/
@@ -205,10 +205,10 @@ helloworld.s style, EXITS/PWRITE syscalls) are still useful for
 under qemu-arm on this Linux host.
 
 Also: `cmp`-clean isn't a strong enough check on its own for a fixture
-with no data section. tests/linker/arm_diff/exit_linux_arm.s (no GLOBL/DATA
+with no data section. tests/linker/arm_diff/exit_linux.s (no GLOBL/DATA
 at all) caught a 1-byte size bug in Elf.ml's shstrtab content (missing
 one of goken's two trailing NULs, see elfstrtab() in 8l/elf.c) that
-tests/linker/arm_diff/hello_linux_arm.s could not have caught: that fixture's
+tests/linker/arm_diff/hello_linux.s could not have caught: that fixture's
 section-header/string-table region sits in the zero-padded gap before
 its data segment, so a byte too few there just disappears into
 already-zero padding instead of changing the file's total size.
@@ -292,7 +292,7 @@ Per case N:
      offsets until byte-identical.
   5. Commit case-by-case (small, reviewable diffs), not batched.
 
-hello_linux_arm.s is the designated first data point (see Phase 0,
+hello_linux.s is the designated first data point (see Phase 0,
 item 4) rather than a specific "first case": run the harness on it,
 read the `cmp -l` output and the qemu-arm result, and let that
 determine what the first real fix is. The evidence gathered so far

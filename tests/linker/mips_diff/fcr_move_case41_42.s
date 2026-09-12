@@ -2,7 +2,7 @@
 // R0 first, a real MIPS I FCR hazard workaround). No delay-slot
 // hazard for the write, so this stays byte-identical (unlike case
 // 42's read, which gets the same unconditional 2-NOP D_FCREG
-// special case as case 38's MFC0 -- see case41_42_check_mips.s and
+// special case as case 38's MFC0 -- see fcr_move_case41_42_check.s and
 // Codegenv.ml's case 41/42 comments).
 TEXT _start(SB), $0
     MOVW    $42, R1

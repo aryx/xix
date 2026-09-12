@@ -6,7 +6,7 @@
 // MOVBU/MOVHU should zero-extend to 255/65535 (SUB'ing them gives
 // exactly 65280, i.e. exit code 0 mod 256) while MOVB/MOVH should
 // sign-extend back to -1 (not separately checked here -- kept
-// branch-free on purpose, see movbh_check_mips.s for a
+// branch-free on purpose, see movbh_case12_13_check.s for a
 // BEQ-verified functional check of the sign-extend side).
 TEXT _start(SB), $0
     MOVW    $-1, R1

@@ -50,9 +50,9 @@
    always passes goken's `-c` so the comparison is apples to apples.
 
 * Phase 0.5 -- baseline corpus
-** DONE tests/linker/riscv_diff/hello_linux_riscv.s: cmp -l clean + qemu-riscv32
+** DONE tests/linker/riscv_diff/hello_linux.s: cmp -l clean + qemu-riscv32
    Copied from goken's tests/s/mini/ (simpler than xix's own
-   tests/assembler/hello_linux_riscv.s, which adds extra stuff not
+   tests/assembler/hello_linux.s, which adds extra stuff not
    needed for this baseline). PASS: byte-identical (4112 bytes both
    sides) on the very first successful link, once the assembler bug,
    the -c flag, and the BIG/fits_addi_imm address-of-global formula
@@ -72,7 +72,7 @@ Cases with a matching (* case N: *) comment already in Codegeni.ml:
    family -- andi/ori/xori/slti/sltiu $I,[R,]D -- reusing
    oprrr_arith_opcode's funct3 (SUB has no immediate form; SLL/SRL/
    SRA's immediate forms are case 1, a different bit layout). Tested
-   via case2_general_riscv.s (+ riscv64_diff copy): PASS byte-
+   via arith_imm_case2.s (+ riscv64_diff copy): PASS byte-
    identical + PASS same exit code on both RV32 and RV64. This also
    indirectly validates case 10's MOVBU-via-ANDI encoding below,
    which reuses the exact same op_itype/op_opimm/funct3=7 path.
@@ -89,7 +89,7 @@ Cases with a matching (* case N: *) comment already in Codegeni.ml:
    (mirroring Parser_asmv.mly/MIPS) since Indirect was previously
    only ever constructed programmatically by Rewritei.ml's prologue/
    epilogue, unreachable from a .s file. Tested via
-   case6_7_riscv.s (+ riscv64_diff copy): PASS byte-identical + PASS
+   mem_move_case6_7.s (+ riscv64_diff copy): PASS byte-identical + PASS
    same exit code on both RV32 and RV64.
    Found and fixed a second, more serious pre-existing bug while
    writing this fixture (the first to use a nonzero, non-multiple-
@@ -110,7 +110,7 @@ Cases with a matching (* case N: *) comment already in Codegeni.ml:
    (i.e. "2*ptrsize" is a riscv32-only workaround; riscv64's ptrsize
    is already 8, no bump needed) -- naively using `2 * ptrsize is_64`
    for both arches would silently double-count riscv64's case to 16,
-   which is exactly the regression case4_riscv64.s's own frame shape
+   which is exactly the regression jal_case4.s's own frame shape
    (JAL-calling, `$0` declared) caught when this fix was first tried.
 ** DONE case 9  lui I1,D; addi I0,D (MOVW-immediate too big for 12 bits)
 ** DONE case 11 addi $I,R,D (address-of-global fast path)
@@ -137,9 +137,9 @@ Cases with a matching (* case N: *) comment already in Codegeni.ml:
    (only MOVW/ECALL were). MULH/MULHSU/MULHU left unwired: Ast_asmi's
    mul_opcode has no constructor for them yet (`MUL` alone, with a
    standing "TODO: lots of MUL").
-   Added tests/linker/riscv_diff/case0_1_riscv.s (all ten register-
+   Added tests/linker/riscv_diff/arith_shift_case0_1.s (all ten register-
    register ops plus SLL/SRL/SRA-by-immediate, chained into the exit
-   code) and its riscv64_diff copy (case0_1_riscv64.s, since
+   code) and its riscv64_diff copy (arith_shift_case0_1.s, since
    Codegeni.ml is fully shared between oil/ojl and nothing here is
    RV64-specific). PASS byte-identical + PASS same exit code on
    both RV32 and RV64. Verified: full ARM/MIPS baselines and make
@@ -170,7 +170,7 @@ Cases with a matching (* case N: *) comment already in Codegeni.ml:
    instruction bytes (goken's disassembler text is ambiguous/
    misleading about operand order), not just reading the C source.
    Also newly discovered (out of scope, documented at length in
-   case3_riscv.s's own comment): goken's assembler recognizes the
+   branch_case3.s's own comment): goken's assembler recognizes the
    "branch to L1; immediately followed by unconditional JMP to L2"
    idiom (a classic if/then/else compiler pattern) and rewrites it --
    inverts the branch to jump straight to L2, then *relocates* L1's
@@ -180,7 +180,7 @@ Cases with a matching (* case N: *) comment already in Codegeni.ml:
    "invert-and-skip-one-instruction" idiom instead (branch directly
    over a single following instruction, no intervening JMP), which
    doesn't trigger it.
-   Added tests/linker/riscv_diff/case3_riscv.s (all six conditions,
+   Added tests/linker/riscv_diff/branch_case3.s (all six conditions,
    both operand forms, chained into the exit code) and its
    riscv64_diff copy. PASS byte-identical + PASS same exit code (127)
    on both RV32 and RV64.
@@ -213,8 +213,8 @@ Cases with a matching (* case N: *) comment already in Codegeni.ml:
    inversion from case 3; and, combined with a later JAL/indirect-
    return in the same function, a "loop rotation" that was observed
    via an ad-hoc test to miscompute a target address into a non-4-
-   byte-aligned garbage branch). See case4_riscv.s's own comment.
-   Added tests/linker/riscv_diff/case4_riscv.s and its riscv64_diff
+   byte-aligned garbage branch). See jal_case4.s's own comment.
+   Added tests/linker/riscv_diff/jal_case4.s and its riscv64_diff
    copy. PASS byte-identical + PASS same exit code on both RV32 and
    RV64. Verified: full ARM/MIPS/RISC-V baselines and make test all
    still pass.
@@ -240,7 +240,7 @@ Not yet in Codegeni.ml at all:
    goken's own assembler, same category as case 4's bare "JAL label"
    having no working goken syntax either). So case 8 is only tested
    through the MOVW-immediate path that actually reaches it in
-   goken, via tests/linker/riscv_diff/case8_riscv.s (+ riscv64_diff
+   goken, via tests/linker/riscv_diff/lui_case8.s (+ riscv64_diff
    copy); xix's own directly-usable `LUI $I,D` mnemonic is kept as a
    building block with no differential test of its own, same
    reasoning as JAL's bare-label form. PASS byte-identical + PASS
@@ -312,7 +312,7 @@ Not yet in Codegeni.ml at all:
    `T.Virt _ | T.TEXT _ | T.WORD _ -> Codegen.default_rules ...`
    catch-all already at the top of `rules`, same shared code path
    ARM/MIPS use), confirmed via tests/linker/riscv_diff/
-   case25_26_riscv.s (+ riscv64_diff copy) with no new code needed --
+   word_pseudo_case25_26.s (+ riscv64_diff copy) with no new code needed --
    same "confirmed no new code needed" precedent as MIPS's case 0/
    case 40. PASS byte-identical + PASS same exit code on both RV32
    and RV64.

@@ -7,7 +7,7 @@
 // hazard-avoidance heuristic, empirically confirmed but not fully
 // characterized) -- the same already-documented, deliberately
 // unported scheduler gap as every branch/call delay slot this
-// session. See mullohi_check_mips.s for a MUL-based functional
+// session. See mullohi_case20_22_check.s for a MUL-based functional
 // check that accepts that diff.
 TEXT _start(SB), $0
     MOVW    $6, R1

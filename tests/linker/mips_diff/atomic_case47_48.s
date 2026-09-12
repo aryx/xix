@@ -6,7 +6,7 @@
 // chained with anything. LL (load) has the same mandatory 1-NOP
 // load-delay-slot hazard as case 8/27/36, so it's kept right before
 // SYSCALL here (nothing eligible to hoist into the slot, confirmed
-// via `vl -a`) to stay byte-identical -- see case47_48_check_mips.s
+// via `vl -a`) to stay byte-identical -- see atomic_case47_48_check.s
 // for a version that actually reads the loaded value back, which
 // gives the scheduler something to hoist and isn't byte-identical.
 // Uses the stack pointer (valid memory) so both sides actually run

@@ -23,7 +23,7 @@
    table content incl. goken's own double-trailing-NUL quirk in
    elfstrtab(), the "sh_size=14 doesn't cover it" mismatch) traced
    there, not guessed (first attempt got the string table 1 byte
-   short -- caught by exit_linux_arm.s, see Phase 0.5). Also added
+   short -- caught by exit_linux.s, see Phase 0.5). Also added
    `-s` to the harness's goken invocation to strip goken's native
    Plan9 symbol/debug table (embeds the invocation cwd, not
    byte-reproducible, and xix never emits one anyway).
@@ -63,20 +63,20 @@
    chasing it. Worth its own investigation later if CMP/Bxx-heavy
    fixtures are added.
 ** DONE extend corpus: tests/linker/arm_diff/{exit_linux_arm,addr_arm,call_arm}.s
-   Moved hello_linux_arm.s from tests/linker/ into tests/linker/arm_diff/
+   Moved hello_linux.s from tests/linker/ into tests/linker/arm_diff/
    (a subfolder, not its own top-level dir: these fixtures exercise
    assembler codegen + basic exec layout more than linking proper --
    one object file each, no cross-object resolution -- but it's
    still o5a+o5l's combined output being compared, and a sibling
    tests/linker/mips_diff/ is expected once MIPS gets this treatment
-   too). Added 3 more from goken's own tests/s/{exit,variants}/: exit_linux_arm.s
+   too). Added 3 more from goken's own tests/s/{exit,variants}/: exit_linux.s
    (minimal exit(42), no data section -- caught the elfstrtab 1-byte
-   bug above), addr_arm.s ($sym(SB) address-of-global + pointer-valued
-   DATA), call_arm.s (BL to a symbol, two TEXT procs). All 4: PASS
+   bug above), addr.s ($sym(SB) address-of-global + pointer-valued
+   DATA), call.s (BL to a symbol, two TEXT procs). All 4: PASS
    byte-identical + PASS same qemu-arm exit code. Also fixed
    diff-arm.sh: `set -e` was aborting the script on a fixture's
-   intentional non-zero exit code (exit_linux_arm.s exits 42).
-** DONE tests/linker/arm_diff/hello_linux_arm.s: cmp -l clean vs goken
+   intentional non-zero exit code (exit_linux.s exits 42).
+** DONE tests/linker/arm_diff/hello_linux.s: cmp -l clean vs goken
    PASS: byte-identical (4112 bytes both sides). Last 6 bytes closed
    in Layout5.ml: implemented goken's checkpool()'s "true end of
    program" flush trigger (`if(p->link==P) flushpool(p,true)`) --
@@ -99,10 +99,10 @@
    (see below): a fixture using the same large offset twice diverges
    in pool *layout* from goken even though the actual load/store
    instructions it generates are correct. Low urgency (no test
-   currently needs it -- tests/linker/arm_diff/longoff_arm.s is
+   currently needs it -- tests/linker/arm_diff/longoff_case30_31.s is
    deliberately written to avoid triggering it), but real; will
    resurface for any fixture that repeats a big constant/address.
-** DONE tests/linker/arm_diff/hello_linux_arm.s: runs correctly under qemu-arm
+** DONE tests/linker/arm_diff/hello_linux.s: runs correctly under qemu-arm
    Root cause found and fixed: linker/Flags.ml's kencc_compatible
    defaulted to true, which sets the MOV instruction's Rn field to the
    destination register instead of 0 (Codegen5.ml:441). goken always
@@ -137,7 +137,7 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    the same oprange as AADD/AMVN/ACMP) with a too-big immediate:
    load it into REGTMP via the literal pool first, then apply the
    real op using REGTMP as the "from" register (size=8: LDR + OP).
-   Added tests/linker/arm_diff/lcon_arm.s (ADD $0x12345678,R0,R1).
+   Added tests/linker/arm_diff/lcon_case13.s (ADD $0x12345678,R0,R1).
    PASS byte-identical + PASS same qemu-arm exit code first try.
 ** DONE case 4/34 address-of-local/param ($lacon) -- mirrors the
    address-of-global case 4/12 split, just SP-relative instead of
@@ -171,7 +171,7 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
      case -- any real program combining a round frame size (4096,
      8192, ...) with a small local/param offset can hit it, so it
      was worth chasing rather than dodging with a "safe" fixture.
-   Added tests/linker/arm_diff/lacon_arm.s (fast-path Local, fast-path
+   Added tests/linker/arm_diff/lacon_case4_12.s (fast-path Local, fast-path
    Param, and a second slow-path instance for good measure). PASS
    byte-identical + PASS same qemu-arm exit code.
 ** DONE case 30/31 mov/movb/movbu R,L(R) / L(R),R -- long (>12-bit)
@@ -192,7 +192,7 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
      pending pool entry per flush, so this never showed up before.
    Also surfaced (see the separate "literal-pool value
    deduplication" TODO above): goken dedups repeated pool values,
-   we don't yet -- tests/linker/arm_diff/longoff_arm.s deliberately
+   we don't yet -- tests/linker/arm_diff/longoff_case30_31.s deliberately
    uses each offset only once to isolate case 30/31's own
    correctness from that gap.
    PASS byte-identical + PASS same qemu-arm exit code.
@@ -200,8 +200,8 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    Codegen.default_rules (used by ARM/MIPS/RISC-V alike): AWORD is
    never hand-written (it's what 5a itself generates for a
    literal-pool entry), so this is verified indirectly by every
-   fixture whose codegen falls back to a literal pool (bigimm_arm.s
-   for case 12, lcon_arm.s for case 13), not by a dedicated fixture.
+   fixture whose codegen falls back to a literal pool (bigimm_case12.s
+   for case 12, lcon_case13.s for case 13), not by a dedicated fixture.
 ** DONE case 54 floating point arith (ArithF: ADDF/SUBF/MULF/DIVF/
    ADDD/SUBD/MULD/DIVD, plus CmpF: CMPF/CMPD which share this case
    in codegen.c via `if(p->to.type==D_NONE) rt=0` -- kept as its own
@@ -215,12 +215,12 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    polarity). Float immediates are limited to goken's chipfloats[]
    (float.c): exactly {0,1,2,3,4,5,0.5,10} -- anything else is a
    genuine assembler error here, not goken's own silent
-   `diag(); rf=0` fallback. Added tests/linker/arm_diff/fpa_arm.s.
+   `diag(); rf=0` fallback. Added tests/linker/arm_diff/fpa_case54.s.
    PASS byte-identical; confirmed empirically that qemu-arm has no
    FPA coprocessor at all to trap/emulate it -- both sides SIGILL
    identically (rc=132) on the very first FPA instruction, which is
    itself the matching signal (same crash, not a different one),
-   same reasoning as swp_arm.s's deliberately-unmapped test address.
+   same reasoning as swp_case40.s's deliberately-unmapped test address.
 ** DONE case 40 swp oreg,reg,reg -- ARM's atomic exchange (SWPW/
    SWPBU), deprecated since ARMv6 in favor of LDREX/STREX but still
    real (goken's own runtime uses it for spinlocks, e.g.
@@ -232,7 +232,7 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    the same register is both the new value written (Rm) and the
    destination that receives the old value (Rd); the 3-operand form
    is implemented too but not independently verified against a real
-   fixture. Added tests/linker/arm_diff/swp_arm.s.
+   fixture. Added tests/linker/arm_diff/swp_case40.s.
 ** MAJOR FIND, FIXED: immrot() was subtly wrong for some values --
    goken's own `immrot(ulong v)` (5l/span.c) is, relative to true ARM
    rotated-immediate semantics, buggy on a 64-bit host: `ulong` is
@@ -254,7 +254,7 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    every earlier fixture's constants either fit directly (0-255, way
    below where the two versions could ever disagree) or were clearly
    too large either way (like 0x12345678); tests/linker/arm_diff/
-   swp_arm.s's `MOVW $0x9000, R4` is what exposed it. Re-verified
+   swp_case40.s's `MOVW $0x9000, R4` is what exposed it. Re-verified
    the entire existing corpus (all fixtures using case 2/4/12/13/34)
    still passes byte-identical after the fix -- nothing had
    coincidentally depended on the old, wrong 32-bit behavior.
@@ -265,9 +265,9 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    immediate-only: bit22=0, offset register directly in bits[3:0],
    no magnitude limit -- ported from goken's oshrr/olhrr, which XOR
    olhr/oshr's immediate-mode bit22 off). Added
-   tests/linker/arm_diff/halflong_arm.s (each offset used exactly
+   tests/linker/arm_diff/halflong_case72_73.s (each offset used exactly
    once, same literal-pool-dedup-avoidance reasoning as
-   longoff_arm.s). PASS byte-identical + PASS same qemu-arm exit
+   longoff_case30_31.s). PASS byte-identical + PASS same qemu-arm exit
    code.
 ** DONE case 70 movh/movhu R,O(R) -> strh (real ARMv4T STRH, ghalfword
    helper)
@@ -281,7 +281,7 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    wrongly varied the SH bits by signedness for STORE too, encoding
    STRH as a bogus STRD-shaped opcode -- caught by a 1-byte cmp -l
    diff, fixed, now genuinely byte-identical (not just "close").
-   Added tests/linker/arm_diff/halfword_arm.s. PASS byte-identical +
+   Added tests/linker/arm_diff/halfword_case70_71.s. PASS byte-identical +
    PASS same qemu-arm exit code.
 ** SKIP  cases 22/23/32/33 (movb/movh/movhu via byte-split-and-shift,
    the pre-ARMv4T fallback for O(R) and L(R) offsets) -- confirmed
@@ -298,7 +298,7 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    FPA -- FPA is defunct hardware (see case 54's DONE entry), so any
    float-using ARM program built with goken's *default* settings
    would be non-functional on that real hardware, same failure mode
-   as fpa_arm.s's SIGILL under qemu-arm. `vfp = debug['f']`
+   as fpa_case54.s's SIGILL under qemu-arm. `vfp = debug['f']`
    (5l/span.c) is OFF by default (opposite polarity of the armv4
    story), so this needed a new xix-side flag (`-f`, Flags.vfp,
    ARM-only) mirroring goken's, plus scripts/diff-arm.sh and
@@ -316,10 +316,10 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    result into the ARM CPSR where Bxx reads flags from (size=8 vs
    FPA's size=4), and the field layout for the 2nd operand differs
    (bit12 vs FPA's bit16).
-   Added tests/linker/arm_diff/vfp_arm.s: register-register ADDF
+   Added tests/linker/arm_diff/vfp_case74_75.s: register-register ADDF
    starting from the zero-initialized register state (Linux's ELF
    loader zeroes VFP registers too) + CMPF + BEQ. PASS
-   byte-identical on the first try, AND -- unlike fpa_arm.s --
+   byte-identical on the first try, AND -- unlike fpa_case54.s --
    PASS genuinely correct execution under qemu-arm (rc=0, the
    CMPF/BEQ branch actually taken): VFP is real, still-relevant
    hardware, so this is functionally verified, not just
@@ -357,18 +357,18 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    VMOV's direction bit (bits[23:20], a genuinely separate,
    non-overlapping field -- not bits[19:16] as first computed, which
    is actually the register slot).
-   Added tests/linker/arm_diff/fixfloat_fpa.s and fixfloat_vfp.s
+   Added tests/linker/arm_diff/fixfloat_fpa_case55.s and fixfloat_vfp_case76.s
    (both: 42 -> float reg -> back -> exit(42)). PASS byte-identical
    AND PASS genuine functional round-trip under qemu-arm (rc=42 both
    sides, both FPA and VFP) -- FPA's arithmetic SIGILLs
-   (fpa_arm.s) but apparently qemu does implement these two
+   (fpa_case54.s) but apparently qemu does implement these two
    particular legacy opcodes.
 ** DONE case 12 movw $lcon, reg -- both the address-of-global slow
    path (MOVW $L(SB),RT -> LDR from literal pool) and the plain
    too-big-immediate case (MOVW $0x12345678,R -> LDR from literal
    pool, reusing Ast_asm.Int through the same PoolOperand mechanism,
    already generically handled by Codegen.default_rules's WORD case).
-   Added tests/linker/arm_diff/bigimm_arm.s. PASS byte-identical +
+   Added tests/linker/arm_diff/bigimm_case12.s. PASS byte-identical +
    PASS same qemu-arm exit code (120, from the truncated-to-byte
    0x12345678 status value).
 ** SKIP  case 16 div r,[r,]r -- goken itself just emits an invalid/

@@ -1,5 +1,5 @@
 // Address-of-local/param (case 26, MOVW $lsext/auto/oreg,,r2 ==>
-// lu+or+add): mirrors ARM's lacon_arm.s. `x-8(FP)` is a Local
+// lu+or+add): mirrors ARM's lacon_case4_12.s. `x-8(FP)` is a Local
 // entity, `y+8(SP)` a Param entity (this codebase's own convention:
 // the FP token maps to Local, the SP token to Param). Caught a
 // real, previously-flagged-as-unverified bug in

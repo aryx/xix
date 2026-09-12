@@ -4,7 +4,7 @@
 // real functional verification though: MTC0/MFC0 are privileged
 // (kernel-mode) instructions, illegal from qemu-mips user-mode
 // emulation on both goken's and xix's output identically (see
-// case37_38_mips.s) -- so this is really just a second byte/shape
+// cop0_move_case37_38.s) -- so this is really just a second byte/shape
 // confirmation of case 38's encoding and its 2-NOP delay slot,
 // structured like a functional check for consistency with the rest
 // of this session's fixtures. Not byte-identical for the usual

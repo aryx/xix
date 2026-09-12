@@ -5,31 +5,31 @@
 # docs/claude_notes/todo_riscv_port.org.
 #
 # Usage: ./test-riscv.sh
+#
+# See tests/linker/README.md for the fixture-naming/"_check" conventions.
 
 set -e
 
 cd "$(dirname "$0")"
 
-# file:entry_symbol pairs -- entry defaults to _main (the linkers'
-# default) when not TEXT _start.
+# Every fixture here uses TEXT _start, so there's no entry_symbol
+# field -- just a bare list of .s files.
 CASES=(
-    "tests/linker/riscv_diff/hello_linux_riscv.s:_start"
-    "tests/linker/riscv_diff/case0_1_riscv.s:_start"
-    "tests/linker/riscv_diff/case3_riscv.s:_start"
-    "tests/linker/riscv_diff/case4_riscv.s:_start"
-    "tests/linker/riscv_diff/case25_26_riscv.s:_start"
-    "tests/linker/riscv_diff/case8_riscv.s:_start"
-    "tests/linker/riscv_diff/case2_general_riscv.s:_start"
-    "tests/linker/riscv_diff/case6_7_riscv.s:_start"
-    "tests/linker/riscv_diff/system_csr_case22.s:_start"
+    "tests/linker/riscv_diff/hello_linux.s"
+    "tests/linker/riscv_diff/arith_shift_case0_1.s"
+    "tests/linker/riscv_diff/branch_case3.s"
+    "tests/linker/riscv_diff/jal_case4.s"
+    "tests/linker/riscv_diff/word_pseudo_case25_26.s"
+    "tests/linker/riscv_diff/lui_case8.s"
+    "tests/linker/riscv_diff/arith_imm_case2.s"
+    "tests/linker/riscv_diff/mem_move_case6_7.s"
+    "tests/linker/riscv_diff/system_csr_case22.s"
 )
 
 FAIL=0
-for c in "${CASES[@]}"; do
-    file=${c%%:*}
-    entry=${c##*:}
-    echo "### $file (entry $entry)"
-    if ! ./scripts/diff-riscv.sh "$file" "$entry"; then
+for file in "${CASES[@]}"; do
+    echo "### $file"
+    if ! ./scripts/diff-riscv.sh "$file" "_start"; then
         FAIL=1
     fi
     echo

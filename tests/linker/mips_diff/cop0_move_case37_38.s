@@ -1,6 +1,6 @@
 // mov r,mr (case 37, MTC0/DMTC0), coprocessor-0/MMU register write.
 // No delay-slot hazard for the write direction -- byte-identical.
-// See case37_38_check_mips.s for a functional round-trip check of
+// See cop0_move_case37_38_check.s for a functional round-trip check of
 // case 38 (MFC0/DMFC0, the read direction), which does have a
 // 2-NOP delay-slot hazard (goken's noop.c has a dedicated always-2
 // -NOP special case for any AMOVW/AMOVV whose source is D_MREG,

@@ -1,7 +1,7 @@
 // Functional check for case 12's sign-extend (MOVB/MOVH): R1 = -1
 // (all bits set), truncated to a byte/half and sign-extended back
 // should still be exactly -1 either way. Uses BEQ to self-check, so
-// (like immcon_mips.s/case6_mips.s) this inherits the known
+// (like immcon_case4_10.s/branch_case6.s) this inherits the known
 // delay-slot-scheduler byte diff and is deliberately not
 // byte-identical -- see docs/claude_notes/todo_mips_port.org.
 TEXT _start(SB), $0

@@ -43,7 +43,7 @@ the ARM/MIPS module split exactly:
 A real, blocking bug found in the *assembler* first
 ---------------------------------------------------------
 
-Before any of the linker work could even be tested, hello_linux_riscv.s
+Before any of the linker work could even be tested, hello_linux.s
 wouldn't assemble at all with oia: "Syntax error, last name: MOVW".
 Root cause, in assembler/Parse_asmi.ml: the entire keyword-recognition
 table (the `match s with "MOVW" -> ... | "ECALL" -> ... | ...` block
@@ -73,7 +73,7 @@ linkers/il/compress.c, called unconditionally from asm.c's main
 encode loop unless `-c` is passed (`if(!debug['c'] && o->ctype) ...`,
 mirroring the existing `-s` strip-symbol-table precedent exactly:
 a debug-flag-gated behavior, not something hardcoded on). Confirmed
-by disassembling goken's default output for hello_linux_riscv.s: it
+by disassembling goken's default output for hello_linux.s: it
 starts with the same lui/addi pair oil produces, then hits 16-bit
 opcodes capstone (configured for plain RV32) can't decode -- e.g.
 bytes 05 45 decode as `C.LI a2, 13` in the RVC encoding, replacing
@@ -113,7 +113,7 @@ genuinely simpler than ARM here, while still being a *live* fast path
 
 Built this correctly from the start rather than discovering it later
 via a kitchen-sink fixture (as happened for both ARM and MIPS):
-hello_linux_riscv.s itself already exercises both paths --
+hello_linux.s itself already exercises both paths --
 `MOVW $msg(SB), R11` takes the fast path (msg's offset is small), and
 `MOVW $setSB(SB), RSB` takes the slow path (the explicit `!= 0`
 exclusion is what forces it there, unlike ARM where the exclusion
@@ -173,7 +173,7 @@ Test corpus
 --------------
 
 tests/linker/riscv_diff/, sibling to arm_diff/ and mips_diff/. First
-fixture: hello_linux_riscv.s, copied from goken's tests/s/mini/ (same
+fixture: hello_linux.s, copied from goken's tests/s/mini/ (same
 "start with the simpler upstream version, not xix's own more elaborate
 tests/assembler/ copy" reasoning as the other two archs). PASS:
 byte-identical + matching qemu-riscv32 behavior on the very first

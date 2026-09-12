@@ -4,8 +4,8 @@
 // self-checks with BEQ. Not byte-identical: LL immediately followed
 // by something eligible gives goken's sched.c something to hoist
 // into the load-delay slot instead of a plain nop (see
-// case47_48_mips.s's comment), and this also inherits BEQ/JMP's own
-// delay-slot gap (see case6_mips.s).
+// atomic_case47_48.s's comment), and this also inherits BEQ/JMP's own
+// delay-slot gap (see branch_case6.s).
 TEXT _start(SB), $0
     MOVW    $0, R4
     MOVW    $42, R2

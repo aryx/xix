@@ -167,6 +167,27 @@ let gen_absolute (rd : reg) (v : int) : Bits.t list = gen_absolute_via op_lui rd
  * value. Caller is responsible for passing that delta as `v`. *)
 let gen_pcrelative (rd : reg) (v : int) : Bits.t list = gen_absolute_via op_auipc rd v
 
+(* S-type: imm[31:25] rs2[24:20] rs1[19:15] funct3[14:12] imm[11:7]
+ * opcode[6:0] -- goken's OP_S(rs1,rs2,imm) (case 6, STORE opcode
+ * 0x23), shared by SB/SH/SW/SD (see op_itype's LOAD counterpart). *)
+let op_stype funct3 (R rs1) (R rs2) (imm : int) : Bits.t =
+  [(0x23, 0); (imm land 0x1f, 7); (funct3, 12);
+   (rs1, 15); (rs2, 20); ((imm lsr 5) land 0x7f, 25)]
+
+(* claude: case 6/7's shared "imm out of range" bounds check (goken's
+ * `if(v < -BIG || v >= BIG) diag(...)`) and 4-byte-instruction
+ * wrapping, factored out since both the store and load sides, and
+ * now each of their W__/V__ and B_/H_ variants, need the identical
+ * check. *)
+let gen_store (node : 'a T.node) (offset : int) (mk : unit -> Bits.t) =
+  if not (fits_addi_imm offset)
+  then error node "TODO: store offset out of 12-bit range"
+  else { size = 4; x = None; binary = (fun () -> [ mk () ]) }
+let gen_load (node : 'a T.node) (offset : int) (mk : unit -> Bits.t) =
+  if not (fits_addi_imm offset)
+  then error node "TODO: load offset out of 12-bit range"
+  else { size = 4; x = None; binary = (fun () -> [ mk () ]) }
+
 let op_branch = 0x63 (* BEQ/BNE/BLT/BGE/BLTU/BGEU -- goken's OBRANCH *)
 let op_jal = 0x6f (* goken's OJAL *)
 
@@ -291,6 +312,24 @@ let rules (is_64 : bool)
         else
           { size = 4; x = None; binary = (fun () ->
             [ op_itype op_opimm 0 (R r) rt i ]
+          )}
+
+    (* case 2 (generalized): andi/ori/xori/slti/sltiu $I,[R,]D --
+     * goken's optab reuses the *same* funct3 for these immediate
+     * forms as their register-register counterparts (oprrr_arith_
+     * opcode above), the real ISA's OP-IMM family; only SUB has no
+     * immediate counterpart (ADDI with a negated immediate covers
+     * that), and SLL/SRL/SRA's immediate forms are case 1 above
+     * (a different bit layout: shift amount, not a plain 12-bit
+     * signed immediate). *)
+    | Arith (((AND | OR | XOR | SLT _) as op), Imm i, middle, rt) ->
+        let r = middle ||| rt in
+        let (funct3, _) = oprrr_arith_opcode op in
+        if not (fits_addi_imm i)
+        then error node "TODO: immediate out of 12-bit range"
+        else
+          { size = 4; x = None; binary = (fun () ->
+            [ op_itype op_opimm funct3 r rt i ]
           )}
 
     (* case 8:		/* lui	I,D */ *)
@@ -482,47 +521,69 @@ let rules (is_64 : bool)
               )}
         )
 
+    (* case 6:		/* sb R,I(S) */
+     * claude: generalized to a shared helper -- goken's case 6 is
+     * fully generic over SB/SH/SW/SD, the only difference between
+     * mnemonics being which funct3 the optab looked up beforehand;
+     * this mirrors that by taking funct3 as a parameter, used below
+     * both by Move2's W__/V__ (word/doubleword, needed by
+     * Rewritei.ml's link-register-save prologue) and Move1's B_/H_
+     * (byte/half stores, e.g. user-written "MOVB R,I(S)"). *)
     | Move2 (W__, Left (Gen (GReg rf)), Gen (Indirect (rbase, offset))) ->
-        (* case 6:		/* sb R,I(S) */
-         * word/doubleword store (funct3=010=SW on riscv32, 011=SD on
-         * riscv64 -- RLINK is a full pointer, so its save must widen
-         * with the arch; goken's case 6 covers SB/SH/SW/SD generally,
-         * keyed off the move's size, but only Word is wired here since
-         * that's all Rewritei.ml's link-register-save prologue needs,
-         * `MOVW RLINK,0(SP)`; the byte/half variants are a follow-up
-         * once move2_size grows B__/H__ constructors -- see
-         * Parse_asmi.ml's TODO comment). claude: this previously
-         * hardcoded funct3=0 (SB, byte store) despite being reached
-         * only for W__ moves -- silently wrong (a byte store instead
-         * of a word/doubleword store) until case4's JAL-triggered
-         * non-leaf prologue exercised it byte-for-byte against goken
-         * for the first time (SW on riscv32; the is_64/SD gap was
-         * then caught the same way testing case4 on riscv64). *)
-        if not (fits_addi_imm offset)
-        then error node "TODO: store offset out of 12-bit range"
-        else
-          { size = 4; x = None; binary = (fun () ->
-            (* S-type: imm[31:25] rs2[24:20] rs1[19:15] funct3[14:12]
-             * imm[11:7] opcode[6:0] *)
-            let (R rs2) = rf and (R rs1) = rbase in
-            let funct3 = if is_64 then 3 (* SD *) else 2 (* SW *) in
-            [ [(0x23, 0); (offset land 0x1f, 7); (funct3, 12);
-               (rs1, 15); (rs2, 20); ((offset lsr 5) land 0x7f, 25)] ]
-          )}
+        let funct3 = if is_64 then 3 (* SD *) else 2 (* SW *) in
+        gen_store node offset (fun () -> op_stype funct3 rbase rf offset)
 
+    | Move1 (B_ _, Left (GReg rf), Indirect (rbase, offset)) ->
+        gen_store node offset (fun () -> op_stype 0 (* SB *) rbase rf offset)
+    | Move1 (H_ _, Left (GReg rf), Indirect (rbase, offset)) ->
+        gen_store node offset (fun () -> op_stype 1 (* SH *) rbase rf offset)
+
+    (* case 7:		/* lb I(S),D */
+     * claude: same generalization as case 6 -- goken picks the
+     * funct3 (0/4=LB/LBU, 1/5=LH/LHU, 2=LW, 3=LD) purely from which
+     * mnemonic was used, the encoding itself (OP_I) is identical. *)
     | Move2 (W__, Left (Gen (Indirect (rbase, offset))), Gen (GReg rt)) ->
-        (* case 7:		/* lb I(S),D */
-         * load, needed by Rewritei.ml's link-register-restore
-         * epilogue (`MOVW 0(SP),RLINK`) -- LW on riscv32, LD on
-         * riscv64, same reasoning as case 6's store width. *)
-        if not (fits_addi_imm offset)
-        then error node "TODO: load offset out of 12-bit range"
-        else
-          { size = 4; x = None; binary = (fun () ->
-            let funct3 = if is_64 then 3 (* LD *) else 2 (* LW *) in
-            [ op_itype 0x03 (* LOAD opcode *) funct3
-                rbase rt offset ]
-          )}
+        let funct3 = if is_64 then 3 (* LD *) else 2 (* LW *) in
+        gen_load node offset (fun () -> op_itype 0x03 funct3 rbase rt offset)
+
+    | Move1 (B_ A.S, Left (Indirect (rbase, offset)), GReg rt) ->
+        gen_load node offset (fun () -> op_itype 0x03 0 (* LB *) rbase rt offset)
+    | Move1 (B_ A.U, Left (Indirect (rbase, offset)), GReg rt) ->
+        gen_load node offset (fun () -> op_itype 0x03 4 (* LBU *) rbase rt offset)
+    | Move1 (H_ A.S, Left (Indirect (rbase, offset)), GReg rt) ->
+        gen_load node offset (fun () -> op_itype 0x03 1 (* LH *) rbase rt offset)
+    | Move1 (H_ A.U, Left (Indirect (rbase, offset)), GReg rt) ->
+        gen_load node offset (fun () -> op_itype 0x03 5 (* LHU *) rbase rt offset)
+
+    (* case 10:		/* sign extend */ *)
+    (* claude: register-to-register sign/zero-extend, e.g. "MOVB
+     * R1,R2" widening a byte already sitting in a register (as
+     * opposed to case 6/7's *memory* byte/half access above --
+     * disambiguated by the `from` gen being GReg here, Indirect
+     * there). goken's asm.c case 10 special-cases MOVBU as a single
+     * ANDI $0xFF (why: idiomatic/simpler than a shift pair for the
+     * zero-extend-byte case specifically -- goken doesn't do this
+     * for MOVHU, which goes through the general shift-pair path
+     * below with no arithmetic/sign-extend bit set). All other
+     * combinations (MOVB/MOVH/MOVHU) go through SLLI shift-left-then
+     * SRLI/SRAI shift-right-back, sign-extending through the top
+     * bits when the right shift is arithmetic (SRAI); riscv64/ojl
+     * widens the shift amount by 32 since the trick needs to punt
+     * the byte/half up to the *top* of a 64-bit register, not a
+     * 32-bit one. *)
+    | Move1 (B_ A.U, Left (GReg rf), GReg rt) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ op_itype op_opimm 7 (* ANDI *) rf rt 0xFF ]
+        )}
+    | Move1 (((B_ A.S | H_ _) as sz), Left (GReg rf), GReg rt) ->
+        let shift = (match sz with B_ _ -> 24 | H_ _ -> 16 | W_ _ | V_ _ -> assert false) in
+        let shift = if is_64 then shift + 32 else shift in
+        let arith_bit = (match sz with B_ A.S | H_ A.S -> 0x20 lsl 5 | _ -> 0) in
+        { size = 8; x = None; binary = (fun () ->
+          [ op_itype op_opimm 1 (* SLLI *) rf rt (shift land 0x3f);
+            op_itype op_opimm 5 (* SRLI/SRAI *) rt rt (shift lor arith_bit);
+          ]
+        )}
 
     (* --------------------------------------------------------------------- *)
     (* Other: not ported yet *)

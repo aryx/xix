@@ -78,6 +78,13 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
        *)
       | "MOVW" -> TMOVE2 W__
 
+      (* claude: byte/half loads/stores and register-to-register
+       * sign/zero extend (case 6/7/10) -- Ast_asmi's move1_size
+       * bundles size+sign together (B_/H_ of A.sign), unlike goken's
+       * grammar which has four separate mnemonics. *)
+      | "MOVB" -> TMOVE1 (B_ A.S) | "MOVBU" -> TMOVE1 (B_ A.U)
+      | "MOVH" -> TMOVE1 (H_ A.S) | "MOVHU" -> TMOVE1 (H_ A.U)
+
       | "ECALL" -> TSYSCALL
 
       (* claude: register-register arithmetic (case 0) and shift-

@@ -67,11 +67,51 @@
 * Phase 1 -- asm.c case backlog (goken/linkers/il/asm.c)
 Cases with a matching (* case N: *) comment already in Codegeni.ml:
 ** DONE case 2  addi $I,[R,]D (used for the prologue/epilogue SP
-   adjustment in Rewritei.ml, and for MOVW-immediate-fits-12-bit)
+   adjustment in Rewritei.ml, and for MOVW-immediate-fits-12-bit).
+   Later generalized (same case number) to the rest of the OP-IMM
+   family -- andi/ori/xori/slti/sltiu $I,[R,]D -- reusing
+   oprrr_arith_opcode's funct3 (SUB has no immediate form; SLL/SRL/
+   SRA's immediate forms are case 1, a different bit layout). Tested
+   via case2_general_riscv.s (+ riscv64_diff copy): PASS byte-
+   identical + PASS same exit code on both RV32 and RV64. This also
+   indirectly validates case 10's MOVBU-via-ANDI encoding below,
+   which reuses the exact same op_itype/op_opimm/funct3=7 path.
 ** DONE case 6  sb R,I(S) (store; needed by the link-register-save
-   prologue)
-** DONE case 7  lb I(S),D (load; needed by the link-register-restore
-   epilogue)
+   prologue) / case 7  lb I(S),D (load; needed by the link-register-
+   restore epilogue). Later generalized (same case numbers) to
+   Move1's B_/H_ byte/half loads/stores too (e.g. user-written
+   "MOVB R,I(S)"/"MOVB I(S),D"), reusing new op_stype/gen_store/
+   gen_load helpers -- goken's case 6/7 are fully generic over
+   SB/SH/SW/SD and LB/LBU/LH/LHU/LW/LD, the funct3 difference coming
+   purely from which mnemonic's optab entry was looked up, not from
+   the C code itself. Required extending the `gen` grammar
+   (Parser_asmi.mly) with a `con TOPAR reg TCPAR -> Indirect` rule
+   (mirroring Parser_asmv.mly/MIPS) since Indirect was previously
+   only ever constructed programmatically by Rewritei.ml's prologue/
+   epilogue, unreachable from a .s file. Tested via
+   case6_7_riscv.s (+ riscv64_diff copy): PASS byte-identical + PASS
+   same exit code on both RV32 and RV64.
+   Found and fixed a second, more serious pre-existing bug while
+   writing this fixture (the first to use a nonzero, non-multiple-
+   of-8 leaf frame size): Rewritei.ml's frame-size computation was
+   missing goken's obj.c padding step entirely (round declared size,
+   then bump by a literal 4 if the size's bit 2 has the "wrong"
+   parity -- the parity check itself is inverted between riscv32 and
+   riscv64), and separately was treating goken's `ptrsize` (the
+   RLINK-slot size added on top of the padded declared size to get
+   the actual SP-adjust amount) as a flat 4 on both arches, when
+   goken's own obj.c sets it to *8* on riscv64 (thechar=='j') --
+   RLINK is a full 8-byte pointer there. Fixed by threading `is_64`
+   into `Rewritei.rewrite` (CLI.ml) and adding `padded_declared_size`
+   and an arch-aware `ptrsize` function. Also had to special-case the
+   size-declared-as-0-but-non-leaf frame (needs room to spill RLINK
+   even with no real locals): goken's noop.c forces this to exactly
+   8 on *both* arches via a branch that only fires `ptrsize == 4`
+   (i.e. "2*ptrsize" is a riscv32-only workaround; riscv64's ptrsize
+   is already 8, no bump needed) -- naively using `2 * ptrsize is_64`
+   for both arches would silently double-count riscv64's case to 16,
+   which is exactly the regression case4_riscv64.s's own frame shape
+   (JAL-calling, `$0` declared) caught when this fix was first tried.
 ** DONE case 9  lui I1,D; addi I0,D (MOVW-immediate too big for 12 bits)
 ** DONE case 11 addi $I,R,D (address-of-global fast path)
 ** DONE case 20 lui/auipc I1,D; addi I0;D (address-of-global slow/
@@ -205,8 +245,31 @@ Not yet in Codegeni.ml at all:
    building block with no differential test of its own, same
    reasoning as JAL's bare-label form. PASS byte-identical + PASS
    same exit code on both RV32 and RV64.
-** TODO case 10 sign extend (MOVB/MOVH -- see the Move1 backlog note
-   in the plan doc)
+** DONE case 10 sign extend -- register-to-register MOVB/MOVBU/MOVH/
+   MOVHU (e.g. "MOVB R1,R2"), disambiguated from case 6/7's memory
+   access above by the `from` gen being GReg here rather than
+   Indirect. MOVBU is special-cased by goken as a single ANDI $0xFF
+   (funct3=7, reusing case 2's generalized op_itype/op_opimm path
+   above); MOVB/MOVH/MOVHU all go through an SLLI-then-SRLI/SRAI
+   shift pair instead (shift left by 24 or 16 to punt the byte/half
+   up to the top of the register, then shift back down -- arithmetic
+   for sign-extend, logical for zero-extend -- widened by +32 on
+   riscv64 since the trick needs the *top* of a 64-bit register, not
+   a 32-bit one).
+   Discovered goken's own grammar has NO register-to-register syntax
+   for its LMOVB-token mnemonics at all (`LMOVB rreg ',' addr` / `addr
+   ',' rreg`, where `addr` = `oreg | name`, never a bare register) --
+   even though the underlying machinery (asm.c's case 10, optab.c's
+   `AMOVB C_ZREG C_REG` entry) fully supports a register "from"
+   operand (`C_ZREG` accepts `C_REG` per span.c's `cmp()`). So this
+   case, like case 4's bare "JAL label" and case 8's standalone
+   "LUI", has real, reachable machinery in goken's own linker with no
+   matching concrete syntax to differentially test against -- xix's
+   MOVB/MOVH/MOVBU/MOVHU register-to-register syntax is kept as a
+   real, directly-usable building block, but its correctness rests
+   on reusing the exact same already-byte-verified encoding helpers
+   as case 1 (SLLI/SRAI shift-immediate) and case 2 (ANDI), not on a
+   dedicated differential fixture of its own.
 ** TODO case 12 mov r,lext => lui/auipc I1,T; sb r,I0(T)
 ** TODO case 13 mov lext, r => lui/auipc I1,T; lb r,I0(T)
 ** TODO case 14 op $lcon,[r,]d => lui L1,T; addi $L0,T,T; op T,r,d

@@ -232,6 +232,11 @@ reg:
 /*(*TODO: far more cases *)*/
 gen:
  | reg   { GReg $1 }
+ /*(* claude: needed for case 6/7/10's Move1 byte/half loads/stores
+    * and case 10's register-to-register sign/zero extend, e.g.
+    * "MOVB 4(R2),R5" -- mirrors Parser_asmv.mly's (MIPS) identical
+    * rule. *)*/
+ | con TOPAR reg TCPAR { Indirect ($3, $1) }
 
 ximm:
  | imm             { Int $1 }

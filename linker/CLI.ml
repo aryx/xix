@@ -261,7 +261,8 @@ let linki (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
     | Some kind -> Profile.rewrite kind arch.rTMP symbols graph
   in
   let data = data @ new_data in
-  let graph = Rewritei.rewrite graph in
+  let is_64 = (match config.arch with Arch.Riscv64 -> true | _ -> false) in
+  let graph = Rewritei.rewrite is_64 graph in
   let symbols2, (data_size, bss_size) =
     Layout.layout_data symbols data in
   (* claude: setSB's value is BIG, not 0 -- see Codegeni.ml's `big`

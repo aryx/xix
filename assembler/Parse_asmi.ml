@@ -88,6 +88,16 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
       | "MOVB" -> TMOVE1 (B_ A.S) | "MOVBU" -> TMOVE1 (B_ A.U)
       | "MOVH" -> TMOVE1 (H_ A.S) | "MOVHU" -> TMOVE1 (H_ A.U)
 
+      (* claude: case 17 -- fcvt, split by register-file direction
+       * (see Ast_asmi.ml's FCVTFF/FCVTFI/FCVTIF comment). Only the
+       * signed-integer conversions are wired (goken has no MOVFWU/
+       * MOVDWU/MOVWUF/MOVWUD mnemonics for the unsigned FCVT.*.WU/
+       * FCVT.WU.* forms either -- consistent, not a gap this port
+       * introduces). *)
+      | "MOVFD" -> TFCVTFF MOVFD | "MOVDF" -> TFCVTFF MOVDF
+      | "MOVFW" -> TFCVTFI MOVFW | "MOVDW" -> TFCVTFI MOVDW
+      | "MOVWF" -> TFCVTIF MOVWF | "MOVWD" -> TFCVTIF MOVWD
+
       | "ECALL" -> TSYSCALL
 
       (* claude: register-register arithmetic (case 0) and shift-

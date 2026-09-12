@@ -301,6 +301,7 @@ let rewrite (is_64 : bool) (cg : instr T.code_graph) : instr T.code_graph =
      | T.I (Arith _ | ArithMul _ | ArithF _ | LUI _
            | Move1 _ | Move2 _ | FENCE_I
            | JMP _ | JAL _ | JALR _ | JALRI _ | Bxx _
+           | FCVTFF _ | FCVTFI _ | FCVTIF _
            | ECALL | BREAK | SYS | CSR _
            ) ->
         frame

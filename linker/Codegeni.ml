@@ -122,6 +122,29 @@ let op_utype opcode (R rd) (imm20 : int) : Bits.t =
 let op_rtype opcode funct3 funct7 (R rs1) (R rs2) (R rd) : Bits.t =
   [(opcode, 0); (rd, 7); (funct3, 12); (rs1, 15); (rs2, 20); (funct7, 25)]
 
+let op_fp = 0x53 (* OP-FP major opcode -- goken's OOP_FP *)
+(* claude: case 17's own shape (goken's `OP_RF(rs1,rs2,rd,rm)` ==
+ * `OPX | rm<<12 | rd<<7 | R(rs1)<<15 | R(rs2)<<20 | o->param<<25` --
+ * same R-type field layout as op_rtype, just with the funct3 slot
+ * repurposed as `rm` (rounding mode) and the "rs2" register-number
+ * slot repurposed as a format selector, not a real second operand
+ * register. The `o->param<<25` funct7 term is easy to miss reading
+ * asm.c's case 17 body alone -- it's buried in the OP_RF macro
+ * definition itself, a screen away -- so every (funct7, rs2_sel, rm)
+ * triple below was verified empirically against real goken (`ia`/
+ * `il`), not just derived from the C source: MOVFD/MOVDF -> FCVT.D.S
+ * (funct7=0x21,rs2=0)/FCVT.S.D (0x20,1); MOVFW/MOVDW -> FCVT.W.S
+ * (0x60,0)/FCVT.W.D (0x61,0), rm=1 (round-to-zero, goken's own
+ * `o->a3==C_REG` check -- always true here since the destination is
+ * always a plain register for these two); MOVWF/MOVWD -> FCVT.S.W
+ * (0x68,0)/FCVT.D.W (0x69,0), rm=7 (dynamic rounding, destination is
+ * always a float register for these two). *)
+(* claude: takes raw ints (not `(R _)`/`(FR _)`) since rs1/rd can be
+ * either register file here, depending on conversion direction --
+ * the caller destructures whichever constructor applies. *)
+let op_rftype (funct7 : int) (rs2_sel : int) (rm : int) (rs1 : int) (rd : int) : Bits.t =
+  [(op_fp, 0); (rd, 7); (rm, 12); (rs1, 15); (rs2_sel, 20); (funct7, 25)]
+
 (* claude: (funct3, funct7) for case 0 (register-register) and case 1
  * (shift-immediate, which reuses funct3/the sign of funct7 as its
  * "which shift" selector -- see op_itype_shift below) -- goken's
@@ -403,6 +426,25 @@ let rules (is_64 : bool)
         { size = 4; x = None; binary = (fun () ->
           [ op_utype op_lui rt i ]
         )}
+
+    (* --------------------------------------------------------------------- *)
+    (* Floating point conversion *)
+    (* --------------------------------------------------------------------- *)
+
+    (* case 17: fcvt S,D -- see op_rftype's own comment for the
+     * (funct7, rs2_sel, rm) triple per direction. *)
+    | FCVTFF (MOVFD, (FR fs), (FR fd)) ->
+        { size = 4; x = None; binary = (fun () -> [ op_rftype 0x21 0 7 fs fd ]) }
+    | FCVTFF (MOVDF, (FR fs), (FR fd)) ->
+        { size = 4; x = None; binary = (fun () -> [ op_rftype 0x20 1 7 fs fd ]) }
+    | FCVTFI (MOVFW, (FR fs), (R rt)) ->
+        { size = 4; x = None; binary = (fun () -> [ op_rftype 0x60 0 1 fs rt ]) }
+    | FCVTFI (MOVDW, (FR fs), (R rt)) ->
+        { size = 4; x = None; binary = (fun () -> [ op_rftype 0x61 0 1 fs rt ]) }
+    | FCVTIF (MOVWF, (R rs), (FR fd)) ->
+        { size = 4; x = None; binary = (fun () -> [ op_rftype 0x68 0 7 rs fd ]) }
+    | FCVTIF (MOVWD, (R rs), (FR fd)) ->
+        { size = 4; x = None; binary = (fun () -> [ op_rftype 0x69 0 7 rs fd ]) }
 
     (* --------------------------------------------------------------------- *)
     (* System *)

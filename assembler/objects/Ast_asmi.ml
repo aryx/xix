@@ -101,6 +101,20 @@ type instr =
   (* TODO: in theory takes F | D | W, not just A.floatp_precision *)
   | ArithF of (arithf_opcode * A.floatp_precision) *
        freg * freg option * freg
+  (* claude: case 17 -- "fcvt S,D" (goken's `OP_RF(from,func3,to,rm)`,
+   * a single shared case for all 6 real conversion directions --
+   * MOVFD/MOVDF (float<->double, no int involved) and MOVFW/MOVDW/
+   * MOVWF/MOVWD (float or double <-> a plain integer register).
+   * Split into 3 constructors by register-file direction (rather
+   * than one polymorphic instr, since `freg`/`reg` are genuinely
+   * different types here) -- see Codegeni.ml's op_rftype comment for
+   * the funct7/rs2-field/rm encoding, empirically verified against
+   * goken (not just derived from asm.c's own OP_RF macro) since the
+   * funct7 term is easy to miss reading the C source (buried in a
+   * macro definition one screen away from the case body itself). *)
+  | FCVTFF of fcvt_ff_opcode * freg * freg
+  | FCVTFI of fcvt_fi_opcode * freg * reg
+  | FCVTIF of fcvt_if_opcode * reg * freg
   (* Special RISCV: "lui $I,D" -- loads the raw 32-bit immediate's
    * upper 20 bits (bits [31:12], no rounding, unlike case 9's
    * MOVW-immediate expansion which rounds to compensate for ADDI's
@@ -184,6 +198,10 @@ type instr =
     | ABS_ | NEG_
     | CMPEQ_ | CMPGE_ | CMPGT_
 
+  and fcvt_ff_opcode = MOVFD (* float->double *) | MOVDF (* double->float *)
+  and fcvt_fi_opcode = MOVFW (* float->int *) | MOVDW (* double->int *)
+  and fcvt_if_opcode = MOVWF (* int->float *) | MOVWD (* int->double *)
+
   and move1_size = 
      | B_ (* Byte *) of A.sign
      | H_ (* Half world *) of A.sign
@@ -231,6 +249,7 @@ let branch_opd_of_instr (instr: instr) : A.branch_operand option =
   | JALR (_, opd) -> Some opd
   | Bxx (_, _, _, opd) -> Some opd
   | Arith _ | ArithF _ | ArithMul _ | LUI _
+  | FCVTFF _ | FCVTFI _ | FCVTIF _
   | Move1 _ | Move2 _ | FENCE_I
   | ECALL | SYS | BREAK | CSR _ | JALRI _
      -> None
@@ -268,5 +287,6 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
       A.visit_globals_branch_operand f b
   | JALRI _
   | Arith _ | ArithMul _ | ArithF _ | LUI _
+  | FCVTFF _ | FCVTFI _ | FCVTIF _
   | FENCE_I
   | ECALL | SYS | BREAK | CSR _ -> ()

@@ -34,6 +34,9 @@ module L = Location_cpp
 
 %token <Ast_asmi.arith_opcode> TARITH
 %token <Ast_asmi.arithf_opcode * Ast_asm.floatp_precision> TARITHF
+%token <Ast_asmi.fcvt_ff_opcode> TFCVTFF
+%token <Ast_asmi.fcvt_fi_opcode> TFCVTFI
+%token <Ast_asmi.fcvt_if_opcode> TFCVTIF
 %token <Ast_asmi.mul_opcode> TMULOP
 %token TSYSCALL TRFE TBREAK
 %token TJMP TJAL
@@ -200,6 +203,13 @@ instr:
 
  | TARITHF freg         TC freg { ArithF ($1, $2, None, $4) }
  | TARITHF freg TC freg TC freg { ArithF ($1, $2, Some $4, $6) }
+
+ /*(* case 17: "MOVFD Fs,Fd" / "MOVFW Fs,Rd" / "MOVWF Rs,Fd" (fcvt,
+    * split by register-file direction -- see Ast_asmi.ml's FCVTFF/
+    * FCVTFI/FCVTIF comment). *)*/
+ | TFCVTFF freg TC freg { FCVTFF ($1, $2, $4) }
+ | TFCVTFI freg TC reg  { FCVTFI ($1, $2, $4) }
+ | TFCVTIF reg TC freg  { FCVTIF ($1, $2, $4) }
 
  /*(* TODO? check "one side must be register" but va code buggy I think *)*/
  | TMOVE1 lgen TC gen           { Move1 ($1, $2, $4) }

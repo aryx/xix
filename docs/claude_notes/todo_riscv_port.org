@@ -377,7 +377,24 @@ Not yet in Codegeni.ml at all:
    copy): PASS byte-identical + PASS same exit code on both RV32 and
    RV64 (this fixture is what originally caught the RLINK bug above,
    on RV64 specifically).
-** TODO case 17 fcvt S,D
+** DONE case 17 fcvt S,D
+   Covers all 6 real conversion directions (goken's MOVFD/MOVDF,
+   float<->double; MOVFW/MOVDW/MOVWF/MOVWD, int<->float/double), split
+   at the AST level into `FCVTFF`/`FCVTFI`/`FCVTIF` by register-file
+   direction (bumped Object_file.version 27->28). New `op_rftype`
+   helper (goken's `OP_RF`) -- the (funct7, rs2-field, rounding-mode)
+   triple per direction was verified empirically against real goken
+   (assembling each mnemonic and disassembling under qemu), not just
+   derived from asm.c's case 17 body: the funct7 term
+   (`o->param<<25`) is easy to miss reading that body alone, since
+   it's buried in the OP_RF macro's own definition a screen away.
+   Unsigned int conversions (MOVFWU/MOVDWU/MOVWUF/MOVWUD, FCVT.*.WU/
+   FCVT.WU.*) aren't wired -- goken itself has no such mnemonics
+   either, so this isn't a gap this port introduces.
+   Added tests/linker/riscv_diff/fcvt_case17.s (+ riscv64_diff copy),
+   exercising all 4 of MOVWF/MOVFD/MOVDF/MOVFW (a round-trip through
+   both float and double) plus MOVWD/MOVDW directly: PASS byte-
+   identical + PASS same exit code on both RV32 and RV64.
 ** TODO case 18 lui L1, T; jal [r,]L0(T)
 ** DONE (confirmed dead in goken, not implemented) case 19 addiw $0, rs, rd. Investigated: goken's optab has a
    real `AMOVW C_REG C_REG` entry mapping to this (ADDIW, zero

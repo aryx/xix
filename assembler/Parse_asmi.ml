@@ -80,6 +80,25 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
 
       | "ECALL" -> TSYSCALL
 
+      (* claude: register-register arithmetic (case 0) and shift-
+       * immediate (case 1) -- the RV32-native forms only (`w option`
+       * = None), not the explicit-32-bit-on-RV64 *W variants
+       * (ADDW/SLLW/etc, a separate opcode family -- see
+       * oprrr_arith_opcode's comment in Codegeni.ml). *)
+      | "ADD" -> TARITH (ADD None) | "SUB" -> TARITH (SUB None)
+      | "SLL" -> TARITH (SLL None) | "SRL" -> TARITH (SRL None)
+      | "SRA" -> TARITH (SRA None)
+      | "SLT" -> TARITH (SLT A.S) | "SLTU" -> TARITH (SLT A.U)
+      | "XOR" -> TARITH XOR | "OR" -> TARITH OR | "AND" -> TARITH AND
+
+      (* claude: MULH/MULHSU/MULHU aren't wired -- Ast_asmi's
+       * mul_opcode has no constructor for them yet (`MUL` alone,
+       * with a standing "TODO: lots of MUL" -- see the AST); left
+       * as a follow-up rather than guessed at. *)
+      | "MUL" -> TMULOP MUL
+      | "DIV" -> TMULOP (DIV (None, A.S)) | "DIVU" -> TMULOP (DIV (None, A.U))
+      | "REM" -> TMULOP (REM (None, A.S)) | "REMU" -> TMULOP (REM (None, A.U))
+
       | _ -> TIDENT s
       )
 

@@ -99,6 +99,7 @@ let fits_addi_imm x = x >= -big && x < big
  *)
 
 let op_opimm = 0x13 (* ADDI/SLTI/etc *)
+let op_op = 0x33 (* ADD/SUB/AND/OR/etc (register-register) -- goken's OOP *)
 let op_lui = 0x37
 (* claude: AUIPC (PC-relative "add upper immediate"); riscv64/ojl uses
  * this instead of LUI for absolute-address computations -- see
@@ -115,6 +116,34 @@ let op_itype opcode funct3 (R rs1) (R rd) (imm : int) : Bits.t =
  *)
 let op_utype opcode (R rd) (imm20 : int) : Bits.t =
   [(opcode, 0); (rd, 7); ((imm20 lsr 12) land 0xfffff, 12)]
+
+(* R-type: funct7[31:25] rs2[24:20] rs1[19:15] funct3[14:12] rd[11:7]
+ * opcode[6:0] -- goken's OP_R(rs1,rs2,rd) (case 0). *)
+let op_rtype opcode funct3 funct7 (R rs1) (R rs2) (R rd) : Bits.t =
+  [(opcode, 0); (rd, 7); (funct3, 12); (rs1, 15); (rs2, 20); (funct7, 25)]
+
+(* claude: (funct3, funct7) for case 0 (register-register) and case 1
+ * (shift-immediate, which reuses funct3/the sign of funct7 as its
+ * "which shift" selector -- see op_itype_shift below) -- goken's
+ * optab.c func3/param columns. Only the RV32-native (`w option =
+ * None`) forms; the explicit-32-bit-on-RV64 `*W` variants (ADDW,
+ * SLLW, etc -- a genuinely different opcode family, OOP_32 not OOP)
+ * are left as a follow-up, same scoping as everywhere else this
+ * session: fail loudly rather than silently emit the wrong opcode. *)
+let oprrr_arith_opcode (op : arith_opcode) : int * int =
+  match op with
+  | ADD None -> 0, 0
+  | SUB None -> 0, 0x20
+  | SLL None -> 1, 0
+  | SLT S -> 2, 0
+  | SLT U -> 3, 0
+  | XOR -> 4, 0
+  | SRL None -> 5, 0
+  | SRA None -> 5, 0x20
+  | OR -> 6, 0
+  | AND -> 7, 0
+  | ADD (Some _) | SUB (Some _) | SLL (Some _) | SRL (Some _) | SRA (Some _) ->
+      failwith "TODO:oprrr_arith_opcode RV64 *W ops"
 
 (* claude: goken's case 9/20 pattern for materializing an absolute
  * 32-bit value v into rd: LUI the upper 20 bits, rounding up (adding
@@ -163,6 +192,38 @@ let rules (is_64 : bool)
     (* --------------------------------------------------------------------- *)
     (* Arithmetic *)
     (* --------------------------------------------------------------------- *)
+
+    (* case 0:		/* add S,[R,]D */ *)
+    (* claude: register-register arith. goken's default-middle-reg
+     * rule (asm.c's `if(r==NREG) ... default: r=p->to.reg`) matches
+     * the existing `middle ||| rt` convention already used by case 2
+     * below. OP_R(rs1,rs2,rd) = OP_R(r, p->from.reg, p->to.reg) --
+     * note rs1 is the *middle* operand and rs2 the *from* one, not
+     * the other way around (confirmed via `il -a`: "ADD R1,R2,R3"
+     * encodes rs1=R2(middle), rs2=R1(from), rd=R3). *)
+    | Arith (((ADD None | SUB None | SLL None | SRL None | SRA None
+              | SLT _ | XOR | OR | AND) as op), Reg rf, middle, rt) ->
+        let r = middle ||| rt in
+        let (funct3, funct7) = oprrr_arith_opcode op in
+        { size = 4; x = None; binary = (fun () ->
+          [ op_rtype op_op funct3 funct7 r rf rt ]
+        )}
+
+    (* case 1:		/* slli $I,[R,]D */ *)
+    (* claude: shift-by-immediate. Same rd/rs1 shape as case 2's
+     * ADDI, but the immediate field packs the shift amount (bits
+     * [4:0], goken masks 0x3F for RV64's wider shamt but only
+     * [4:0] matters on RV32) together with a fixed selector bit
+     * (bit 10, i.e. `param<<5` in goken, which is 0 for SLLI/SRLI
+     * or 0x20<<5 for SRAI) that lands in the immediate's own
+     * bits [11:5] -- the real ISA's funct7 field for shift-immediate
+     * specifically. *)
+    | Arith (((SLL None | SRL None | SRA None) as op), Imm i, middle, rt) ->
+        let r = middle ||| rt in
+        let (funct3, funct7) = oprrr_arith_opcode op in
+        { size = 4; x = None; binary = (fun () ->
+          [ op_itype op_opimm funct3 r rt ((i land 0x3f) lor (funct7 lsl 5)) ]
+        )}
 
     (* case 2:		/* addi $I,[R,]D */ *)
     | Arith (ADD None, Imm i, middle, rt) ->

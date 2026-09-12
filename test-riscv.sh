@@ -14,6 +14,7 @@ cd "$(dirname "$0")"
 # default) when not TEXT _start.
 CASES=(
     "tests/linker/riscv_diff/hello_linux_riscv.s:_start"
+    "tests/linker/riscv_diff/case0_1_riscv.s:_start"
 )
 
 FAIL=0

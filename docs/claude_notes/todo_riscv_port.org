@@ -77,11 +77,35 @@ Cases with a matching (* case N: *) comment already in Codegeni.ml:
 ** DONE case 20 lui/auipc I1,D; addi I0;D (address-of-global slow/
    absolute path; also used for address-of-procedure/STText2)
 ** DONE case 24 SYS (ECALL)
+** DONE case 0  add S,[R,]D (ADD/SUB/AND/OR/XOR/SLT/SLTU/SLL/SRL/SRA,
+   register-register) / case 1  slli $I,[R,]D (SLL/SRL/SRA,
+   shift-by-immediate) -- the RV32-native forms only (`w option` =
+   None); the explicit-32-bit-on-RV64 *W variants (ADDW/SLLW/etc,
+   a separate opcode family, OOP_32 not OOP) are a follow-up.
+   goken's default-middle-register rule (asm.c: `if(r==NREG) ...
+   default: r=p->to.reg`) matches the `middle ||| rt` convention
+   already used by case 2. New op_rtype helper (R-type encoding) and
+   oprrr_arith_opcode (funct3/funct7 per mnemonic, also reused by
+   case 1's shift-immediate encoding, which packs the same funct7
+   bit into the immediate's own [11:5] bits). Confirmed via `il -a`
+   directly that OP_R's rs1 is the *middle* operand and rs2 the
+   *from* one (not the reverse) -- e.g. "ADD R1,R2,R3" encodes
+   rs1=R2(middle), rs2=R1(from), rd=R3.
+   Also wired up the ADD/SUB/SLL/SRL/SRA/SLT/SLTU/XOR/OR/AND
+   (TARITH) and MUL/DIV/DIVU/REM/REMU (TMULOP) keywords in
+   Parse_asmi.ml -- none of them were wired at all before this
+   (only MOVW/ECALL were). MULH/MULHSU/MULHU left unwired: Ast_asmi's
+   mul_opcode has no constructor for them yet (`MUL` alone, with a
+   standing "TODO: lots of MUL").
+   Added tests/linker/riscv_diff/case0_1_riscv.s (all ten register-
+   register ops plus SLL/SRL/SRA-by-immediate, chained into the exit
+   code) and its riscv64_diff copy (case0_1_riscv64.s, since
+   Codegeni.ml is fully shared between oil/ojl and nothing here is
+   RV64-specific). PASS byte-identical + PASS same exit code on
+   both RV32 and RV64. Verified: full ARM/MIPS baselines and make
+   test (134/134) all still pass.
 
 Not yet in Codegeni.ml at all:
-** TODO case 0  add S,[R,]D (register-register add; also likely how
-   plain register-to-register MOVW should lower -- "add S,zero,D")
-** TODO case 1  slli $I,[R,]D
 ** TODO case 3  beq S,[R,]L
 ** TODO case 4  jal [D,]L
 ** TODO case 5  jalr [D,]I(S) (RET when not-leaf uses this shape too,

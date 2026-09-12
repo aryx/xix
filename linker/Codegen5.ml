@@ -1216,6 +1216,23 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               )}
         )
 
+    (* case 59/60/61: movw/bu R<<I(R),R -> ldr indexed / movb R(R),R
+     * -> ldrsb indexed / movw/b/bu R,R<<[IR](R) -> str indexed --
+     * NOT PORTED. Same shape as case 62/63 (see todo_arm_port.org):
+     * goken's 5a grammar has no rule combining a shift operand with a
+     * base register at all, so this addressing mode can't be spelled
+     * in real .s text either -- compilers/5c/peep.c confirms it's a
+     * compiler peephole (fusing a separate shift + load/store into
+     * one D_SHIFT-operand instruction), not something 5a ever parses.
+     * No way to build a byte-identical fixture against 5a/5l for it;
+     * left unimplemented rather than repeating the CASE/BCASE
+     * detour (see that entry's writeup for the fuller cost/benefit).
+     * Also unlikely to ever be needed: xix's own future C compiler
+     * (occ) is planned to use c-- as a backend, which does its own
+     * peepholing and emits plain, unfused assembly -- not this exact
+     * fused-shift-into-addressing-mode shape goken's 5c produces.
+     *)
+
     (* Swap *)
     (* case 40:	/* swp oreg,reg,reg */ *)
     (* claude: SWPW/SWPBU, ARM's atomic exchange (deprecated since

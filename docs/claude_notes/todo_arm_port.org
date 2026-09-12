@@ -406,9 +406,19 @@ Not yet in Codegen5.ml at all:
 ** TODO case 53 floating point load, long offset UGLY
 ** TODO case 56 move to FP[CS]R
 ** TODO case 57 move from FP[CS]R
-** TODO case 59 movw/bu R<<I(R),R -> ldr indexed
-** TODO case 60 movb R(R),R -> ldrsb indexed
-** TODO case 61 movw/b/bu R,R<<[IR](R) -> str indexed
+** TODO (investigated, deliberately not implemented) case 59 movw/bu
+   R<<I(R),R -> ldr indexed / case 60 movb R(R),R -> ldrsb indexed /
+   case 61 movw/b/bu R,R<<[IR](R) -> str indexed -- same story as
+   case 62/63 (see that entry): goken's 5a grammar has no rule
+   combining a shift operand with a base register, so this can't be
+   spelled in real .s text; compilers/5c/peep.c confirms it's a
+   compiler peephole (fusing a separate shift + load/store into one
+   D_SHIFT-operand instruction) rather than something 5a ever parses.
+   No way to build a byte-identical fixture against 5a/5l. Documented
+   in Codegen5.ml instead of repeating the CASE/BCASE detour. Also
+   unlikely to ever be needed: xix's own future C compiler (occ) is
+   planned to use c-- as a backend, which does its own peepholing and
+   emits plain, unfused assembly, not this exact shape.
 ** TODO (investigated, deliberately not implemented) case 62 case R
    -> movw R<<2(PC),PC / case 63 bcase -- switch-statement jump
    table. Confirmed real (unlike MIPS's case 45/46, see

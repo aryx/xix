@@ -167,6 +167,64 @@ let gen_absolute (rd : reg) (v : int) : Bits.t list = gen_absolute_via op_lui rd
  * value. Caller is responsible for passing that delta as `v`. *)
 let gen_pcrelative (rd : reg) (v : int) : Bits.t list = gen_absolute_via op_auipc rd v
 
+let op_branch = 0x63 (* BEQ/BNE/BLT/BGE/BLTU/BGEU -- goken's OBRANCH *)
+let op_jal = 0x6f (* goken's OJAL *)
+
+(* B-type: imm[12|10:5] rs2[24:20] rs1[19:15] funct3[14:12]
+ * imm[4:1|11] opcode[6:0] -- goken's OP_B(rs1,rs2,imm) macro, ported
+ * bit-scatter-for-bit-scatter rather than re-derived from the ISA
+ * manual's field layout, to stay byte-for-byte faithful. *)
+let op_btype funct3 (R rs1) (R rs2) (imm : int) : Bits.t =
+  [ (op_branch, 0);
+    ((imm asr 11) land 0x1, 7);
+    ((imm asr 1) land 0xf, 8);
+    (funct3, 12);
+    (rs1, 15);
+    (rs2, 20);
+    ((imm asr 5) land 0x3f, 25);
+    ((imm asr 12) land 0x1, 31);
+  ]
+
+(* J-type: imm[20|10:1|11|19:12] rd[11:7] opcode[6:0] -- goken's
+ * OP_J(rd,imm) macro, same bit-for-bit porting approach as OP_B. *)
+let op_jtype (R rd) (imm : int) : Bits.t =
+  [ (op_jal, 0);
+    (rd, 7);
+    ((imm asr 12) land 0xff, 12);
+    ((imm asr 11) land 0x1, 20);
+    ((imm asr 1) land 0x3ff, 21);
+    ((imm asr 20) land 0x1, 31);
+  ]
+
+(* claude: (funct3) for case 3's branch conditions -- goken's
+ * optab.c func3 column. GT/LE (b_condition's own AST constructors)
+ * have no direct hardware encoding at all -- goken's assembler
+ * doesn't accept "BLE"/"BGT" mnemonics either (real RISC-V has no
+ * such instructions; they'd need an operand-swapping pseudo-op
+ * rewrite, e.g. "BLE a,b,L" => "BGE b,a,L", which isn't wired in
+ * the grammar -- see Parse_asmi.ml). *)
+let opirr_bxx_funct3 (c : b_condition) : int =
+  match c with
+  | EQ -> 0
+  | NE -> 1
+  | LT A.S -> 4
+  | GE A.S -> 5
+  | LT A.U -> 6
+  | GE A.U -> 7
+  | GT _ | LE _ -> failwith "TODO:opirr_bxx_funct3 GT/LE (no direct RISC-V encoding)"
+
+(* claude: RISC-V has no branch-delay slot (unlike MIPS -- see
+ * notes_riscv_port_plan.txt), so a branch/jump's immediate is just a
+ * plain PC-relative delta, no -4/-8 bias to account for. `node.
+ * real_pc` and the branch target's `real_pc` are both absolute (not
+ * goken's text-relative raw `pc`), but since this is a *difference*
+ * the constant INITTEXT offset cancels out either way -- same
+ * reasoning already used for case 20's riscv64/AUIPC delta. *)
+let branch_delta (node : 'a T.node) : int =
+  match node.branch with
+  | None -> raise (Impossible "resolving should have set the branch field")
+  | Some ndst -> ndst.real_pc - node.real_pc
+
 (*****************************************************************************)
 (* The rules! *)
 (*****************************************************************************)
@@ -260,6 +318,66 @@ let rules (is_64 : bool)
           [ op_itype 0x67 (* JALR opcode *) 0 rt rZERO 0 ]
         )}
 
+    (* case 4:	/* jal [D,]L */ *)
+    (* claude: unconditional jump-to-label (JMP, no link -- goken's C
+     * defaults `r` to REGZERO here, and JMP's own grammar production
+     * never allows an explicit override) and jump-and-link-to-label
+     * with an explicit link register (JALR here despite the
+     * confusing name clash with goken's separate JALR/case-5
+     * indirect-through-register form -- see the AST comment on
+     * Ast_asmi.ml's JALR: xix's own grammar produces JALR, not JAL,
+     * for "JAL reg,label" syntax, reusing the same constructor as
+     * the genuinely-indirect "JALR reg,(reg2)" form; this arm
+     * exactly targets the label-shaped Absolute case, the other
+     * (IndirectJump, an actual nonzero-rd computed jump) is a
+     * follow-up -- see docs/claude_notes/todo_riscv_port.org).
+     * Bare `JAL` (Ast_asmi's own JAL constructor, defaulting r to
+     * REGLINK, no explicit register at all) is also wired here for
+     * completeness, even though it can't be verified directly
+     * against goken -- goken's own "JAL" mnemonic grammar production
+     * *always* requires an explicit register (`LCALL sreg ',' rel`),
+     * so there's no matching goken source syntax to diff against;
+     * it shares the exact same encoding path as the tested
+     * JALR-with-Absolute arm below, just with a different r. *)
+    | JMP { contents = (Absolute _) } ->
+        { size = 4; x = None; binary = (fun () ->
+          [ op_jtype rZERO (branch_delta node) ]
+        )}
+    | JAL { contents = (Absolute _) } ->
+        { size = 4; x = None; binary = (fun () ->
+          [ op_jtype rLINK (branch_delta node) ]
+        )}
+    | JALR (rd, { contents = (Absolute _) }) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ op_jtype rd (branch_delta node) ]
+        )}
+
+    (* case 3:	/* beq S,[R,]L */ *)
+    (* claude: goken's own grammar (a.y) assigns operands
+     * asymmetrically between the 1- and 2-register forms, *not* a
+     * simple "middle defaults to zero" like every other case this
+     * session: "BEQ R1,R2,L" (2 explicit regs) puts from=R1,
+     * reg(middle)=R2, matching case 3's `OP_B(r=middle, from, v)`
+     * formula directly (rs1=R2,rs2=R1) -- but "BEQ R1,L" (1 reg)
+     * is REWRITTEN BY THE GRAMMAR ITSELF into from=$zero,reg=R1
+     * (`outcode($1, &regzero, $2.reg, &$4)` in a.y), landing R1 in
+     * the *middle* slot, not `from` -- so it encodes as rs1=R1,
+     * rs2=$zero (branch if R1 == 0), not rs1=0,rs2=R1 as a naive
+     * "default the omitted operand to zero" reading of case 3's C
+     * would suggest. Confirmed by decoding goken's actual output
+     * bytes for both forms directly (not just eyeballing `il -a`'s
+     * pretty-printed text, which turned out ambiguous about
+     * operand order). *)
+    | Bxx (cond, GReg rf, middle, { contents = (Absolute _) }) ->
+        let (rs1, rs2) = (match middle with
+          | Some rm -> (rm, rf)
+          | None -> (rf, rZERO)
+        ) in
+        let funct3 = opirr_bxx_funct3 cond in
+        { size = 4; x = None; binary = (fun () ->
+          [ op_btype funct3 rs1 rs2 (branch_delta node) ]
+        )}
+
     (* --------------------------------------------------------------------- *)
     (* Memory / Address *)
     (* --------------------------------------------------------------------- *)
@@ -342,8 +460,20 @@ let rules (is_64 : bool)
 
     | Move2 (W__, Left (Gen (GReg rf)), Gen (Indirect (rbase, offset))) ->
         (* case 6:		/* sb R,I(S) */
-         * store, needed by Rewritei.ml's link-register-save
-         * prologue (`MOVW RLINK,0(SP)`). *)
+         * word/doubleword store (funct3=010=SW on riscv32, 011=SD on
+         * riscv64 -- RLINK is a full pointer, so its save must widen
+         * with the arch; goken's case 6 covers SB/SH/SW/SD generally,
+         * keyed off the move's size, but only Word is wired here since
+         * that's all Rewritei.ml's link-register-save prologue needs,
+         * `MOVW RLINK,0(SP)`; the byte/half variants are a follow-up
+         * once move2_size grows B__/H__ constructors -- see
+         * Parse_asmi.ml's TODO comment). claude: this previously
+         * hardcoded funct3=0 (SB, byte store) despite being reached
+         * only for W__ moves -- silently wrong (a byte store instead
+         * of a word/doubleword store) until case4's JAL-triggered
+         * non-leaf prologue exercised it byte-for-byte against goken
+         * for the first time (SW on riscv32; the is_64/SD gap was
+         * then caught the same way testing case4 on riscv64). *)
         if not (fits_addi_imm offset)
         then error node "TODO: store offset out of 12-bit range"
         else
@@ -351,19 +481,22 @@ let rules (is_64 : bool)
             (* S-type: imm[31:25] rs2[24:20] rs1[19:15] funct3[14:12]
              * imm[11:7] opcode[6:0] *)
             let (R rs2) = rf and (R rs1) = rbase in
-            [ [(0x23, 0); (offset land 0x1f, 7); (0, 12);
+            let funct3 = if is_64 then 3 (* SD *) else 2 (* SW *) in
+            [ [(0x23, 0); (offset land 0x1f, 7); (funct3, 12);
                (rs1, 15); (rs2, 20); ((offset lsr 5) land 0x7f, 25)] ]
           )}
 
     | Move2 (W__, Left (Gen (Indirect (rbase, offset))), Gen (GReg rt)) ->
         (* case 7:		/* lb I(S),D */
          * load, needed by Rewritei.ml's link-register-restore
-         * epilogue (`MOVW 0(SP),RLINK`). *)
+         * epilogue (`MOVW 0(SP),RLINK`) -- LW on riscv32, LD on
+         * riscv64, same reasoning as case 6's store width. *)
         if not (fits_addi_imm offset)
         then error node "TODO: load offset out of 12-bit range"
         else
           { size = 4; x = None; binary = (fun () ->
-            [ op_itype 0x03 (* LOAD opcode *) 2 (* funct3=010=LW *)
+            let funct3 = if is_64 then 3 (* LD *) else 2 (* LW *) in
+            [ op_itype 0x03 (* LOAD opcode *) funct3
                 rbase rt offset ]
           )}
 

@@ -105,9 +105,81 @@ Cases with a matching (* case N: *) comment already in Codegeni.ml:
    both RV32 and RV64. Verified: full ARM/MIPS baselines and make
    test (134/134) all still pass.
 
+** DONE case 3  beq S,[R,]L (BEQ/BNE/BLT/BGE/BLTU/BGEU, both the
+   2-register and 1-register-vs-zero forms). New op_btype (B-type
+   encoding, ported bit-scatter-for-bit-scatter from goken's OP_B
+   macro, same reasoning as case 0/1's op_rtype) and
+   opirr_bxx_funct3 (funct3 per condition; LE/GT left unwired --
+   real RISC-V has no BLE/BGT hardware instruction, only an
+   operand-swapping pseudo-op this port doesn't add).
+   Extended Ast_asmi's `Bxx` from
+   `b_condition * gen * A.branch_operand` to
+   `b_condition * gen * reg option * A.branch_operand` (bumped
+   Object_file.version 14->15) since, unlike MIPS's split BEQ/BNE-
+   vs-Bxx AST design, RISC-V's 6 hardware branches are ALL genuine
+   2-register comparisons per goken's uniform case-3 handling --
+   Parser_asmi.mly gained a second `TB gen TC reg TC rel` rule for
+   the explicit-middle-register form.
+   Discovered by reading goken's own yacc grammar (ia/a.y), not just
+   asm.c: the 1-register form (`BEQ S,L`, no explicit middle reg) is
+   rewritten AT PARSE TIME to `from=regzero, reg(middle)=S` --
+   i.e. the explicit register lands in the *middle* slot, not
+   `from`. This is NOT the usual "middle defaults to zero" pattern
+   every other optional-middle-register case uses (MIPS's case 2/9/
+   0/1, RISC-V's own case 0/1) -- confirmed by decoding the actual
+   instruction bytes (goken's disassembler text is ambiguous/
+   misleading about operand order), not just reading the C source.
+   Also newly discovered (out of scope, documented at length in
+   case3_riscv.s's own comment): goken's assembler recognizes the
+   "branch to L1; immediately followed by unconditional JMP to L2"
+   idiom (a classic if/then/else compiler pattern) and rewrites it --
+   inverts the branch to jump straight to L2, then *relocates* L1's
+   code to the end of the function, threaded back in with its own
+   JMP. A real code-layout/CFG optimization in goken's own assembler,
+   not something this port replicates; worked around by using an
+   "invert-and-skip-one-instruction" idiom instead (branch directly
+   over a single following instruction, no intervening JMP), which
+   doesn't trigger it.
+   Added tests/linker/riscv_diff/case3_riscv.s (all six conditions,
+   both operand forms, chained into the exit code) and its
+   riscv64_diff copy. PASS byte-identical + PASS same exit code (127)
+   on both RV32 and RV64.
+** DONE case 4  jal [D,]L (JAL with an explicit, non-RLINK link
+   register -- xix's own grammar routes "JAL reg,label" through the
+   JALR AST constructor, `TJAL reg TC branch {JALR($2,$4)}`, which is
+   why Codegeni.ml's match arm is `JALR (rd, {contents=Absolute _})`
+   rather than a separate constructor; goken's own "JAL" mnemonic
+   always requires an explicit register too, via the same grammar
+   token as JALR -- a bare "JAL label" with no register doesn't even
+   parse in goken's own assembler). New op_jtype (J-type encoding,
+   same bit-scatter-porting approach as op_btype) and branch_delta
+   helper (shared by case 3 and case 4).
+   Found and fixed a real, pre-existing bug while testing this: case
+   6's store (`Move2 (W__, ...)`, used by Rewritei.ml's non-leaf
+   prologue to save RLINK -- never byte-verified against goken before
+   since no earlier fixture triggered the non-leaf prologue path) had
+   funct3 hardcoded to 0 (SB, byte store) instead of matching the
+   move's actual width -- silently storing only 1 byte of the return
+   address instead of a full word. Fixed to SW (funct3=2) on riscv32;
+   testing the same fixture on riscv64 then caught a second instance
+   of the same class of bug (RLINK is a full pointer there, so the
+   save/restore need SD/LD, funct3=3, not SW/LW) -- both case 6
+   (store) and case 7 (load) now branch on `is_64`.
+   Deliberately NOT covered by a byte-identical fixture: a plain
+   "JMP label" to a non-adjacent target, and JMP's interaction with
+   conditional branches/loops -- every natural shape collides with
+   one of goken's own code-layout optimizations (the dead-code-after-
+   JMP elision already known from MIPS's RFE case; the branch+jmp
+   inversion from case 3; and, combined with a later JAL/indirect-
+   return in the same function, a "loop rotation" that was observed
+   via an ad-hoc test to miscompute a target address into a non-4-
+   byte-aligned garbage branch). See case4_riscv.s's own comment.
+   Added tests/linker/riscv_diff/case4_riscv.s and its riscv64_diff
+   copy. PASS byte-identical + PASS same exit code on both RV32 and
+   RV64. Verified: full ARM/MIPS/RISC-V baselines and make test all
+   still pass.
+
 Not yet in Codegeni.ml at all:
-** TODO case 3  beq S,[R,]L
-** TODO case 4  jal [D,]L
 ** TODO case 5  jalr [D,]I(S) (RET when not-leaf uses this shape too,
    currently hardcoded inline in Codegeni.ml's JMP case instead of
    going through a general case-5 encoder -- revisit if/when a

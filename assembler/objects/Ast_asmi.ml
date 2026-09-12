@@ -116,8 +116,15 @@ type instr =
   | JMP of A.branch_operand
   | JAL of A.branch_operand (* jump and link *)
   | JALR of reg * A.branch_operand (* no Relative|LabelUse here *) 
-  (* "left side must be register" *)
-  | Bxx of b_condition * gen * A.branch_operand (* just Relative|LabelUse *)
+  (* "left side must be register". claude: unlike MIPS (where Bxx is
+   * only ever the vs-zero family, BEQ/BNE being separate 2-register
+   * constructors), RISC-V's hardware branches (BEQ/BNE/BLT/BGE/
+   * BLTU/BGEU) are *all* genuine 2-register comparisons -- goken's
+   * il/asm.c case 3 handles them uniformly via one optional middle
+   * register (defaulting to REGZERO when omitted), so this reuses a
+   * single Bxx constructor for both the 1- and 2-register forms
+   * instead of MIPS's BEQ/BNE-vs-Bxx split. *)
+  | Bxx of b_condition * gen * reg option * A.branch_operand (* just Relative|LabelUse *)
   (* Special RISCV *)
   (*| AUIPC ? *)
 
@@ -194,7 +201,7 @@ let branch_opd_of_instr (instr: instr) : A.branch_operand option =
   | JMP opd -> Some opd
   | JAL opd -> Some opd
   | JALR (_, opd) -> Some opd
-  | Bxx (_, _, opd) -> Some opd
+  | Bxx (_, _, _, opd) -> Some opd
   | Arith _ | ArithF _ | ArithMul _ | LUI 
   | Move1 _ | Move2 _ | FENCE_I
   | ECALL | SYS | BREAK
@@ -228,7 +235,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | JMP b -> A.visit_globals_branch_operand f b
   | JAL b -> A.visit_globals_branch_operand f b
   | JALR (_, b) -> A.visit_globals_branch_operand f b
-  | Bxx (_, gen, b) ->
+  | Bxx (_, gen, _, b) ->
       mov_operand gen;
       A.visit_globals_branch_operand f b
   | Arith _ | ArithMul _ | ArithF _ | LUI

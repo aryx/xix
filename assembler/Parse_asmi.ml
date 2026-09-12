@@ -99,6 +99,17 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
       | "DIV" -> TMULOP (DIV (None, A.S)) | "DIVU" -> TMULOP (DIV (None, A.U))
       | "REM" -> TMULOP (REM (None, A.S)) | "REMU" -> TMULOP (REM (None, A.U))
 
+      (* claude: LE/GT have no direct RISC-V hardware branch (only
+       * BEQ/BNE/BLT/BGE/BLTU/BGEU exist -- goken's own assembler
+       * doesn't accept "BLE"/"BGT" mnemonics either, they'd need an
+       * operand-swapping pseudo-op rewrite this session doesn't
+       * add), so only EQ/NE/LT/GE (both signs) are wired here. *)
+      | "BEQ" -> TB EQ | "BNE" -> TB NE
+      | "BLT" -> TB (LT A.S) | "BGE" -> TB (GE A.S)
+      | "BLTU" -> TB (LT A.U) | "BGEU" -> TB (GE A.U)
+
+      | "JMP" -> TJMP | "JAL" -> TJAL
+
       | _ -> TIDENT s
       )
 

@@ -202,7 +202,8 @@ instr:
  /*(* was just nireg here for branch *)*/
  | TJAL reg TC branch { JALR ($2, $4) }
 
- | TB gen TC rel             { Bxx ($1, $2, $4) }
+ | TB gen TC rel             { Bxx ($1, $2, None, $4) }
+ | TB gen TC reg TC rel      { Bxx ($1, $2, Some $4, $6) }
 
  | TSYSCALL { ECALL }
 

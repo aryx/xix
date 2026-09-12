@@ -15,6 +15,8 @@ cd "$(dirname "$0")"
 CASES=(
     "tests/linker/riscv_diff/hello_linux_riscv.s:_start"
     "tests/linker/riscv_diff/case0_1_riscv.s:_start"
+    "tests/linker/riscv_diff/case3_riscv.s:_start"
+    "tests/linker/riscv_diff/case4_riscv.s:_start"
 )
 
 FAIL=0

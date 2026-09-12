@@ -166,6 +166,50 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm7.token =
        * every other arch ported so far). *)
       | "CBZ" -> TCBx false | "CBNZ" -> TCBx true
 
+      (* claude: case 40 -- TBZ/TBNZ (test bit and branch). *)
+      | "TBZ" -> TTBx false | "TBNZ" -> TTBx true
+
+      (* claude: bare condition-code operand (goken's own LCOND lexer
+       * class) -- a different token from TBx's branch mnemonics
+       * (Parser_asm7.mly's `cond` rule), used by CSEL/CSET/CINC/CNEG/
+       * CINV/CSINC/CSINV/CSNEG/CSETM below. Same aliasing convention
+       * as BCS/BHS/BCC/BLO above. *)
+      | "EQ" -> TCOND EQ | "NE" -> TCOND NE
+      | "CS" -> TCOND (GE A.U) | "HS" -> TCOND (GE A.U)
+      | "CC" -> TCOND (LT A.U) | "LO" -> TCOND (LT A.U)
+      | "MI" -> TCOND MI | "PL" -> TCOND PL
+      | "VS" -> TCOND VS | "VC" -> TCOND VC
+      | "HI" -> TCOND (GT A.U) | "LS" -> TCOND (LE A.U)
+      | "GE" -> TCOND (GE A.S) | "LT" -> TCOND (LT A.S)
+      | "GT" -> TCOND (GT A.S) | "LE" -> TCOND (LE A.S)
+      | "AL" -> TCOND AL
+
+      (* claude: case 18 -- CSEL/CSINC/CSINV/CSNEG cond,Rn,[Rm,]Rd.
+       * CINC/CINV/CNEG (and their *W forms) are goken's own 2-register
+       * alias spellings for CSINC/CSINV/CSNEG respectively -- mapped
+       * onto the *same* opcode constructor here, since the shared
+       * base opcode and the 2-vs-3-register arity (not the mnemonic
+       * name) is what actually decides the encoding -- see
+       * CondSel's own AST comment. *)
+      | "CSEL" -> TCONDSEL CSEL | "CSELW" -> TCONDSEL CSELW
+      | "CSINC" -> TCONDSEL CSINC | "CSINCW" -> TCONDSEL CSINCW
+      | "CINC" -> TCONDSEL CSINC | "CINCW" -> TCONDSEL CSINCW
+      | "CSINV" -> TCONDSEL CSINV | "CSINVW" -> TCONDSEL CSINVW
+      | "CINV" -> TCONDSEL CSINV | "CINVW" -> TCONDSEL CSINVW
+      | "CSNEG" -> TCONDSEL CSNEG | "CSNEGW" -> TCONDSEL CSNEGW
+      | "CNEG" -> TCONDSEL CSNEG | "CNEGW" -> TCONDSEL CSNEGW
+
+      (* claude: case 18 -- CSET/CSETM cond,Rd. *)
+      | "CSET" -> TCONDSET CSET | "CSETW" -> TCONDSET CSETW
+      | "CSETM" -> TCONDSET CSETM | "CSETMW" -> TCONDSET CSETMW
+
+      (* claude: case 58/59 -- the X-width (64-bit) exclusive-monitor
+       * atomic pair, both plain and acquire/release flavors -- see
+       * Ast_asm7.ml's LoadExcl/StoreExcl comment for what's
+       * deliberately out of scope (sub-word forms, plain LDAR/STLR). *)
+      | "LDXR" -> TLDXR false | "LDAXR" -> TLDXR true
+      | "STXR" -> TSTXR false | "STLXR" -> TSTXR true
+
       | "SVC" -> TSVC
       | "RETURN" -> TRETURN
 

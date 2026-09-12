@@ -22,9 +22,8 @@ open Ast_asm
 (*****************************************************************************)
 (* Abstract Syntax Tree (AST) for the assembly language supported by 7a/7l
  * (goken's Plan 9 ARM64/AArch64 assembler/linker). I call this language
- * Asm7. See docs/claude_notes/notes_arm64_port_plan.txt for the overall
- * port plan and how this compares to the ARM32/MIPS/RISC-V ports already
- * done.
+ * Asm7. See docs/claude_notes/arm64_port.md for the overall
+ * port writeup and how this compares to the ARM32/MIPS/RISC-V ports.
  *
  * claude: register 31 is contextual in real AArch64: goken's own grammar
  * (assemblers/7a/a.y) lexes "ZR" and "RSP" to the *same* D_REG/reg=31 node
@@ -67,17 +66,15 @@ open Ast_asm
  * nearby pool word, addpool()/flushpool()-style, same family as
  * Layout5.ml's mechanism) -- see Layout7.ml/Codegen7.ml.
  *
- * Scope for this first version (see notes_arm64_port_plan.txt's "Suggested
- * phase plan" for what's deliberately deferred): SIMD/vector registers,
- * atomics, system instructions (MRS/MSR/SYS/DMB/HINT), the conditional-
- * select family (CSEL/CSET/CINC/...), bitfield move/extract as their own
- * mnemonics (BFM/BFI/EXTR -- LSL/LSR/ASR/ROR *by immediate* still work,
- * see `Shift` below, since goken implements those via the same bitfield
- * encoding family but they're common enough to be worth including from
- * the start), floating point, load/store *pair* (LDP/STP), and the
- * extended-register / pre-post-increment addressing modes are all left
- * for a follow-up phase -- see the port log once one exists for what's
- * actually landed.
+ * Scope (see arm64_port.md's "Deliberately out of scope" and
+ * "Investigated and skipped" sections for the full, up-to-date list):
+ * SIMD/vector registers, SYS/SYSL/MRS/MSR, bitfield move/extract as
+ * their own mnemonics (BFM/BFI/EXTR -- LSL/LSR/ASR/ROR *by immediate*
+ * still work, see `Shift` below, since goken implements those via the
+ * same bitfield encoding family), load/store *pair* (confirmed dead
+ * in goken itself, not just deferred), and the extended-register /
+ * pre-post-increment (beyond X_'s own) addressing modes are all out
+ * of scope.
  *)
 
 (*****************************************************************************)
@@ -189,6 +186,15 @@ type instr =
    * (non)zero"). *)
   | CBxx of bool (* true = branch if nonzero (CBNZ), false = CBZ *) *
       reg * A.branch_operand
+  (* claude: LTYPET -- TBZ/TBNZ $bit,Rt,label ("test bit and branch if
+   * (non)zero"), goken's case 40. `int` is the tested bit number
+   * (0-63; unlike CBZ/CBNZ there's no separate *W mnemonic -- a single
+   * TBZ/TBNZ can test any bit 0-63 of the full 64-bit register, the
+   * "b5"/"b40" field split in the encoding is purely a bit-numbering
+   * artifact, not a width selector -- see Codegen7.ml's optbz
+   * comment). *)
+  | TBxx of bool (* true = branch if nonzero (TBNZ), false = TBZ *) *
+      int * reg * A.branch_operand
   (* claude: LTYPEA -- RET[reg], defaults to RLINK (X30) when the
    * register is omitted, matching goken's own default. Unlike
    * ARM32/MIPS/RISC-V (where "RET" is purely a compiler-facing virtual
@@ -198,6 +204,52 @@ type instr =
    * here, not routed through the shared Ast_asm.virtual_instr.RET at
    * all. *)
   | RET of reg option
+
+  (* claude: LTYPES -- CSEL/CSINC/CSINV/CSNEG cond,Rn,[Rm,]Rd, goken's
+   * case 18. The "2-register" alias mnemonics CINC/CINV/CNEG (and
+   * their *W forms) share the exact same base opcode as CSINC/CSINV/
+   * CSNEG respectively (confirmed in asmout.c's oprrr(): `case ACINC:
+   * case ACSINC: return ...` -- one shared row per pair) and goken's
+   * own grammar is fully permissive about which of the two mnemonic
+   * spellings gets 2 vs 3 explicit registers (the 2-vs-3-register
+   * *count*, not the specific mnemonic name, decides whether case 18
+   * takes its "invert cond, reuse Rn as Rm" alias path) -- so this
+   * port only needs ONE opcode identity per shared row
+   * (`CSEL`/`CSINC`/`CSINV`/`CSNEG`, `+W` forms), with the alias
+   * mnemonics (CINC/CINV/CNEG) mapped onto the same constructor in
+   * Parse_asm7.ml's keyword table, exactly mirroring goken's actual
+   * behavior rather than artificially restricting arity per name. *)
+  | CondSel of cond_sel_opcode * condition * reg * reg option * reg
+  (* claude: LTYPER -- CSET/CSETM cond,Rd (goken's case 18, the
+   * "no source register at all" branch: both source-register
+   * positions default to ZR). *)
+  | CondSet of cond_set_opcode * condition * reg
+
+  (* claude: LTYPES -- TBZ/TBNZ, see the AST-level comment above
+   * `TBxx`'s own declaration. *)
+
+  (* claude: atomics (goken's case 58/59, LDSTX-based encoding).
+   * Scoped narrowly per arm64_port.md: only the X-width
+   * (64-bit) exclusive-monitor pair, both plain and acquire/release
+   * flavors (LDXR/LDAXR, STXR/STLXR) -- the sub-word (B/H/W) forms
+   * and the non-exclusive LDAR/STLR (a genuinely different grammar
+   * shape, LTYPE3's plain "gen,gen" rather than LDXR/STXR's own)
+   * aren't wired, see arm64_port.md for the reasoning
+   * (goken's own C-side notes document a real historical bug-history
+   * in exactly this instruction family, so scope was kept deliberately
+   * narrow and each case was verified with extra care, not just
+   * byte-diffed). *)
+  | LoadExcl of bool (* true = acquire (LDAXR), false = plain (LDXR) *) *
+      reg (* Rn, address base, zero offset only *) * reg (* Rt, dest *)
+  (* claude: goken's own grammar order for STXR/STLXR ("reg,gen,sreg")
+   * turned out to spell "Rt(value),[Rn](address),Rs(status)" --
+   * confirmed empirically (assembled+disassembled a concrete
+   * instruction with real goken and checked which field the status
+   * register landed in), not assumed from the C source alone, given
+   * this family's documented bug history elsewhere. *)
+  | StoreExcl of bool (* true = release (STLXR), false = plain (STXR) *) *
+      reg (* Rt, value to store *) * reg (* Rn, address base, zero offset only *) *
+      reg (* Rs, status result *)
 
   (* Floating point *)
   (* claude: LTYPEK -- dyadic float arith (goken's case 54, "op
@@ -241,7 +293,7 @@ type instr =
    * hand-written or compiler-generated code the way barriers are.
    * SYS/SYSL/MRS/MSR -- goken's `sysarg`, real system-register
    * selectors -- are a separate, genuinely more involved family, also
-   * deferred, see notes_arm64_port_plan.txt. *)
+   * deferred, see arm64_port.md. *)
   | Barrier of barrier_opcode * int
 
   (* claude: every "*W"-suffixed mnemonic below (ADDW/LSLW/CMPW/MULW/...)
@@ -267,6 +319,17 @@ type instr =
     | CMPW | CMNW
   and mul_opcode =
     | MUL | MULW
+
+  (* claude: CSINC/CSINV/CSNEG's own base opcodes double as CINC/CINV/
+   * CNEG's (see CondSel's own comment above for why one opcode
+   * identity per row is enough); CSEL has no 2-register alias form of
+   * its own (there's no unconditional "always pick Rn" mnemonic). *)
+  and cond_sel_opcode =
+    | CSEL | CSINC | CSINV | CSNEG
+    | CSELW | CSINCW | CSINVW | CSNEGW
+  and cond_set_opcode =
+    | CSET | CSETM
+    | CSETW | CSETMW
 
   (* claude: single (S, 32-bit) vs double (D, 64-bit) precision only
    * differ in goken's own FPOP2S/FPOP1S/FPCMP/FPCVTI encodings by one
@@ -335,8 +398,10 @@ let branch_opd_of_instr (instr : instr) : A.branch_operand option =
   | BL opd -> Some opd
   | Bxx (_, opd) -> Some opd
   | CBxx (_, _, opd) -> Some opd
+  | TBxx (_, _, _, opd) -> Some opd
   | Arith _ | Shift _ | Cmp _ | ArithMul _ | Move _ | RET _ | SVC _
-  | FArith _ | FCmp _ | Barrier _ -> None
+  | FArith _ | FCmp _ | Barrier _ | CondSel _ | CondSet _
+  | LoadExcl _ | StoreExcl _ -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   let mov_operand x =
@@ -356,5 +421,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | BL b -> A.visit_globals_branch_operand f b
   | Bxx (_, b) -> A.visit_globals_branch_operand f b
   | CBxx (_, _, b) -> A.visit_globals_branch_operand f b
+  | TBxx (_, _, _, b) -> A.visit_globals_branch_operand f b
   | Arith _ | Shift _ | Cmp _ | ArithMul _ | RET _ | SVC _
-  | FArith _ | FCmp _ | Barrier _ -> ()
+  | FArith _ | FCmp _ | Barrier _ | CondSel _ | CondSet _
+  | LoadExcl _ | StoreExcl _ -> ()

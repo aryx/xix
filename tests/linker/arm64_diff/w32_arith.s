@@ -7,7 +7,7 @@
 // oprrr_shift/oprrr_mul comments). Register setup uses bare (64-bit)
 // MOV since "MOVW $con,R" -- the W-sized register-immediate move --
 // isn't implemented yet (a separate, still-deferred piece of work,
-// see notes_arm64_port_plan.txt).
+// see arm64_port.md).
 TEXT _start(SB), $0
     MOV $10, R1
     MOV $11, R2

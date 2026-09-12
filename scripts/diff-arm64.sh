@@ -4,7 +4,7 @@
 # ELF executables byte-for-byte and (when qemu-aarch64 is available)
 # run both under it.
 #
-# See docs/claude_notes/notes_arm64_port_plan.txt for why only the
+# See docs/claude_notes/arm64_port.md for why only the
 # final executable is ever compared (never the intermediate object
 # files: o7a's .o7 uses OCaml Marshal by design, not goken's object
 # format), and docs/claude_notes/arm_port.md for the harness shape

@@ -40,13 +40,19 @@ module L = Location_cpp
 %token <Ast_asm7.fp_arith_opcode> TFARITH
 %token <Ast_asm7.fp_cmp_opcode> TFCMP
 %token <Ast_asm7.barrier_opcode> TDMB
+%token <Ast_asm7.cond_sel_opcode> TCONDSEL
+%token <Ast_asm7.cond_set_opcode> TCONDSET
 %token <Ast_asm7.move_size> TMOV
 %token TB TBL
 %token <Ast_asm7.condition> TBx
 %token <bool> TCBx
+%token <bool> TTBx
+%token <Ast_asm7.condition> TCOND
 %token TRET
 %token TNOP
 %token TSVC
+%token <bool> TLDXR
+%token <bool> TSTXR
 /*(* claude: goken's compiler-facing "RETURN" pseudo-op -- distinct
    * from the real hardware "RET" instruction above. RETURN is expanded
    * by Rewrite7.ml (leaf/frame-size-driven prologue+epilogue
@@ -241,6 +247,25 @@ instr:
  /*(* case 51: "DMB $imm" / "DSB $imm" / "ISB $imm" *)*/
  | TDMB imm                     { Barrier ($1, $2) }
 
+ /*(* case 40: "TBZ $bit,Rt,label" / "TBNZ $bit,Rt,label" *)*/
+ | TTBx imm TC reg TC rel       { TBxx ($1, $2, $4, $6) }
+
+ /*(* case 18: "CSEL EQ,Rn,Rm,Rd" / "CINC EQ,Rn,Rd" (2-register alias
+    * form -- see CondSel's own AST comment) *)*/
+ | TCONDSEL cond TC reg TC reg TC reg { CondSel ($1, $2, $4, Some $6, $8) }
+ | TCONDSEL cond TC reg TC reg        { CondSel ($1, $2, $4, None, $6) }
+
+ /*(* case 18: "CSET EQ,Rd" *)*/
+ | TCONDSET cond TC reg         { CondSet ($1, $2, $4) }
+
+ /*(* case 58: "LDXR (Rn),Rt" / "LDAXR (Rn),Rt" *)*/
+ | TLDXR ireg TC reg            { LoadExcl ($1, $2, $4) }
+ /*(* case 59: "STXR Rt,(Rn),Rs" / "STLXR Rt,(Rn),Rs" -- confirmed this
+    * exact operand order empirically against real goken (see
+    * Ast_asm7.ml's StoreExcl comment), not assumed from the grammar
+    * alone. *)*/
+ | TSTXR reg TC ireg TC reg     { StoreExcl ($1, $2, $4, $6) }
+
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/
 /*(*************************************************************************)*/
@@ -296,6 +321,14 @@ lgen:
  | ximm { Right $1 }
 
 ireg: TOPAR reg TCPAR { $2 }
+
+/*(* claude: bare condition-code operand (goken's own `cond:` rule,
+   * a.y: "LCOND { $$.type=D_COND; $$.reg=$1; }") -- a genuinely
+   * different grammar/lexer slot from `TBx`'s "BEQ"/"BNE"/... branch
+   * mnemonics, even though both ultimately carry the same
+   * Ast_asm7.condition payload; see Parse_asm7.ml's keyword table for
+   * the separate "EQ"/"NE"/... entries this produces. *)*/
+cond: TCOND { $1 }
 
 branch:
  | rel               { $1 }

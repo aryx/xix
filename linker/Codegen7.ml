@@ -24,7 +24,7 @@ open Codegen
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* ARM64/AArch64 code generation, first version.
+(* ARM64/AArch64 code generation.
  *
  * The 'case <n>: ...' comments below refer to goken's linkers/7l/asmout.c
  * (mirrors the Codegen{5,v,i}.ml convention).
@@ -42,22 +42,22 @@ open Codegen
  * successfully elsewhere in this project, is more faithful and less
  * error-prone here than re-deriving a from-scratch Bits.t decomposition.
  *
- * Scope (see docs/claude_notes/notes_arm64_port_plan.txt for the
+ * Scope (see docs/claude_notes/arm64_port.md for the full,
  * up-to-date status): Arith/Shift/Cmp/ArithMul have both their bare
  * (64-bit) and *W-suffixed (32-bit-view) forms; register<->memory
  * Move (Indirect and the SB-relative fast path) covers all 4 sizes
  * (B_/H_/W_/X_); the literal pool covers "MOV $bigconst,R" and
- * address-of-global (see Layout7.ml's own comment). Still deferred:
- * AND/ORR/EOR/BIC's *immediate* form (a "bitmask immediate" encoding,
- * genuinely different from ADD/SUB's plain 12-bit uimm, and a real
- * bug-history minefield in goken's own C side -- see this file's
- * opirr_addsub comment) -- only their register-register form is
- * implemented, both widths; register-immediate moves at B_/H_/W_ size
- * ("MOVW $con,R" etc, as opposed to X_'s "MOV $con,R") and register-
- * to-register moves at those sizes aren't implemented either -- only
- * X_'s "MOV Rs,Rd"/"MOV $con,Rd" are, per goken's own case 24/32 (which
- * are genuinely X_-only shapes to begin with, not a narrowed subset of
- * something wider).
+ * address-of-global; AND/ORR/EOR's own bitmask-immediate form is
+ * implemented for e=64 patterns only (see bitmask_immediate_encoding's
+ * own comment for the real goken bug this scoping decision is
+ * responding to); the conditional-select family, TBZ/TBNZ, and the
+ * X-width exclusive-monitor atomic pair are implemented too. Register-
+ * immediate moves at B_/H_/W_ size ("MOVW $con,R" etc, as opposed to
+ * X_'s "MOV $con,R") and register-to-register moves at those sizes
+ * aren't implemented -- only X_'s "MOV Rs,Rd"/"MOV $con,Rd" are, per
+ * goken's own case 24/32 (which are genuinely X_-only shapes to begin
+ * with, not a narrowed subset of something wider); BIC has no
+ * immediate form on real AArch64 at all.
  *)
 
 (*****************************************************************************)
@@ -146,8 +146,12 @@ let opirr_addsub (op : arith_opcode) : int =
   | SUB -> s64 lor (1 lsl 30) lor (0x11 lsl 24)
   | ADDW -> s32 lor (0x11 lsl 24)
   | SUBW -> s32 lor (1 lsl 30) lor (0x11 lsl 24)
-  | AND_ | ORR | EOR | BIC | ANDW | ORRW | EORW | BICW ->
-      failwith "TODO:opirr_addsub AND/ORR/EOR/BIC immediate (bitmask-immediate encoding not implemented)"
+  | AND_ | ORR | EOR ->
+      raise (Impossible "AND/ORR/EOR use the bitmask-immediate path (opirr_bitmask_logical), never the addcon one")
+  | ANDW | ORRW | EORW ->
+      failwith "TODO: ANDW/ORRW/EORW immediate needs its own e<=32 bitcon search (N always 0), not implemented (only the bare 64-bit AND/ORR/EOR immediate is)"
+  | BIC | BICW ->
+      failwith "BIC has no immediate form at all on real AArch64 (confirmed absent from goken's own opirr() table, not just unimplemented here)"
 
 (* claude: goken's oaddi() -- packs a 12-bit unsigned immediate (or,
  * shifted left by 12, up to 0xFFF000) into the "addcon" instruction
@@ -434,6 +438,93 @@ let isbitcon (v : int) : bool =
       else try_e (e * 2)
   in try_e 2
 
+(* claude: AND/ORR/EOR's own *immediate* form (case 53, a genuinely
+ * different "bitmask immediate" encoding from ADD/SUB's plain
+ * "addcon" one) -- scoped to ONLY the e=64 case (a single contiguous
+ * run of 1-bits, any rotation, NOT further replicated at any smaller
+ * power-of-two element size), never a smaller replicated element,
+ * unlike `isbitcon` above (which does search smaller e, for the
+ * unrelated MOV-immediate classification question of "does this
+ * value need the literal pool"). This is a deliberate, empirically-
+ * forced scope decision, not laziness: direct testing against real
+ * goken turned up a genuine bug in its own bitmask-immediate
+ * assembler for sub-64-bit element sizes -- "AND $0x0202020202020202,
+ * R1,R2" (a clean e=8 pattern, one bit set per byte) assembles with
+ * goken's real 7a/7l to bytes that decode back to 0x0200000002000000,
+ * a DIFFERENT value than requested (confirmed by manually decoding
+ * the raw instruction word's N/immr/imms fields against the standard
+ * ARM64 algorithm, not just trusting objdump's summary line) --
+ * likewise "AND $0x0101010101010101,R1,R2" (e=8) round-trips as only
+ * 0x0000000100000001 (e=32). This smells like a real bug in goken's
+ * own findmask64()/maxstr1() for element sizes below 32/64, not
+ * something worth differentially testing against (there's no
+ * confidence the "bug" is even stable/well-defined across inputs) --
+ * far more brittle than the "big vs small constant" MOV-immediate
+ * surprise this file's `move_immediate_encoding` already documents.
+ * Values needing e<64 are therefore simply not classified as bitcon
+ * here at all; they fall through to `bitmask_immediate_encoding`
+ * returning `None`, and the caller in `rules` errors loudly rather
+ * than emitting anything (matching this port's own consistent
+ * "loud error over silently-wrong bytes" policy) -- always at least
+ * as correct as replicating goken's own confirmed-buggy direct
+ * encoding.
+ *
+ * The (run-length, left-shift) pair search below reuses the exact
+ * same shape as `isbitcon`'s own `is_contig_run_e64` helper (already
+ * proven correct via extensive testing), just returning the
+ * parameters instead of a bare bool. immr/imms/N were derived AND
+ * verified empirically against goken (not just read off asmout.c's
+ * C source, given the elevated risk already found in this family):
+ * for v=1 (n=1,k=0) goken emits N=1,immr=0,imms=0; v=3 (n=2,k=0)
+ * gives imms=1; v=7 (n=3,k=0) gives imms=2; v=0x1FE=0xFF<<1 (n=8,k=1,
+ * a genuinely ROTATED pattern) gives immr=63,imms=7 -- confirming
+ * imms=n-1 and immr=(64-k) mod 64 (i.e. the ARM64 decode's own
+ * "pattern = ROR(ones(n), immr)" convention: rotating the canonical
+ * ones-from-bit-0 pattern RIGHT by immr must reproduce v, so a
+ * pattern that's really a LEFT-shift-by-k of the canonical form needs
+ * immr = 64-k, not k itself). *)
+let bitcon64_params (v : int) : (int * int) option (* (n, k) *) =
+  if v <= 0 then None
+  else
+    let rec try_n n =
+      if n >= 63 then None
+      else
+        let pat = (1 lsl n) - 1 in
+        let rec try_k k =
+          if k > 62 - n then None
+          else if pat lsl k = v then Some (n, k)
+          else try_k (k + 1)
+        in
+        match try_k 0 with
+        | Some r -> Some r
+        | None -> try_n (n + 1)
+    in try_n 1
+
+(* claude: case 53's own base opcodes (goken's opirr(), the AAND/AORR/
+ * AEOR rows only -- BIC genuinely has no immediate form on real
+ * AArch64 at all, confirmed absent from opirr()'s table, not just
+ * unimplemented here, see opirr_addsub's own comment). Only the
+ * bare (64-bit) forms: the *W-suffixed 32-bit-view immediate form
+ * needs its own, narrower bitcon-at-e<=32 search (N is always 0
+ * there, never 1) that this port hasn't verified at all yet -- not
+ * wired, see bitmask_immediate_encoding's own dispatch below. *)
+let opirr_bitmask_logical (op : arith_opcode) : int =
+  match op with
+  | AND_ -> s64 lor (0x24 lsl 23)
+  | ORR -> s64 lor (1 lsl 29) lor (0x24 lsl 23)
+  | EOR -> s64 lor (2 lsl 29) lor (0x24 lsl 23)
+  | ADD | SUB | BIC | ADDW | SUBW | BICW | ANDW | ORRW | EORW ->
+      raise (Impossible "opirr_bitmask_logical: not a supported bitmask-immediate opcode")
+
+let bitmask_immediate_encoding (op : arith_opcode) (v : int) (r : int) (rt : int) : int option =
+  match bitcon64_params v with
+  | None -> None
+  | Some (n, k) ->
+      let imms = n - 1 in
+      let immr = (64 - k) mod 64 in
+      Some (opirr_bitmask_logical op lor (1 lsl 22) lor (immr lsl 16)
+            lor (imms lsl 10) lor (r lsl 5) lor rt)
+
 let movcon (v : int) : int option =
   let rec aux s =
     if s >= 4 then None
@@ -576,6 +667,53 @@ let opirr_barrier (op : barrier_opcode) : int =
   | DMB_ -> sysop 0 0 3 3 0 5 0x1F
   | ISB_ -> sysop 0 0 3 3 0 6 0x1F
 
+(* claude: case 40 -- TBZ/TBNZ $bit,Rt,label. goken's own base opcode
+ * (`opirr()`, `0x36<<24`/`0x37<<24`) plus a split bit-number field
+ * (bit 5 of the tested-bit-number at instruction bit 31, the low 5
+ * bits at instruction bits[23:19] -- goken's `((v&0x20)<<(31-5)) |
+ * ((v&0x1F)<<19)`, transcribed directly) and a 14-bit word-scaled
+ * PC-relative branch field at bits[18:5] (same `branch_delta`
+ * mechanism as every other branch here, just a narrower field and
+ * shifted by 5 instead of the caller ORing at bit 0). *)
+let opirr_tbz (nonzero : bool) : int = if nonzero then 0x37 lsl 24 else 0x36 lsl 24
+let tbz_bitfield (bit : int) : int =
+  ((bit land 0x20) lsl (31 - 5)) lor ((bit land 0x1F) lsl 19)
+
+(* claude: case 18 -- CSEL/CSINC/CSINV/CSNEG/CSET/CSETM (goken's
+ * oprrr(), transcribed directly; see CondSel/CondSet's own AST
+ * comments for why CINC/CINV/CNEG share CSINC/CSINV/CSNEG's row, and
+ * why CSET/CSETM's own rows are byte-identical to CSINC/CSINV's --
+ * they're genuinely the same base opcode, confirmed reading asmout.c,
+ * not a coincidence). *)
+let oprrr_condsel (op : cond_sel_opcode) : int =
+  let base = 0xD4 lsl 21 in
+  match op with
+  | CSEL -> s64 lor base | CSELW -> s32 lor base
+  | CSINC -> s64 lor base lor (1 lsl 10) | CSINCW -> s32 lor base lor (1 lsl 10)
+  | CSINV -> s64 lor (1 lsl 30) lor base | CSINVW -> s32 lor (1 lsl 30) lor base
+  | CSNEG -> s64 lor (1 lsl 30) lor base lor (1 lsl 10)
+  | CSNEGW -> s32 lor (1 lsl 30) lor base lor (1 lsl 10)
+let oprrr_condset (op : cond_set_opcode) : int =
+  let base = 0xD4 lsl 21 in
+  match op with
+  | CSET -> s64 lor base lor (1 lsl 10) | CSETW -> s32 lor base lor (1 lsl 10)
+  | CSETM -> s64 lor (1 lsl 30) lor base | CSETMW -> s32 lor (1 lsl 30) lor base
+
+(* claude: case 58/59 -- the exclusive-monitor atomic pair (goken's
+ * `#define LDSTX(sz,o2,l,o1,o0)`, and opload()/opstore()'s own
+ * ALDXR/ALDAXR/ASTXR/ASTLXR rows, transcribed directly). Scoped to
+ * X-width (sz=3) only -- see LoadExcl/StoreExcl's own AST comments
+ * for what's deliberately out of scope and why this family got extra
+ * empirical verification (operand order confirmed by disassembling a
+ * concrete instruction against real goken) rather than trusting the
+ * C source alone, given its documented bug history. *)
+let ldstx (sz : int) (o2 : int) (l : int) (o1 : int) (o0 : int) : int =
+  (sz lsl 30) lor (0x8 lsl 24) lor (o2 lsl 23) lor (l lsl 22) lor (o1 lsl 21) lor (o0 lsl 15)
+let opload_excl (acquire : bool) : int =
+  (if acquire then ldstx 3 0 1 0 1 else ldstx 3 0 1 0 0) lor (0x1F lsl 10)
+let opstore_excl (release : bool) : int =
+  (if release then ldstx 3 0 0 0 1 else ldstx 3 0 0 0 0) lor (0x1F lsl 10)
+
 (*****************************************************************************)
 (* The rules! *)
 (*****************************************************************************)
@@ -600,6 +738,16 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 4; x = None; binary = (fun () ->
           [ w1 (oprrr_arith op lor (rf lsl 16) lor (r lsl 5) lor rt) ]
         )}
+    (* case 53: AND/ORR/EOR $bimm,[Rn,]Rd -- bitmask immediate (e=64
+     * cases only, see bitmask_immediate_encoding's own comment). *)
+    | Arith ((AND_ | ORR | EOR as op), Imm i, middle, (R rt)) ->
+        let (R r) = middle ||| R rt in
+        (match bitmask_immediate_encoding op i r rt with
+        | Some w -> { size = 4; x = None; binary = (fun () -> [ w1 w ]) }
+        | None ->
+            error node
+              "TODO: AND/ORR/EOR immediate isn't a valid e=64 bitmask pattern (needs e<64 replication, deliberately not implemented -- see bitmask_immediate_encoding's comment -- or isn't representable as a bitmask immediate at all)")
+
     (* case 2/4: op $imm,[Rn,]Rd ("addcon" fast path only -- see oaddi) *)
     | Arith (op, Imm i, middle, (R rt)) ->
         let (R r) = middle ||| R rt in
@@ -905,6 +1053,14 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                 lor rt) ]
         )}
 
+    (* case 40: TBZ/TBNZ $bit,Rt,label *)
+    | TBxx (nonzero, bit, (R rt), { contents = (Absolute _) }) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (opirr_tbz nonzero lor (tbz_bitfield bit)
+                lor (((branch_delta node) land 0x3FFF) lsl 5)
+                lor rt) ]
+        )}
+
     (* RET / RET Rn -- defaults to RLINK (X30), goken's own default for
      * a bare "RET". *)
     | RET None ->
@@ -913,6 +1069,51 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         )}
     | RET (Some (R rt)) ->
         { size = 4; x = None; binary = (fun () -> [ w1 (opbrr_ret lor (rt lsl 5)) ]) }
+
+    (* --------------------------------------------------------------------- *)
+    (* Conditional select *)
+    (* --------------------------------------------------------------------- *)
+
+    (* case 18: CSEL/CSINC/CSINV/CSNEG (and CINC/CINV/CNEG's alias
+     * form) cond,Rn,[Rm,]Rd -- Rm absent means the 2-register alias
+     * shape (goken inverts cond and reuses Rn as Rm, see this file's
+     * oprrr_condsel comment). *)
+    | CondSel (op, cond, (R rn), Some (R rm), (R rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (oprrr_condsel op lor (rm lsl 16)
+                lor ((int_of_condition cond) lsl 12) lor (rn lsl 5) lor rt) ]
+        )}
+    | CondSel (op, cond, (R rn), None, (R rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (oprrr_condsel op lor (rn lsl 16)
+                lor (((int_of_condition cond) lxor 1) lsl 12) lor (rn lsl 5) lor rt) ]
+        )}
+
+    (* case 18: CSET/CSETM cond,Rd -- both source-register positions
+     * default to ZR, cond inverted (same shape as CondSel's 2-register
+     * alias form above, just with no source register at all). *)
+    | CondSet (op, cond, (R rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (oprrr_condset op lor (31 lsl 16)
+                lor (((int_of_condition cond) lxor 1) lsl 12) lor (31 lsl 5) lor rt) ]
+        )}
+
+    (* --------------------------------------------------------------------- *)
+    (* Atomics *)
+    (* --------------------------------------------------------------------- *)
+
+    (* case 58: LDXR/LDAXR (Rn),Rt *)
+    | LoadExcl (acquire, (R rn), (R rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (opload_excl acquire lor (0x1F lsl 16) lor (rn lsl 5)
+                lor (0x1F lsl 10) lor rt) ]
+        )}
+    (* case 59: STXR/STLXR Rt,(Rn),Rs *)
+    | StoreExcl (release, (R rt), (R rn), (R rs)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (opstore_excl release lor (rs lsl 16) lor (rn lsl 5)
+                lor (0x1F lsl 10) lor rt) ]
+        )}
 
     (* --------------------------------------------------------------------- *)
     (* System *)
@@ -941,7 +1142,8 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | B { contents = (Relative _ | LabelUse _ | SymbolJump _) }
     | BL { contents = (Relative _ | LabelUse _ | SymbolJump _) }
     | Bxx (_, { contents = (Relative _ | LabelUse _ | SymbolJump _ | IndirectJump _) })
-    | CBxx (_, _, { contents = (Relative _ | LabelUse _ | SymbolJump _ | IndirectJump _) }) ->
+    | CBxx (_, _, { contents = (Relative _ | LabelUse _ | SymbolJump _ | IndirectJump _) })
+    | TBxx (_, _, _, { contents = (Relative _ | LabelUse _ | SymbolJump _ | IndirectJump _) }) ->
         raise (Impossible
           "branch operand should have been resolved to Absolute by now")
     )

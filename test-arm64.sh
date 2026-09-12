@@ -1,7 +1,6 @@
 #!/bin/bash
-# Differential test driver for the ARM64 port (first version -- see
-# docs/claude_notes/notes_arm64_port_plan.txt). Mirrors test-arm.sh's
-# shape and phase-0.5-baseline-corpus role.
+# Differential test driver for the ARM64 port (complete -- see
+# docs/claude_notes/arm64_port.md). Mirrors test-arm.sh's shape.
 #
 # Usage: ./test-arm64.sh
 
@@ -21,6 +20,9 @@ CASES=(
     "tests/linker/arm64_diff/float_arith.s"
     "tests/linker/arm64_diff/float_mem.s"
     "tests/linker/arm64_diff/barrier.s"
+    "tests/linker/arm64_diff/condsel_tbz.s"
+    "tests/linker/arm64_diff/atomics.s"
+    "tests/linker/arm64_diff/bitmask_logical.s"
 )
 
 FAIL=0

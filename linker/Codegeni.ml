@@ -365,8 +365,9 @@ let rules (is_64 : bool)
     (* --------------------------------------------------------------------- *)
 
     (* claude: RISC-V has no branch-delay slot (unlike MIPS) -- see
-     * docs/claude_notes/notes_riscv_port_plan.txt / notes_mips_port_plan.txt
-     * for that story. RET (Rewritei.ml) expands to a plain
+     * docs/claude_notes/notes_riscv_port_plan.txt /
+     * docs/claude_notes/mips_port.md for that story. RET (Rewritei.ml)
+     * expands to a plain
      * `JMP (RLINK)`, encoded as `JALR x0, 0(RLINK)` (rd=x0 means
      * "don't save a return address", i.e. an unconditional jump).
      *)

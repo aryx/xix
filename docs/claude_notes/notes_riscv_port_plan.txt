@@ -2,7 +2,7 @@ Porting the RISC-V (RV32) toolchain (oia/oil) against goken, byte-equal
 =========================================================================
 
 Goal: same as docs/claude_notes/notes_arm_port_plan.txt and
-notes_mips_port_plan.txt, mirrored for RISC-V: assemble+link the same
+docs/claude_notes/mips_port.md, mirrored for RISC-V: assemble+link the same
 .s with both goken's ia/il (Plan 9 RISC-V assembler/linker) and xix's
 oia/oil, and require the final executables to be byte-identical.
 Scope is RISC-V (RV32, thechar 'i') assembler + linker only, same
@@ -129,7 +129,7 @@ existing convention to inherit.
 RISC-V has no branch-delay slots (a real MIPS-specific complication that doesn't apply here)
 ---------------------------------------------------------------------------------------------------
 
-Unlike MIPS (see notes_mips_port_plan.txt's whole branch-delay-slot
+Unlike MIPS (see mips_port.md's whole branch-delay-slot
 saga), RISC-V jumps/branches take effect immediately -- no slot to
 fill, no NOP, no goken sched.c-style hoisting to worry about
 replicating. Rewritei.ml's RET/JMP expansion is correspondingly

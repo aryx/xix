@@ -1,7 +1,6 @@
 #!/bin/bash
 # Differential test driver for the MIPS port. Mirrors test-arm.sh --
-# see docs/claude_notes/notes_mips_port_plan.txt and
-# docs/claude_notes/todo_mips_port.org.
+# see docs/claude_notes/mips_port.md.
 #
 # Usage: ./test-mips.sh
 #

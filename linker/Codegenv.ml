@@ -346,7 +346,7 @@ let op_last = sp 1 7
  * (case 18) and JAL (case 11); goken's sched.c can additionally fill
  * a *call's* delay slot with a real instruction hoisted from the
  * call target (duplicating it there) instead of a plain NOP, which
- * this doesn't replicate -- see docs/claude_notes/todo_mips_port.org.
+ * this doesn't replicate -- see docs/claude_notes/mips_port.md.
  *)
 let nop = op_rrr (op 4 7) rZERO rZERO rZERO
 
@@ -636,7 +636,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * the exact trigger isn't fully characterized (it's not simply
      * "immediately after the MUL": some adjacent arrangements need
      * no padding while some buffered ones do -- see
-     * docs/claude_notes/todo_mips_port.org). Not ported, same
+     * docs/claude_notes/mips_port.md). Not ported, same
      * already-documented reason as every other sched.c gap this
      * session (branch/call delay slots) -- a fixture chaining MUL
      * into MFHI/MFLO will be functionally correct but not
@@ -809,7 +809,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
          * real bug where the caller's next instruction was silently
          * consumed as the delay slot instead, clobbered by the
          * callee), but not byte-identical to goken's scheduled
-         * output. See docs/claude_notes/todo_mips_port.org.
+         * output. See docs/claude_notes/mips_port.md.
          *)
         { size = 8; x = None; binary = (fun () ->
           [ gbranch_static node true; nop ]
@@ -836,7 +836,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * op_irr_no_r3/opirr_bxx_opcode above). Same delay-slot caveat
      * as case 11 (JAL) just above: a plain nop, not goken's
      * scheduler-hoisted instruction -- see
-     * docs/claude_notes/todo_mips_port.org. *)
+     * docs/claude_notes/mips_port.md. *)
     | BEQ (GReg rf, r_opt, _branch) ->
         { size = 8; x = None; binary = (fun () ->
             let r = r_opt ||| rZERO in
@@ -1117,7 +1117,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * it either -- its switch lowering is a binary-search of
      * branches instead, unlike 5c/7c/2c. No way to make goken itself
      * exercise this, so no way to test a port -- see
-     * docs/claude_notes/todo_mips_port.org.
+     * docs/claude_notes/mips_port.md.
      *)
 
     (* --------------------------------------------------------------------- *)

@@ -94,6 +94,10 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
       | "SWI" -> TSWI
       | "RFE" -> TRFE
 
+      (* claude: case 17, 64-bit long multiply. *)
+      | "MULL" -> TMULL (A.S, false) | "MULLU" -> TMULL (A.U, false)
+      | "MULAL" -> TMULL (A.S, true) | "MULALU" -> TMULL (A.U, true)
+
       | "SWPW" -> TSWAP A.Word | "SWPBU" -> TSWAP (A.Byte A.U)
 
       (* conditions *)

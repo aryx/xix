@@ -43,6 +43,7 @@ module L = Location_cpp
 %token <Ast_asm.floatp_precision> TMOVWF TMOVFW
 %token <Ast_asm.floatp_precision> TMOVF
 %token <Ast_asm5.fcrreg> TFCR
+%token <Ast_asm.sign * bool> TMULL
 %token TMVN
 %token <Ast_asm.move_size> TMOV TSWAP
 %token TB  TBL
@@ -225,6 +226,13 @@ instr:
  | TSWI cond imm { (SWI $3, $2) }
  | TRFE cond     { (RFE, $2) }
 
+ /*(* case 17: "MULL cond R1,R2,(HI,LO)" *)*/
+ | TMULL cond reg TC reg TC regreg
+     { let (sign, accum) = $1 in
+       let (hi, lo) = $7 in
+       (MULL (sign, accum, $3, $5, hi, lo), $2)
+     }
+
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/
 /*(*************************************************************************)*/
@@ -245,6 +253,9 @@ reg:
        then R $3
        else error "register value out of range"
      }
+
+/*(* for MULL (case 17): "(HI,LO)" *)*/
+regreg: TOPAR reg TC reg TCPAR { ($2, $4) }
 
 /*(* ARM specific *)*/
 shift:

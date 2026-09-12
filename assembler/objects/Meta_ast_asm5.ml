@@ -164,6 +164,14 @@ let rec vof_instr =
       and v2 = vof_fregister v2
       and v3 = vof_register v3
       in Ocaml.VSum (("MOVFW", [ v1; v2; v3 ]))
+  | MULL ((v1, v2, v3, v4, v5, v6)) ->
+      let v1 = vof_sign v1
+      and v2 = Ocaml.vof_bool v2
+      and v3 = vof_register v3
+      and v4 = vof_register v4
+      and v5 = vof_register v5
+      and v6 = vof_register v6
+      in Ocaml.VSum (("MULL", [ v1; v2; v3; v4; v5; v6 ]))
   | Bxx ((v1, v2)) ->
       let v1 = vof_condition v1
       and v2 = vof_branch_operand v2

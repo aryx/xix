@@ -384,7 +384,27 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    below with the other unported arithmetic cases.
 
 Not yet in Codegen5.ml at all:
-** TODO case 17 mull (64-bit long multiply, register-pair result)
+** DONE case 17 mull (64-bit long multiply, register-pair result) --
+   real, reachable syntax: "MULL cond R1,R2,(HI,LO)" (a.y's `regreg:
+   '(' regi ',' regi ')'`), all 4 sign/accumulate variants
+   (MULL/MULLU/MULAL/MULALU) sharing one new instr constructor
+   (`MULL of A.sign * bool * reg * reg * reg * reg`) since goken's
+   own oprrr() encodes the 4 mnemonics as a 2-bit sub-field (sign,
+   accumulate) rather than 4 unrelated opcodes. New `gmull_opcode`
+   helper for that bit packing -- caught a real bug while testing:
+   the first version had the sign and accumulate bits swapped
+   (MULL's own encoding came out identical to MULALU's), found by
+   mull_case17.s and confirmed against goken directly.
+   Added mull_case17.s (all 4 variants computing the same product
+   into 4 different register pairs, MULAL/MULALU accumulating onto
+   pre-zeroed registers so all 4 results should match, summed into
+   the exit code -- exactly the kind of test that would have caught
+   the bit-swap bug above). Two different multiplicands ($100000/
+   $100001, not the same constant twice) to avoid the already-known
+   literal-pool-deduplication gap, same reasoning as
+   longoff_case30_31.s. PASS byte-identical + PASS same qemu-arm
+   exit code. Verified: full ARM/MIPS/RISC-V baselines and make test
+   (134/134) all still pass.
 ** TODO case 35 mov PSR,R
 ** TODO case 36 mov R,PSR
 ** TODO case 37 mov $con,PSR

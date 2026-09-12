@@ -158,6 +158,15 @@ type instr =
    * ArithF/MOVE. *)
   | MOVWF of A.floatp_precision * reg * freg (* int -> float/double *)
   | MOVFW of A.floatp_precision * freg * reg (* float/double -> int *)
+  (* claude: case 17 -- 64-bit long multiply, register-pair result.
+   * The 4 mnemonics (MULL/MULLU/MULAL/MULALU) are just
+   * sign x accumulate-or-not, goken's own oprrr() encodes them as
+   * such (a 2-bit sub-field), so one constructor covers all 4
+   * instead of a small enum type -- "MULL r1,r2,(hi,lo)" syntax
+   * (goken's a.y `regreg: '(' regi ',' regi ')'`). *)
+  | MULL of A.sign * bool (* accumulate *) *
+      reg (* r1, from *) * reg (* r2, middle *) *
+      reg (* hi *) * reg (* lo *)
   (*e: [[Ast_asm5.instr]] arithmetic instructions cases *)
 
   (* Memory *)
@@ -277,7 +286,7 @@ let branch_opd_of_instr (instr : instr_with_cond) : A.branch_operand option =
   | BL opd -> Some opd
   | Bxx (_cond, opd) -> Some opd
   | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | MOVE _ | MOVEF _ | SWAP _
-  | Cmp _ | CmpF _ | SWI _ | RFE -> None
+  | Cmp _ | CmpF _ | SWI _ | RFE | MULL _ -> None
 (*e: function [[Ast_asm5.branch_opd_of_instr]] *)
 
 (*s: function [[Ast_asm5.visit_globals_instr]] *)
@@ -297,6 +306,6 @@ let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
   | BL b -> A.visit_globals_branch_operand f b
   | Bxx (_, b) -> A.visit_globals_branch_operand f b
   | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | SWAP _ | Cmp _ | CmpF _ | SWI _
-  | RFE -> ()
+  | RFE | MULL _ -> ()
 (*e: function [[Ast_asm5.visit_globals_instr]] *)
 (*e: objects/Ast_asm5.ml *)

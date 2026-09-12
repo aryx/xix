@@ -583,6 +583,19 @@ let gfcr (fcr : fcrreg) (R rint) : Bits.t =
   let fcr_val = match fcr with FPSR -> 1 | FPCR -> 2 in
   [(0xe, 24); (1, 8); (1, 4); (fcr_val, 21); (rint, 12)]
 
+(* claude: case 17 (MULL/MULLU/MULAL/MULALU, 64-bit long multiply) --
+ * oprrr()'s 4 cases in codegen.c all share `(v<<21)|(0x9<<4)`, where
+ * `v` packs sign (bit1: 1=signed) and accumulate (bit0: 1=yes) into
+ * a fixed `4 lor ...` base (bit2 always set, marking the "long
+ * multiply" opcode class): AMULLU=4(U,no-acc), AMULALU=5(U,acc),
+ * AMULL=6(S,no-acc), AMULAL=7(S,acc) -- confirmed against goken
+ * directly (a first version of this helper had the two bits
+ * swapped, caught by mull_case17.s: "MULL R1,R2,(R3,R4)" produced
+ * MULALU's bits (0xa nibble) instead of MULL's (0xc)). *)
+let gmull_opcode (sign : A.sign) (accumulate : bool) : Bits.t =
+  let v = 4 lor (match sign with A.S -> 2 | A.U -> 0) lor (if accumulate then 1 else 0) in
+  [(v, 21); (0x9, 4)]
+
 (*s: function [[Codegen5.gload_from_pool]] *)
 let gload_from_pool (nsrc : 'a T.node) cond rt =
   match nsrc.branch with
@@ -717,6 +730,18 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           { size = 4; x = None; binary = (fun () ->
             [ [gcond cond] @ gop_fixfloat `ToInt prec @ [(rf, 0); (rt, 12)] ]
           )}
+
+    (* case 17: 64-bit long multiply, register-pair result -- see
+     * gmull_opcode's comment above for the sign/accumulate bit
+     * packing. Bit layout: r1 (from) at bits[11:8], r2 (middle) at
+     * bits[3:0], hi at bits[19:16], lo at bits[15:12] -- goken's
+     * `(rf<<8)|r|(rt<<16)|(rt2<<12)`. *)
+    | MULL (sign, accumulate, (R r1), (R r2), (R hi), (R lo)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ [gcond cond] @ gmull_opcode sign accumulate
+            @ [(r1, 8); (r2, 0); (hi, 16); (lo, 12)]
+          ]
+        )}
 
     (* --------------------------------------------------------------------- *)
     (* Arithmetics *)

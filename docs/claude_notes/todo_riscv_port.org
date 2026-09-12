@@ -184,8 +184,27 @@ Not yet in Codegeni.ml at all:
    currently hardcoded inline in Codegeni.ml's JMP case instead of
    going through a general case-5 encoder -- revisit if/when a
    general JALR-with-offset is needed)
-** TODO case 8  lui I,D (used standalone, not just as case 9/20's
-   first half)
+** DONE case 8  lui I,D. New `LUI of int * reg` AST constructor
+   (bumped Object_file.version 15->16) and `TLUI`/"LUI" grammar/
+   lexer wiring for xix's own `LUI $I,D` syntax, plus a fast path in
+   the existing `Move2 (W__, Right (Int i), Gen (GReg rt))` case
+   (MOVW-immediate) that emits case 8's bare 4-byte LUI instead of
+   case 9's 8-byte LUI+ADDI whenever `i land 0xfff = 0` -- matching
+   goken's own constant classifier (il/span.c's `aclass`, C_UCON
+   class), which picks the same shorter encoding since there's
+   nothing for the ADDI to add.
+   Discovered while trying to test xix's own `LUI $I,D` mnemonic
+   directly against goken: goken's grammar parses a standalone "LUI"
+   mnemonic (LLUI -> ALUI) but its linker optab.c has no entry for
+   ALUI at all ("illegal combination LUI..." -- dead syntax in
+   goken's own assembler, same category as case 4's bare "JAL label"
+   having no working goken syntax either). So case 8 is only tested
+   through the MOVW-immediate path that actually reaches it in
+   goken, via tests/linker/riscv_diff/case8_riscv.s (+ riscv64_diff
+   copy); xix's own directly-usable `LUI $I,D` mnemonic is kept as a
+   building block with no differential test of its own, same
+   reasoning as JAL's bare-label form. PASS byte-identical + PASS
+   same exit code on both RV32 and RV64.
 ** TODO case 10 sign extend (MOVB/MOVH -- see the Move1 backlog note
    in the plan doc)
 ** TODO case 12 mov r,lext => lui/auipc I1,T; sb r,I0(T)

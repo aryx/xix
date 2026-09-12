@@ -37,6 +37,7 @@ module L = Location_cpp
 %token <Ast_asmi.mul_opcode> TMULOP
 %token TSYSCALL TRFE TBREAK
 %token TJMP TJAL
+%token TLUI
 %token TBEQ TBNE
 %token <Ast_asmi.b_condition> TB
 %token <Ast_asmi.move1_size> TMOVE1
@@ -206,6 +207,8 @@ instr:
  | TB gen TC reg TC rel      { Bxx ($1, $2, Some $4, $6) }
 
  | TSYSCALL { ECALL }
+
+ | TLUI imm TC reg { LUI ($2, $4) }
 
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/

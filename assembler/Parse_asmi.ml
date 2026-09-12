@@ -110,6 +110,12 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
 
       | "JMP" -> TJMP | "JAL" -> TJAL
 
+      (* claude: standalone case 8 -- goken's grammar shape is
+       * `LUI $I,D` / `LUI name,D` (outcode's `from`=imm/name,
+       * `to`=D); only the immediate form is wired here (`imm`, not
+       * `name`), matching what Codegeni.ml's case 8 implements. *)
+      | "LUI" -> TLUI
+
       | _ -> TIDENT s
       )
 

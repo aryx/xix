@@ -18,6 +18,7 @@ CASES=(
     "tests/linker/riscv_diff/case3_riscv.s:_start"
     "tests/linker/riscv_diff/case4_riscv.s:_start"
     "tests/linker/riscv_diff/case25_26_riscv.s:_start"
+    "tests/linker/riscv_diff/case8_riscv.s:_start"
 )
 
 FAIL=0

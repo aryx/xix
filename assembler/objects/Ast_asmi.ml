@@ -101,8 +101,11 @@ type instr =
   (* TODO: in theory takes F | D | W, not just A.floatp_precision *)
   | ArithF of (arithf_opcode * A.floatp_precision) *
        freg * freg option * freg
-  (* Special RISCV *)
-  | LUI
+  (* Special RISCV: "lui $I,D" -- loads the raw 32-bit immediate's
+   * upper 20 bits (bits [31:12], no rounding, unlike case 9's
+   * MOVW-immediate expansion which rounds to compensate for ADDI's
+   * signed low 12 bits) into D. *)
+  | LUI of int * reg
 
   (* Memory (Load/Store) *)
   (* "one side must be a register" *)
@@ -202,7 +205,7 @@ let branch_opd_of_instr (instr: instr) : A.branch_operand option =
   | JAL opd -> Some opd
   | JALR (_, opd) -> Some opd
   | Bxx (_, _, _, opd) -> Some opd
-  | Arith _ | ArithF _ | ArithMul _ | LUI 
+  | Arith _ | ArithF _ | ArithMul _ | LUI _
   | Move1 _ | Move2 _ | FENCE_I
   | ECALL | SYS | BREAK
      -> None
@@ -238,6 +241,6 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | Bxx (_, gen, _, b) ->
       mov_operand gen;
       A.visit_globals_branch_operand f b
-  | Arith _ | ArithMul _ | ArithF _ | LUI
+  | Arith _ | ArithMul _ | ArithF _ | LUI _
   | FENCE_I
   | ECALL | SYS | BREAK -> () 

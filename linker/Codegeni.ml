@@ -293,6 +293,17 @@ let rules (is_64 : bool)
             [ op_itype op_opimm 0 (R r) rt i ]
           )}
 
+    (* case 8:		/* lui	I,D */ *)
+    (* claude: standalone LUI -- goken's asm.c case 8 takes the raw
+     * immediate as-is (`v = p->from.offset; o1 = OP_U(p->to.reg, v)`),
+     * no rounding, unlike case 9's MOVW-immediate expansion (which
+     * rounds to compensate for the ADDI that follows it -- there is
+     * no following ADDI here, so no rounding is needed or wanted). *)
+    | LUI (i, rt) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ op_utype op_lui rt i ]
+        )}
+
     (* --------------------------------------------------------------------- *)
     (* System *)
     (* --------------------------------------------------------------------- *)
@@ -395,6 +406,19 @@ let rules (is_64 : bool)
           { size = 4; x = None; binary = (fun () ->
             [ op_itype op_opimm 0 rZERO rt i ]
           )}
+        else if i land 0xfff = 0
+        then
+          (* case 8:	/* lui	I,D */
+           * claude: goken's own constant classifier (il/span.c's
+           * `aclass`) picks this 4-byte LUI-only encoding over
+           * case 9's LUI+ADDI specifically when the immediate's low
+           * 12 bits are exactly zero (its C_UCON class) -- no ADDI
+           * is needed since there'd be nothing to add. Missing this
+           * fast path (i.e. always taking case 9 below) would still
+           * be functionally correct but silently 4 bytes too big
+           * whenever this triggers, so byte-identical only by
+           * accident for the (far more common) non-aligned case. *)
+          { size = 4; x = None; binary = (fun () -> [ op_utype op_lui rt i ]) }
         else
           (* case 9:	/* lui I1,D; addi I0,D */ *)
           { size = 8; x = None; binary = (fun () -> gen_absolute rt i) }
@@ -503,7 +527,7 @@ let rules (is_64 : bool)
     (* --------------------------------------------------------------------- *)
     (* Other: not ported yet *)
     (* --------------------------------------------------------------------- *)
-    | Arith _ | ArithMul _ | ArithF _ | LUI
+    | Arith _ | ArithMul _ | ArithF _
     | Move1 _ | Move2 _
     | JMP _ | JAL _ | JALR _ | Bxx _
     | FENCE_I | BREAK | SYS

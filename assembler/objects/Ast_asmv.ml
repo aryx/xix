@@ -132,6 +132,14 @@ type instr =
   | BREAK
   | TLB of tlb_kind
 
+  (* claude: atomic load-linked/store-conditional -- case 47/48 in
+   * Codegenv.ml. goken's own optab.c only ever declares these with
+   * a plain register-indirect (SOREG) memory operand, no $sym(SB)/
+   * FP/SP-relative form at all, so `gen` here is really only ever
+   * an Indirect in practice. *)
+  | LL of gen * reg (* soreg, r *)
+  | SC of reg * gen (* r, soreg *)
+
   and arith_opcode =
     (* logic *)
     | AND | OR | XOR
@@ -206,7 +214,7 @@ let branch_opd_of_instr (instr: instr) : A.branch_operand option =
   | BNE (_, _, opd) -> Some opd
   | Bxx (_, _, opd) -> Some opd
   | Arith _ | ArithF _ | NOR _ | ArithMul _ | Move1 _ | Move2 _ | SYSCALL | BREAK
-  | TLB _ -> None
+  | TLB _ | LL _ | SC _ -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   let mov_operand x =
@@ -250,5 +258,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | Bxx (_, gen, b) ->
       mov_operand gen;
       A.visit_globals_branch_operand f b
-  | Arith _ | NOR _ | ArithMul _ | ArithF _ 
-  | SYSCALL | BREAK | TLB _ -> () 
+  | LL (gen, _) -> mov_operand gen
+  | SC (_, gen) -> mov_operand gen
+  | Arith _ | NOR _ | ArithMul _ | ArithF _
+  | SYSCALL | BREAK | TLB _ -> ()

@@ -691,13 +691,38 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    emulation same as case37_38_mips.s's MTC0/MFC0). PASS
    byte-identical + PASS same qemu-mips trap on both sides. Verified:
    full MIPS + ARM baselines and make test (134/134) all still pass.
+** DONE case 47 sc r,soreg / case 48 ll soreg,r -- atomic
+   store-conditional/load-linked. Required new AST from scratch (no
+   existing constructor fit their asymmetric semantics -- SC writes
+   a success/failure flag back into its register operand on real
+   hardware, not a plain store): added top-level `LL of gen * reg`
+   and `SC of reg * gen` to `instr` (Object_file.version bumped
+   13->14), new TSC/TLL tokens and lexer keywords, and grammar
+   rules mirroring case 7/8's shape.
+   ZOREG (offset==0) only -- and here that's not just the usual
+   BIG=0 dead-fast-path story (case 7/8/35/36): goken's optab.c
+   *never declares* a large-offset/entity variant for ASC/ALL at
+   all, so there's nothing else to port, not just nothing else
+   reachable. SC (store) has no delay slot; LL (load) gets the same
+   mandatory 1-NOP load-delay-slot hazard as case 8/27/36 (confirmed
+   via `vl -a`).
+   Added tests/linker/mips_diff/case47_48_mips.s (LL kept right
+   before SYSCALL, nothing eligible to hoist -- byte-identical) and
+   case47_48_check_mips.s (the real LL-then-SC protocol, followed by
+   a plain load to confirm the value landed, self-checked with BEQ
+   -- functionally correct but inherits both LL's delay-slot gap and
+   BEQ/JMP's, kept out of test-mips.sh's CASES like the other
+   scheduler-gap fixtures). Both fixtures use the stack pointer as
+   the memory operand (a garbage/uninitialized register address
+   just segfaults or traps identically on both sides, which is a
+   weaker check). PASS byte-identical (case47_48_mips.s) + PASS
+   functionally (both). Verified: full MIPS + ARM baselines and make
+   test (134/134) all still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
 ** TODO case 45 case r
 ** TODO case 46 bcase $con,lbra
-** TODO case 47 sc r, soreg
-** TODO case 48 ll soreg, r
 
 * Notes for later
 ** Expect a BIG/immrot-equivalent story for address-of-global (R30 bias)

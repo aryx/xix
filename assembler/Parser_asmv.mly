@@ -37,6 +37,7 @@ module L = Location_cpp
 %token TNOR
 %token <Ast_asmv.mul_opcode> TMULOP
 %token TSYSCALL TRFE TBREAK
+%token TSC TLL
 %token TJMP TJAL
 %token TBEQ TBNE
 %token <Ast_asmv.b_condition> TB
@@ -213,6 +214,8 @@ instr:
  | TB gen TC rel             { Bxx ($1, $2, $4) }
 
  | TSYSCALL { SYSCALL }
+ | TLL gen TC reg { LL ($2, $4) }
+ | TSC reg TC gen { SC ($2, $4) }
  | TTLB { TLB $1 }
 
 /*(*************************************************************************)*/

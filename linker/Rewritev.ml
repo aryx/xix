@@ -183,6 +183,7 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
             | JMP _ | RFE _ | JAL _ | JALReg _ | BEQ _ | BNE _
             | Bxx _
             | SYSCALL | BREAK | TLB _
+            | LL _ | SC _
             ) ->
         autosize_opt
   ) None;

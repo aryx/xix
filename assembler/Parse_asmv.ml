@@ -98,6 +98,8 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
       | "BLTZAL" -> TB LTZAL
 
       | "SYSCALL" -> TSYSCALL
+      | "SC" -> TSC
+      | "LL" -> TLL
       | "BREAK" -> TBREAK
       | "RFE" -> TRFE
 

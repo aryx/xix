@@ -1085,6 +1085,31 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
            [ op_irr (opirr_mem W__ LDR) 0 rf rt; nop ]
          ) }
 
+    (* case 47:	/* sc r, soreg */ *)
+    (* claude: atomic store-conditional. Unlike case 7 (plain SW),
+     * goken's optab.c only ever declares ASC/ALL with a SOREG memory
+     * operand (C_REG,C_NONE,C_SOREG / C_SOREG,C_NONE,C_REG) -- no
+     * $sym(SB)/FP/SP-relative form at all -- so there's no case
+     * 35/36-style LOREG/Entity variant to port here; ZOREG
+     * (offset==0) is the only shape that exists in goken itself, not
+     * just the only one reachable (same BIG=0/SOREG story as case
+     * 7/8, but here it's not even declared, not just dead). A store,
+     * so no delay slot, same as case 7. *)
+    | SC (rf, Indirect (rt, 0)) ->
+        { size = 4; x = None; binary = (fun () ->
+            [ op_irr (sp 7 0) 0 rt rf ]
+         ) }
+
+    (* case 48:	/* ll soreg, r */ *)
+    (* claude: atomic load-linked -- ZOREG only, same reasoning as
+     * case 47. A load, so it gets the same mandatory 1-NOP
+     * load-delay-slot hazard as case 8/27/36 (confirmed via `vl
+     * -a`). *)
+    | LL (Indirect (rf, 0), rt) ->
+        { size = 8; x = None; binary = (fun () ->
+            [ op_irr (sp 6 0) 0 rf rt; nop ]
+         ) }
+
     (* --------------------------------------------------------------------- *)
     (* System *)
     (* --------------------------------------------------------------------- *)
@@ -1101,8 +1126,8 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      |Move1 (_, _, _)| Move2 _
      |RFE _|JAL _|JALReg (R _, _)|JMP _
      |BEQ (_, _, _)|BNE (_, _, _)|Bxx (_, _, _)
-     |TLB _
-     ) -> 
+     |TLB _|LL (_, _)|SC (_, _)
+     ) ->
        failwith (spf "Codegenv: TODO: instr not handled: %s"
                 (Typesv.show_instr node.instr))
     )

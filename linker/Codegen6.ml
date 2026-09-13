@@ -326,8 +326,25 @@ let gen_of_xgen : xgen -> gen = function
   | XEntity e -> Entity e
 
 (* claude: goken's own `yxm` table (optab.c) is shared verbatim across
- * ADDSD/SUBSD/MULSD/DIVSD -- only this final opcode byte differs. *)
+ * ADDSD/SUBSD/MULSD/DIVSD (and their SS-suffixed siblings, see
+ * `sse_prefix` below) -- only this final opcode byte differs, and only
+ * per *operation*, not per precision. *)
 let arithf_opcode_byte = function FADD -> 0x58 | FSUB -> 0x5c | FMUL -> 0x59 | FDIV -> 0x5e
+
+(* claude: the `Pf2`/`Pf3` legacy prefix MOVSD/MOVSS, ADDSD/ADDSS (and
+ * every other `yxm`/`yxmov`/`yxcvlf`/`yxcvfq`-shaped instruction below
+ * except UCOMISD/UCOMISS, see `ucomis_prefix`) share -- 0xf2 for
+ * double precision, 0xf3 for single, confirmed against real 6a/6l
+ * throughout (e.g. "ADDSS X1,X0" -> `f3 0f 58 c1`, same opcode byte as
+ * ADDSD's own `f2 0f 58 c1`, just the prefix swapped). *)
+let sse_prefix : A.floatp_precision -> int = function A.D -> 0xf2 | A.F -> 0xf3
+
+(* claude: UCOMISD/UCOMISS's own prefix story is a genuine third case,
+ * different from every other SSE instruction here -- UCOMISD is `Pe`
+ * (0x66, confirmed "UCOMISD X1,X0" -> `66 0f 2e c1`), UCOMISS is `Pm`,
+ * i.e. *no* legacy prefix byte at all (confirmed "UCOMISS X1,X0" ->
+ * `0f 2e c1`, straight to the 0x0f escape). *)
+let ucomis_prefix : A.floatp_precision -> int list = function A.D -> [0x66] | A.F -> []
 
 (* claude: the *short* (rel8) Jcc opcode for each condition -- goken's
  * optab.c AJEQ/AJNE/.../AJLS entries each list {short_op, near_op}
@@ -766,69 +783,71 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
     (* --------------------------------------------------------------------- *)
 
     (* claude: case Zm_r_xm (load direction) -- goken's yxmov-shaped
-     * MOVSD -- the *load* form (`Zm_r_xm`, opcode 0x10) is tried first
-     * in goken's own table, so it wins even for a plain register-to-
-     * register move (confirmed against real 6a/6l: "MOVSD X0,X1" ->
-     * `f2 0f 10 c8`, not the store opcode) -- the *opposite* clause
-     * order from `Move`'s own store-first split above, see
-     * Ast_asm6.ml's `MovF` comment. Prefix `0xf2` (Pf2), no REX.W. *)
-    | MovF (src, XReg r) ->
+     * MOVSD/MOVSS -- the *load* form (`Zm_r_xm`, opcode 0x10) is tried
+     * first in goken's own table, so it wins even for a plain
+     * register-to-register move (confirmed against real 6a/6l: "MOVSD
+     * X0,X1" -> `f2 0f 10 c8`, not the store opcode) -- the *opposite*
+     * clause order from `Move`'s own store-first split above, see
+     * Ast_asm6.ml's `MovF` comment. No REX.W either precision. *)
+    | MovF (prec, src, XReg r) ->
         let rm = resolve_gen env node (gen_of_xgen src) in
-        let bytes = [0xf2] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm
+        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm
                     @ [0x0f; 0x10] @ encode_rm (xreg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Zr_m_xm (store direction) -- only reached when the
      * destination isn't a register (the load clause above already
      * claims every `XReg` destination, reg-reg included). *)
-    | MovF (XReg r, dest) ->
+    | MovF (prec, XReg r, dest) ->
         let rm = resolve_gen env node (gen_of_xgen dest) in
-        let bytes = [0xf2] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm
+        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm
                     @ [0x0f; 0x11] @ encode_rm (xreg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
-    | MovF ((XIndirect _ | XEntity _), (XIndirect _ | XEntity _)) ->
-        raise (Impossible "real amd64 MOVSD never has both operands in memory")
+    | MovF (_, (XIndirect _ | XEntity _), (XIndirect _ | XEntity _)) ->
+        raise (Impossible "real amd64 MOVSD/MOVSS never has both operands in memory")
 
     (* claude: case Zm_r_xm -- goken's yxm-shaped dyadic SSE arithmetic
      * -- real x86's own in-place 2-operand shape ("dst := dst op
      * src"), ModRM.reg is always the destination, ModRM.rm the source
-     * (confirmed: "ADDSD X1,X0" -> `f2 0f 58 c1`, reg=X0, rm=X1).
-     * Prefix `0xf2`, no REX.W. *)
-    | ArithF (op, src, dst) ->
+     * (confirmed: "ADDSD X1,X0" -> `f2 0f 58 c1`, reg=X0, rm=X1). No
+     * REX.W either precision. *)
+    | ArithF (op, prec, src, dst) ->
         let rm = resolve_gen env node (gen_of_xgen src) in
-        let bytes = [0xf2] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm
+        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm
                     @ [0x0f; arithf_opcode_byte op] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
-    (* claude: case Zm_r_xm -- goken's yxcmp-shaped UCOMISD -- unlike
-     * ADDSD/etc, this one's real prefix is `Pe` (0x66), *not* `Pf2`
-     * (confirmed against both optab.c and real 6a/6l: "UCOMISD X1,X0"
-     * -> `66 0f 2e c1`, no `f2` byte at all). Sets integer EFLAGS the
-     * same way an unsigned CMP does -- see Ast_asm6.ml's `CmpF`
-     * comment for why this port reuses the existing unsigned `Jcc`
-     * conditions as-is afterward. *)
-    | CmpF (src, dst) ->
+    (* claude: case Zm_r_xm -- goken's yxcmp-shaped UCOMISD/UCOMISS --
+     * see `ucomis_prefix`'s own comment for why this pair's prefix
+     * story is a genuine third case, different from every other SSE
+     * instruction here. Sets integer EFLAGS the same way an unsigned
+     * CMP does -- see Ast_asm6.ml's `CmpF` comment for why this port
+     * reuses the existing unsigned `Jcc` conditions as-is afterward. *)
+    | CmpF (prec, src, dst) ->
         let rm = resolve_gen env node (gen_of_xgen src) in
-        let bytes = [0x66] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm
+        let bytes = ucomis_prefix prec @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm
                     @ [0x0f; 0x2e] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
-    (* claude: case Zm_r_xm -- goken's yxcvlf-shaped CVTSQ2SD (64-bit
-     * int -> double) -- confirmed against real 6a/6l this needs REX.W
-     * (goken's own `Pw` alongside `Pf2`): "CVTSQ2SD AX,X3" ->
-     * `f2 48 0f 2a d8` (REX present even though both registers are <
-     * 8, since `width:Q_` unconditionally forces it here, exactly as
-     * it does for the integer-only instructions above). *)
-    | CvtIntToF (src, dst) ->
+    (* claude: case Zm_r_xm -- goken's yxcvlf/yxcvqf-shaped
+     * CVTSQ2SD/CVTSQ2SS (64-bit int -> float) -- confirmed against
+     * real 6a/6l both need REX.W regardless of precision (goken's own
+     * `Pw` alongside `Pf2`/`Pf3`): "CVTSQ2SD AX,X3" ->
+     * `f2 48 0f 2a d8`, "CVTSQ2SS AX,X3" -> `f3 48 0f 2a d8` (REX
+     * present even though both registers are < 8, since `width:Q_`
+     * unconditionally forces it here, exactly as it does for the
+     * integer-only instructions above). *)
+    | CvtIntToF (prec, src, dst) ->
         let rm = resolve_gen env node src in
-        let bytes = [0xf2] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(xreg_num dst) ~rm
+        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(xreg_num dst) ~rm
                     @ [0x0f; 0x2a] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
-    (* claude: case Zm_r_xm -- goken's yxcvfq-shaped CVTTSD2SQ (double
-     * -> 64-bit int, truncating) -- same REX.W-forcing story.
-     * Confirmed: "CVTTSD2SQ X3,BX" -> `f2 48 0f 2c db`. *)
-    | CvtFToInt (src, dst) ->
+    (* claude: case Zm_r_xm -- goken's yxcvfq-shaped CVTTSD2SQ/
+     * CVTTSS2SQ (float -> 64-bit int, truncating) -- same REX.W-
+     * forcing story regardless of precision. Confirmed: "CVTTSD2SQ
+     * X3,BX" -> `f2 48 0f 2c db`, "CVTTSS2SQ X3,BX" -> `f3 48 0f 2c db`. *)
+    | CvtFToInt (prec, src, dst) ->
         let rm = resolve_gen env node (gen_of_xgen src) in
-        let bytes = [0xf2] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(reg_num dst) ~rm
+        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(reg_num dst) ~rm
                     @ [0x0f; 0x2c] @ encode_rm (reg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 

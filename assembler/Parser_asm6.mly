@@ -42,13 +42,15 @@ module L = Location_cpp
 %token TRET
 %token TSYSCALL
 %token TNOP
-/*(* claude: double-precision SSE only -- see Ast_asm6.ml's own "Scope
-   * so far" note. *)*/
-%token TMOVF
-%token <Ast_asm6.arithf_opcode> TARITHF
-%token TUCOMISD
-%token TCVTINTTOF
-%token TCVTFTOINT
+/*(* claude: SSE only (single- and double-precision), no x87 -- see
+   * Ast_asm6.ml's own "Scope so far" note. Each token carries an
+   * `A.floatp_precision` (MOVSD/MOVSS etc share one grammar rule,
+   * precision threaded through like every other AST case here). *)*/
+%token <Ast_asm.floatp_precision> TMOVF
+%token <Ast_asm6.arithf_opcode * Ast_asm.floatp_precision> TARITHF
+%token <Ast_asm.floatp_precision> TUCOMISF
+%token <Ast_asm.floatp_precision> TCVTINTTOF
+%token <Ast_asm.floatp_precision> TCVTFTOINT
 
 %token TTEXT TGLOBL
 %token TDATA TWORD
@@ -232,19 +234,20 @@ instr:
  | TRET                          { Ret }
  | TSYSCALL                      { Syscall }
 
- /*(* goken's yxmov-shaped MOVSD -- see Ast_asm6.ml's MovF comment for
-    * why its codegen clause order is opposite from TMOV's own. *)*/
- | TMOVF xgen TC xgen            { MovF ($2, $4) }
- /*(* goken's yxm-shaped dyadic SSE arithmetic: "ADDSD Xm/mem,Xn" (in-
-    * place, "Xn += Xm/mem") -- see Ast_asm6.ml's ArithF comment. *)*/
- | TARITHF xgen TC xreg          { ArithF ($1, $2, $4) }
- /*(* goken's yxcmp-shaped UCOMISD -- see Ast_asm6.ml's CmpF comment. *)*/
- | TUCOMISD xgen TC xreg         { CmpF ($2, $4) }
- /*(* goken's yxcvlf-shaped CVTSQ2SD (int64 -> double) and yxcvfq-shaped
-    * CVTTSD2SQ (double -> int64, truncating) -- see Ast_asm6.ml's
-    * CvtIntToF/CvtFToInt comments. *)*/
- | TCVTINTTOF gen TC xreg        { CvtIntToF ($2, $4) }
- | TCVTFTOINT xgen TC reg        { CvtFToInt ($2, $4) }
+ /*(* goken's yxmov-shaped MOVSD/MOVSS -- see Ast_asm6.ml's MovF comment
+    * for why its codegen clause order is opposite from TMOV's own. *)*/
+ | TMOVF xgen TC xgen            { MovF ($1, $2, $4) }
+ /*(* goken's yxm-shaped dyadic SSE arithmetic: "ADDSD/ADDSS Xm/mem,Xn"
+    * (in-place, "Xn += Xm/mem") -- see Ast_asm6.ml's ArithF comment. *)*/
+ | TARITHF xgen TC xreg          { let (op, prec) = $1 in ArithF (op, prec, $2, $4) }
+ /*(* goken's yxcmp-shaped UCOMISD/UCOMISS -- see Ast_asm6.ml's CmpF
+    * comment. *)*/
+ | TUCOMISF xgen TC xreg         { CmpF ($1, $2, $4) }
+ /*(* goken's yxcvlf/yxcvqf-shaped CVTSQ2SD/CVTSQ2SS (int64 -> float)
+    * and yxcvfq-shaped CVTTSD2SQ/CVTTSS2SQ (float -> int64, truncating)
+    * -- see Ast_asm6.ml's CvtIntToF/CvtFToInt comments. *)*/
+ | TCVTINTTOF gen TC xreg        { CvtIntToF ($1, $2, $4) }
+ | TCVTFTOINT xgen TC reg        { CvtFToInt ($1, $2, $4) }
 
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/

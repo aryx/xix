@@ -230,50 +230,65 @@ type instr =
    * must be ordered opposite from `Move`'s (see Codegen6.ml). No
    * float-immediate form exists at all (confirmed: real 6a rejects
    * "MOVSD $0,X0" outright), matching every other arch's own choice
-   * to skip float immediates (e.g. Ast_asm7.ml's `FArith` comment). *)
-  | MovF of xgen * xgen
+   * to skip float immediates (e.g. Ast_asm7.ml's `FArith` comment).
+   * `A.floatp_precision` (shared with Ast_asmv.ml/Ast_asmi.ml/
+   * Ast_asm7.ml) picks MOVSD vs MOVSS -- goken's own `yxmov` table is
+   * identical for both, just `Pf2` vs `Pf3` (see Codegen6.ml). *)
+  | MovF of A.floatp_precision * xgen * xgen
   (* claude: goken's yxm-shaped dyadic SSE arithmetic (optab.c) --
-   * ADDSD/SUBSD/MULSD/DIVSD, real x86's own 2-operand in-place shape
-   * (`dst := dst op src`, no 3-operand form the way VFP/NEON have) --
-   * confirmed against real 6a/6l ("ADDSD X1,X0" -> `f2 0f 58 c1`,
-   * ModRM.reg=X0 (dst), ModRM.rm=X1 (src)). *)
-  | ArithF of arithf_opcode * xgen * xregister
-  (* claude: goken's yxcmp-shaped UCOMISD (optab.c) -- unlike ADDSD/etc,
-   * this one's own real prefix is `Pe` (0x66), *not* `Pf2` (confirmed
-   * against real optab.c and real 6a/6l byte output: "UCOMISD
-   * X1,X0" -> `66 0f 2e c1`, no `f2` byte at all). Sets integer
-   * EFLAGS (ZF/PF/CF) the same way an unsigned integer CMP does, so
-   * this port's *existing* unsigned `Jcc` conditions (JCS/JCC/JHI/JLS)
-   * are reused as-is for a float branch -- no separate float condition
-   * type needed (matching real x86 usage: a NaN operand sets
-   * PF as well as ZF+CF, which this port doesn't attempt to
-   * special-case, same "don't model IEEE unordered comparisons
-   * precisely" scope choice ARM64's own `FCmp` comment makes). *)
-  | CmpF of xgen * xregister
-  (* claude: goken's yxcvlf-shaped CVTSQ2SD (optab.c) -- 64-bit integer
-   * (register or memory, goken's own `Yml`) to double-precision float,
-   * confirmed against real 6a/6l this needs REX.W (goken's `Pw`
-   * prefix, alongside `Pf2`) -- "CVTSQ2SD AX,X3" -> `f2 48 0f 2a d8`.
-   * The 32-bit-int form (`CVTSL2SD`, no REX.W) isn't wired -- not
-   * needed by this checkpoint's own fixture, and every GP register in
-   * this port's own scope is already treated as 64-bit-wide by
-   * convention (see `width`'s own `Q_` case). *)
-  | CvtIntToF of gen * xregister
-  (* claude: goken's yxcvfq-shaped CVTTSD2SQ (optab.c) -- the reverse
-   * conversion, *truncating* (not rounding -- real x86 also has a
-   * separate, non-truncating CVTSD2SQ this port doesn't wire, matching
-   * ARM64's own choice to skip the round-to-nearest FCVTNS variant and
-   * only carry FCVTZS). Also REX.W-forced, confirmed: "CVTTSD2SQ
-   * X3,BX" -> `f2 48 0f 2c db`. *)
-  | CvtFToInt of xgen * register
+   * ADDSD/SUBSD/MULSD/DIVSD (and their SS-suffixed siblings, same
+   * opcode bytes, just `Pf3` instead of `Pf2`), real x86's own
+   * 2-operand in-place shape (`dst := dst op src`, no 3-operand form
+   * the way VFP/NEON have) -- confirmed against real 6a/6l ("ADDSD
+   * X1,X0" -> `f2 0f 58 c1`, ModRM.reg=X0 (dst), ModRM.rm=X1 (src)).
+   * `arithf_opcode` itself stays precision-generic (matching
+   * Ast_asmi.ml's own `ArithF of (arithf_opcode * A.floatp_precision)
+   * * ...` convention: one AST case per *operation*, precision
+   * threaded alongside rather than doubling the opcode count). *)
+  | ArithF of arithf_opcode * A.floatp_precision * xgen * xregister
+  (* claude: goken's yxcmp-shaped UCOMISD/UCOMISS (optab.c) -- unlike
+   * ADDSD/etc, UCOMISD's own real prefix is `Pe` (0x66), *not* `Pf2`
+   * (confirmed against real optab.c and real 6a/6l byte output:
+   * "UCOMISD X1,X0" -> `66 0f 2e c1`, no `f2` byte at all) -- and
+   * UCOMISS's is `Pm`, i.e. *no* legacy prefix at all (confirmed:
+   * "UCOMISS X1,X0" -> `0f 2e c1`), a third, different prefix story
+   * from every other SSE instruction here. Sets integer EFLAGS
+   * (ZF/PF/CF) the same way an unsigned integer CMP does, so this
+   * port's *existing* unsigned `Jcc` conditions (JCS/JCC/JHI/JLS) are
+   * reused as-is for a float branch -- no separate float condition
+   * type needed (matching real x86 usage: a NaN operand sets PF as
+   * well as ZF+CF, which this port doesn't attempt to special-case,
+   * same "don't model IEEE unordered comparisons precisely" scope
+   * choice ARM64's own `FCmp` comment makes). *)
+  | CmpF of A.floatp_precision * xgen * xregister
+  (* claude: goken's yxcvlf/yxcvqf-shaped CVTSQ2SD/CVTSQ2SS (optab.c) --
+   * 64-bit integer (register or memory, goken's own `Yml`) to
+   * single- or double-precision float, confirmed against real 6a/6l
+   * both need REX.W regardless of precision (goken's `Pw` prefix,
+   * alongside `Pf2`/`Pf3`) -- "CVTSQ2SD AX,X3" -> `f2 48 0f 2a d8`,
+   * "CVTSQ2SS AX,X3" -> `f3 48 0f 2a d8`. The 32-bit-int forms
+   * (`CVTSL2SD`/`CVTSL2SS`, no REX.W) aren't wired -- not needed by
+   * this checkpoint's own fixtures, and every GP register in this
+   * port's own scope is already treated as 64-bit-wide by convention
+   * (see `width`'s own `Q_` case). *)
+  | CvtIntToF of A.floatp_precision * gen * xregister
+  (* claude: goken's yxcvfq-shaped CVTTSD2SQ/CVTTSS2SQ (optab.c) -- the
+   * reverse conversion, *truncating* (not rounding -- real x86 also
+   * has separate, non-truncating CVTSD2SQ/CVTSS2SQ this port doesn't
+   * wire, matching ARM64's own choice to skip the round-to-nearest
+   * FCVTNS variant and only carry FCVTZS). Also REX.W-forced
+   * regardless of precision, confirmed: "CVTTSD2SQ X3,BX" ->
+   * `f2 48 0f 2c db`, "CVTTSS2SQ X3,BX" -> `f3 48 0f 2c db`. *)
+  | CvtFToInt of A.floatp_precision * xgen * register
 
   (* System *)
   | Syscall
 
   and arith_opcode = ADD | SUB | XOR
   (* claude: goken's own yxm table is shared verbatim across ADDSD/
-   * SUBSD/MULSD/DIVSD (only the final opcode byte differs -- see
-   * Codegen6.ml's `arithf_opcode`), same "one AST case per real
+   * SUBSD/MULSD/DIVSD *and* their SS-suffixed siblings (only the final
+   * opcode byte differs per operation, not per precision -- see
+   * Codegen6.ml's `arithf_opcode_byte`), same "one AST case per real
    * mnemonic family" choice `arith_opcode` above already makes. *)
   and arithf_opcode = FADD | FSUB | FMUL | FDIV
 
@@ -376,9 +391,9 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | Call b | Jmp b | Jcc (_, b) -> A.visit_globals_branch_operand f b
   | Arith (_, _, _, gen1) -> gen_operand gen1
   | Cmp (_, gen1, _) -> gen_operand gen1
-  | MovF (x1, x2) -> xgen_operand x1; xgen_operand x2
-  | ArithF (_, x1, _) -> xgen_operand x1
-  | CmpF (x1, _) -> xgen_operand x1
-  | CvtIntToF (g1, _) -> gen_operand g1
-  | CvtFToInt (x1, _) -> xgen_operand x1
+  | MovF (_, x1, x2) -> xgen_operand x1; xgen_operand x2
+  | ArithF (_, _, x1, _) -> xgen_operand x1
+  | CmpF (_, x1, _) -> xgen_operand x1
+  | CvtIntToF (_, g1, _) -> gen_operand g1
+  | CvtFToInt (_, x1, _) -> xgen_operand x1
   | Ret | Syscall -> ()

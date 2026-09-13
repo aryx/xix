@@ -110,18 +110,28 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
       | "RET" -> TRET
       | "SYSCALL" -> TSYSCALL
 
-      (* claude: double-precision SSE only -- see Ast_asm6.ml's own
-       * "Scope so far" note. goken's optab.c lists ADDSD/SUBSD/MULSD/
-       * DIVSD all sharing the exact same `yxm` table (only the final
-       * opcode byte differs, see Codegen6.ml's `arithf_rr_opcode`). *)
-      | "MOVSD" -> TMOVF
-      | "ADDSD" -> TARITHF FADD
-      | "SUBSD" -> TARITHF FSUB
-      | "MULSD" -> TARITHF FMUL
-      | "DIVSD" -> TARITHF FDIV
-      | "UCOMISD" -> TUCOMISD
-      | "CVTSQ2SD" -> TCVTINTTOF
-      | "CVTTSD2SQ" -> TCVTFTOINT
+      (* claude: SSE only (single- and double-precision), no x87 -- see
+       * Ast_asm6.ml's own "Scope so far" note. goken's optab.c lists
+       * ADDSD/SUBSD/MULSD/DIVSD (and their SS-suffixed siblings) all
+       * sharing the exact same `yxm` table (only the final opcode byte
+       * differs *per operation*, not per precision -- see
+       * Codegen6.ml's `arithf_opcode_byte`). *)
+      | "MOVSD" -> TMOVF A.D
+      | "ADDSD" -> TARITHF (FADD, A.D)
+      | "SUBSD" -> TARITHF (FSUB, A.D)
+      | "MULSD" -> TARITHF (FMUL, A.D)
+      | "DIVSD" -> TARITHF (FDIV, A.D)
+      | "UCOMISD" -> TUCOMISF A.D
+      | "CVTSQ2SD" -> TCVTINTTOF A.D
+      | "CVTTSD2SQ" -> TCVTFTOINT A.D
+      | "MOVSS" -> TMOVF A.F
+      | "ADDSS" -> TARITHF (FADD, A.F)
+      | "SUBSS" -> TARITHF (FSUB, A.F)
+      | "MULSS" -> TARITHF (FMUL, A.F)
+      | "DIVSS" -> TARITHF (FDIV, A.F)
+      | "UCOMISS" -> TUCOMISF A.F
+      | "CVTSQ2SS" -> TCVTINTTOF A.F
+      | "CVTTSS2SQ" -> TCVTFTOINT A.F
 
       (* claude: named low registers -- goken's real 6a/lex.c has a
        * dedicated register-name hash table for these (a.h/D_AL..D_DI

@@ -18,6 +18,7 @@
   (Main.exe as oil)
   (Main.exe as ojl)
   (Main.exe as o7l)
+  (Main.exe as o6l)
   ; useful to debug, see ../../debug and ocamldebug
   (Main.bc as o5l.bc))
 )

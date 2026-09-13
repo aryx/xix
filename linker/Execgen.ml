@@ -9,7 +9,7 @@ module T = Types
 (*****************************************************************************)
 
 (*s: function [[Execgen.gen]] *)
-let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs : T.word list) (ds : T.byte array) (symbols2 : T.symbol_table2) (chan : Chan.o) : unit =
+let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs : T.byte array) (ds : T.byte array) (symbols2 : T.symbol_table2) (chan : Chan.o) : unit =
   let entry_name : string = config.entry_point in
   let entry_addr : T.real_pc =
     try 
@@ -26,24 +26,22 @@ let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs
   let format = config.header_type in
   Logs.info (fun m -> m "saving executable in %s" (Chan.destination chan));
 
-  (* claude: was hardcoded to Endian.Little regardless of arch (see
-   * the old comment this replaced in Arch.ml's endian_of_arch: "if
-   * put Big here I get a segfault with ovl" -- that's because the
-   * ELF header's byte-order marker would say MSB while the actual
-   * instruction words were still written LSB, so any consumer
-   * reading them as big-endian, e.g. qemu-mips, decoded garbage).
-   * Datagen.ml already takes endian as a parameter and isn't
-   * affected; this was the one hardcoded spot.
-   *)
-  let (_, output_32, _) = Endian.output_functions_of_endian (Arch.endian_of_arch config.arch) in
-
+  (* claude: cs (text) and ds (data) are both flat `byte array`s now --
+   * see Types.bytes_of_words's own comment for why (amd64's
+   * variable-length instructions can't be flattened into fixed 4-byte
+   * words the way every other arch's Codegen*.ml already does). Used
+   * to go through Endian.output_functions_of_endian's `output_32`
+   * here (each fixed-4-byte-word arch's own Codegen*.gen already
+   * picks the right endianness when building its `word list`, then
+   * Types.bytes_of_words -- always Little, see its own comment for
+   * why -- flattens it to bytes before it ever reaches here). *)
   match format with
   | Exec_file.A_out ->
       (* Header *)
       A_out.write_header config.arch sizes entry_addr chan.oc;
 
       (* Text section *)
-      cs |> List.iter (output_32 chan.oc);
+      cs |> Array.iter (output_char chan.oc);
 
       (* Data section (no seek to a page boundary; disk image != memory image) *)
       ds |> Array.iter (output_char chan.oc);
@@ -53,7 +51,7 @@ let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs
 
   | Exec_file.Elf ->
       (* Headers (ELF header + program headers) *)
-      let (offset_disk_text, offset_disk_data) = 
+      let (offset_disk_text, offset_disk_data) =
         Elf.write_headers config sizes entry_addr chan.oc
       in
 
@@ -63,7 +61,7 @@ let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs
        *)
       seek_out chan.oc offset_disk_text; (* = config.header_size *)
       (* Text section *)
-      cs |> List.iter (output_32 chan.oc);
+      cs |> Array.iter (output_char chan.oc);
 
       (* Data section *)
       seek_out chan.oc offset_disk_data;

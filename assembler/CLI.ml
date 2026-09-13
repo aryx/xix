@@ -88,6 +88,13 @@ let assemble7 (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
   then Logs.app (fun m -> m "AST = %s" (Ast_asm7.show_program prog));
   prog
 
+let assemble6 (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Ast_asm6.program =
+  let prog = Parse_asm6.parse caps conf infile in
+  let prog = Resolve_labels.resolve Ast_asm6.branch_opd_of_instr prog in
+  if !dump_ast
+  then Logs.app (fun m -> m "AST = %s" (Ast_asm6.show_program prog));
+  prog
+
 (*s: function [[CLI.assemble]] *)
 (* Will modify chan as a side effect *)
 let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.t) (infile : Fpath.t) (chan : Chan.o) : unit =
@@ -107,6 +114,9 @@ let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.
   | Arch.Arm64 ->
       let prog = assemble7 caps conf infile in
       Object_file.save arch prog chan
+  | Arch.Amd64 ->
+      let prog = assemble6 caps conf infile in
+      Object_file.save arch prog chan
   | _ ->
    failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 (*e: function [[CLI.assemble]] *)
@@ -125,6 +135,7 @@ let main (caps: <caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
     | "oia" -> Arch.Riscv
     | "oja" -> Arch.Riscv64
     | "o7a" -> Arch.Arm64
+    | "o6a" -> Arch.Amd64
     | s -> failwith (spf "arch could not be detected from argv0 %s" s)
   in
 

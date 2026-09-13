@@ -150,6 +150,11 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) :
                * empirically: entry point 0x4000f0 = 0x400000 + a
                * 0xf0-byte ELF header) *)
               | Arch.Arm64 -> 0x400000
+              (* claude: matches goken's own real 6l default (confirmed
+               * empirically: entry point 0x2000f0 = 0x200000 + a
+               * 0xf0-byte ELF header, via readelf on goken's own
+               * hello_linux_amd64.exe). *)
+              | Arch.Amd64 -> 0x200000
               | _ ->
                 failwith (spf "arch not supported yet: %s" (Arch.thestring arch))
               ) + header_size
@@ -219,6 +224,7 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config)
   let instrs = Codegen5.gen symbols2 config graph in
 
   let endian = Arch.endian_of_arch config.arch in
+  let instrs = T.bytes_of_words endian instrs in
   let datas  = Datagen.gen symbols2 init_data sizes endian data in
   Execgen.gen config sizes instrs datas symbols2 chan
 (*e: function [[CLI.link5]] *)
@@ -251,6 +257,7 @@ let linkv (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
         (Exec_file.show_linker_config config));
   let instrs = Codegenv.gen symbols2 config graph in
   let endian = Arch.endian_of_arch config.arch in
+  let instrs = T.bytes_of_words endian instrs in
   let datas  = Datagen.gen symbols2 init_data sizes endian data in
   Execgen.gen config sizes instrs datas symbols2 chan
 
@@ -288,6 +295,7 @@ let linki (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
         (Exec_file.show_linker_config config));
   let instrs = Codegeni.gen symbols2 config graph in
   let endian = Arch.endian_of_arch config.arch in
+  let instrs = T.bytes_of_words endian instrs in
   let datas  = Datagen.gen symbols2 init_data sizes endian data in
   Execgen.gen config sizes instrs datas symbols2 chan
 
@@ -322,6 +330,47 @@ let link7 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
         (Exec_file.show_linker_config config));
   let instrs = Codegen7.gen symbols2 config graph in
   let endian = Arch.endian_of_arch config.arch in
+  let instrs = T.bytes_of_words endian instrs in
+  let datas  = Datagen.gen symbols2 init_data sizes endian data in
+  Execgen.gen config sizes instrs datas symbols2 chan
+
+(* claude: no `Layout.xdefine ... "setSB"` here (unlike link5/linkv/
+ * link7) -- this arch has no dedicated SB register at all: SB-relative
+ * addressing (globals, via `Lea`/`Move`'s `Entity (A.Global ...)`
+ * case) resolves straight to an absolute virtual address at codegen
+ * time (Codegen6.ml's `resolve_gen`/`resolve_gen_full`), the same
+ * "goken's own non-PIE amd64 convention" this port's whole SB-handling
+ * story is grounded in -- see Ast_asm6.ml's prelude. *)
+let link6 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
+  let arch : Ast_asm6.instr Arch_linker.t = Arch_linker.of_arch config.arch in
+  let (code, data, symbols) = Load.load caps files arch in
+  T.lookup (config.entry_point, T.Public) None symbols |> ignore;
+  let graph = Resolve.build_graph arch.branch_opd_of_instr symbols code in
+  let graph, new_data =
+    match config.profile with | None -> graph, []
+    | Some kind -> Profile.rewrite kind arch.rTMP symbols graph
+  in
+  let data = data @ new_data in
+  let graph = Rewrite6.rewrite graph in
+  let symbols2, (data_size, bss_size) =
+    Layout.layout_data symbols data in
+  Check.check symbols;
+  let symbols2, graph, text_size =
+    Layout6.layout_text symbols2 config.init_text graph in
+  let sizes = Exec_file.{ text_size; data_size; bss_size } in
+  let init_data =
+    match config.init_data with | Some x -> x
+    | None -> Int_.rnd (text_size + config.init_text) config.init_round
+  in
+  let config = { config with Exec_file.init_data = Some init_data } in
+  Logs.info (fun m -> m "final config is %s"
+        (Exec_file.show_linker_config config));
+  (* claude: Codegen6.gen already returns a `byte array` directly
+   * (amd64's instructions are variable-length -- see Types.
+   * bytes_of_words's own comment), unlike every other arch's `word
+   * list`, so there's no T.bytes_of_words conversion step here. *)
+  let instrs = Codegen6.gen symbols2 config graph in
+  let endian = Arch.endian_of_arch config.arch in
   let datas  = Datagen.gen symbols2 init_data sizes endian data in
   Execgen.gen config sizes instrs datas symbols2 chan
 
@@ -334,6 +383,8 @@ let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : Exec_file.linker_
      linkv caps config files chan
   | Arch.Arm64 ->
      link7 caps config files chan
+  | Arch.Amd64 ->
+     link6 caps config files chan
   (* claude: riscv64/ojl reuses linki as-is, mirroring goken itself --
    * il/jl are literally the same binary (thechar dispatches on argv0
    * at runtime, see mkfiles/riscv64/mkfile); none of Codegeni.ml,
@@ -359,6 +410,7 @@ let main (caps : <caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
     | "oil" -> Arch.Riscv
     | "ojl" -> Arch.Riscv64
     | "o7l" -> Arch.Arm64
+    | "o6l" -> Arch.Amd64
     | s -> failwith (spf "arch could not detected from argv0 %s" s)
   in
 

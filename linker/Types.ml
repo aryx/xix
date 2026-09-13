@@ -30,6 +30,24 @@ type word = int
 (*e: type [[Types.word]] *)
 [@@deriving show]
 
+(* claude: amd64's instructions are variable-length (1-15 bytes), not
+ * fixed 4-byte words like every arch ported so far, so its own
+ * Codegen6.ml produces a `byte array` text section directly instead
+ * of a `word list`. Execgen.ml's text-segment parameter is now
+ * uniformly `byte array` (it already took one for the data segment),
+ * so every fixed-4-byte-word arch flattens its own `word list` through
+ * this helper before handing it to Execgen.gen -- with its OWN
+ * arch's endianness (Arch.endian_of_arch), not hardcoded: MIPS is
+ * genuinely big-endian here (see Arch.ml's own comment), so a
+ * hardcoded Little would silently corrupt every existing ovl output. *)
+let bytes_of_words (endian : Endian.t) (ws : word list) : byte array =
+  let array_32 = match endian with
+    | Endian.Little -> Endian.Little.array_32
+    | Endian.Big -> Endian.Big.array_32
+  in
+  ws |> List.concat_map (fun w -> array_32 w |> Array.to_list)
+     |> Array.of_list
+
 (*s: type [[Types.addr]] *)
 (* 32 bits *)
 type addr = int

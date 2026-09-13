@@ -14,6 +14,7 @@
 (ocamlyacc Parser_asmv)
 (ocamlyacc Parser_asmi)
 (ocamlyacc Parser_asm7)
+(ocamlyacc Parser_asm6)
 
 (install
  (package xix)
@@ -24,6 +25,7 @@
   (Main.exe as oia)
   (Main.exe as oja)
   (Main.exe as o7a)
+  (Main.exe as o6a)
   ; useful to debug, see ../../debug and ocamldebug
   (Main.bc as o5a.bc))
 )

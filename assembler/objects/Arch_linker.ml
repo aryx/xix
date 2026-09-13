@@ -48,6 +48,13 @@ let of_arch (arch : Arch.t) : 'instr t =
        visit_globals_instr = Ast_asm7.visit_globals_instr;
        rTMP = Ast_asm7.rTMP;
      }
+  | Arch.Amd64 ->
+     (* nosemgrep: do-not-use-obj-magic *)
+     Obj.magic {
+       branch_opd_of_instr = Ast_asm6.branch_opd_of_instr;
+       visit_globals_instr = Ast_asm6.visit_globals_instr;
+       rTMP = Ast_asm6.rTMP;
+     }
   | _ -> failwith (spf "arch not supported yet: %s" (Arch.thestring arch))
 
 (*e: Arch_linker.ml *)

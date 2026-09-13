@@ -131,6 +131,23 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
       | "MOVWQZX" -> TEXTEND MOVWQZX
       | "MOVLQSX" -> TEXTEND MOVLQSX
       | "MOVLQZX" -> TEXTEND MOVLQZX
+
+      | "NEGQ" -> TUNARY (Q_, NEG)
+      | "NOTQ" -> TUNARY (Q_, NOT)
+      | "INCQ" -> TUNARY (Q_, INC)
+      | "DECQ" -> TUNARY (Q_, DEC)
+      | "NEGL" -> TUNARY (L_, NEG)
+      | "NOTL" -> TUNARY (L_, NOT)
+      | "INCL" -> TUNARY (L_, INC)
+      | "DECL" -> TUNARY (L_, DEC)
+      | "NEGW" -> TUNARY (W_, NEG)
+      | "NOTW" -> TUNARY (W_, NOT)
+      | "INCW" -> TUNARY (W_, INC)
+      | "DECW" -> TUNARY (W_, DEC)
+      | "NEGB" -> TUNARY (B_, NEG)
+      | "NOTB" -> TUNARY (B_, NOT)
+      | "INCB" -> TUNARY (B_, INC)
+      | "DECB" -> TUNARY (B_, DEC)
       | "LEAQ" -> TLEA
       | "CALL" -> TCALL
       (* claude: goken's real amd64 condition codes (optab.c's

@@ -37,6 +37,7 @@ module L = Location_cpp
 %token <Ast_asm6.width * Ast_asm6.shift_opcode> TSHIFT
 %token <Ast_asm6.width> TMOV
 %token <Ast_asm6.extend_opcode> TEXTEND
+%token <Ast_asm6.width * Ast_asm6.unary_opcode> TUNARY
 %token TLEA
 %token TCALL
 %token TJMP
@@ -237,6 +238,11 @@ instr:
     * Ast_asm6.ml's Extend comment ("MOVLQZX" is deliberately absent
     * here, mapped onto TMOV L_ instead in Parse_asm6.ml). *)*/
  | TEXTEND gen TC reg            { Extend ($1, $2, $4) }
+
+ /*(* goken's yincb/yincl/yincw/yscond-shaped single-operand ModRM-
+    * extension-group op: "NEGQ gen" / "INCQ gen" -- see Ast_asm6.ml's
+    * Unary comment. *)*/
+ | TUNARY gen                    { let (w, op) = $1 in Unary (w, op, $2) }
 
  /*(* goken's Zaut_r "built-in LEAQ" -- address-of-global only (see
     * Ast_asm6.ml's Lea comment). *)*/

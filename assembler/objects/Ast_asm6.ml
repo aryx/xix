@@ -217,6 +217,17 @@ type instr =
    * byte-cosmetic, difference caught only by testing the actual reg-
    * reg case, not just reg-mem). *)
   | Extend of extend_opcode * gen * register
+  (* claude: goken's yincb/yincl/yincw/yscond-shaped single-operand
+   * ModRM-extension-group ops (optab.c) -- NEG/NOT (goken's own
+   * `yscond` table, shared with SETcc's own single-`Ymb`-operand shape
+   * even though NEG/NOT aren't conditional at all -- just a
+   * coincidentally-identical row shape) and INC/DEC (`yincb`/`yincw`/
+   * `yincl`). All four share the exact same "opcode, ModRM with a
+   * fixed extension digit, no immediate at all" encoding (goken's
+   * `Zo_m`, the very same Z-code `Shift`'s own shift-by-1/shift-by-CL
+   * cases already use above) -- confirmed against real 6a/6l: "NEGQ
+   * AX" -> `48 f7 d8`, "INCQ AX" -> `48 ff c0`. *)
+  | Unary of width * unary_opcode * gen
 
   (* Memory *)
   (* claude: goken's ymovq/ymovl-shaped move (optab.c) -- source is
@@ -334,6 +345,8 @@ type instr =
     | MOVBLSX | MOVBLZX | MOVBQSX | MOVBQZX
     | MOVWLSX | MOVWLZX | MOVWQSX | MOVWQZX
     | MOVLQSX | MOVLQZX
+
+  and unary_opcode = NEG | NOT | INC | DEC
   (* claude: goken's own yxm table is shared verbatim across ADDSD/
    * SUBSD/MULSD/DIVSD *and* their SS-suffixed siblings (only the final
    * opcode byte differs per operation, not per precision -- see
@@ -413,7 +426,7 @@ let branch_opd_of_instr (instr : instr) : A.branch_operand option =
   | Call opd -> Some opd
   | Jmp opd -> Some opd
   | Jcc (_, opd) -> Some opd
-  | Arith _ | Cmp _ | Shift _ | Extend _ | Move _ | Lea _ | Ret | Syscall -> None
+  | Arith _ | Cmp _ | Shift _ | Extend _ | Unary _ | Move _ | Lea _ | Ret | Syscall -> None
   | MovF _ | ArithF _ | CmpF _ | CvtIntToF _ | CvtFToInt _ -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
@@ -442,6 +455,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | Cmp (_, gen1, _) -> gen_operand gen1
   | Shift (_, _, _, gen1) -> gen_operand gen1
   | Extend (_, gen1, _) -> gen_operand gen1
+  | Unary (_, _, gen1) -> gen_operand gen1
   | MovF (_, x1, x2) -> xgen_operand x1; xgen_operand x2
   | ArithF (_, _, x1, _) -> xgen_operand x1
   | CmpF (_, x1, _) -> xgen_operand x1

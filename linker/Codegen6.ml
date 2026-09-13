@@ -397,6 +397,18 @@ let extend_rex ~(need_w : bool) ~(byte_source : bool) ~(reg_field : int)
   let forced = byte_source && (match rm with RReg (A.R n) -> regrex_forces_rex n | RMem _ | RAbs _ -> false) in
   if w <> 0 || r <> 0 || b <> 0 || forced then [ 0x40 lor w lor r lor b ] else []
 
+(* claude: goken's own yincb/yincl/yincw/yscond tables (optab.c) --
+ * NEG/NOT share the same B_-is-one-less opcode pair as every other
+ * arith-family instruction in this file (0xf6 vs 0xf7); INC/DEC
+ * likewise (0xfe vs 0xff). Ext digits: NEG=3, NOT=2 (goken's own
+ * `yscond` rows), INC=0, DEC=1 (goken's own `yincb`/`yincl`/`yincw`
+ * rows) -- confirmed against real 6a/6l throughout. *)
+let unary_ext = function NEG -> 3 | NOT -> 2 | INC -> 0 | DEC -> 1
+let unary_opcode (width : width) (op : unary_opcode) : int =
+  match width, op with
+  | B_, (NEG | NOT) -> 0xf6 | B_, (INC | DEC) -> 0xfe
+  | (Q_ | L_ | W_), (NEG | NOT) -> 0xf7 | (Q_ | L_ | W_), (INC | DEC) -> 0xff
+
 (* claude: an `xgen` (XMM register-or-memory operand) coerced into the
  * *existing* `gen` type before resolution -- goken's own D_X0..D_X0+15
  * REX/ModRM encoding is numerically identical to the GP register
@@ -671,6 +683,15 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let rm = resolve_gen env node src in
         let bytes = extend_rex ~need_w ~byte_source ~reg_field:(reg_num dst) ~rm
                     @ opcode_bytes @ encode_rm (reg_num dst) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+
+    (* claude: case Zo_m -- NEG/NOT/INC/DEC, single ModRM-extension-
+     * group operand, no immediate at all (the same Z-code `Shift`'s
+     * own shift-by-1/shift-by-CL cases already use). *)
+    | Unary (width, op, dest) ->
+        let rm = resolve_gen env node dest in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(unary_ext op) ~rm
+                    @ [unary_opcode width op] @ encode_rm (unary_ext op) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
     (* --------------------------------------------------------------------- *)

@@ -274,18 +274,19 @@ let encode_rm (reg_field : int) (rm : resolved_gen) : int list =
        * -> "48 8d 04 25 <disp32>"). *)
       [ modrm ~md:0 ~reg:reg_field ~rm:4; sib ~scale:0 ~index:4 ~base:5 ] @ le32 addr
 
-let arith_ext = function ADD -> 0 | SUB -> 5 | XOR -> 6
+let arith_ext = function ADD -> 0 | SUB -> 5 | XOR -> 6 | AND -> 4 | OR -> 1
 (* claude: the reg-reg ("Zr_m") opcode -- confirmed against goken's own
  * optab.c that B_'s own opcode is always exactly one less than L_/Q_/
  * W_'s shared one (ADD 0x00 vs 0x01, SUB 0x28 vs 0x29, XOR 0x30 vs
- * 0x31), matching real x86's own "even opcode = 8-bit form" encoding
- * convention -- but kept as an explicit table, not opcode-1 arithmetic,
- * so a future opcode (e.g. AND/OR, not wired yet) can't silently rely
- * on a pattern that happens to hold only for these three. *)
+ * 0x31, AND 0x20 vs 0x21, OR 0x08 vs 0x09), matching real x86's own
+ * "even opcode = 8-bit form" encoding convention -- but kept as an
+ * explicit table, not opcode-1 arithmetic, so a future opcode this
+ * pattern doesn't hold for can't silently rely on it. *)
 let arith_rr_opcode (width : width) (op : arith_opcode) : int =
   match width, op with
-  | B_, ADD -> 0x00 | B_, SUB -> 0x28 | B_, XOR -> 0x30
+  | B_, ADD -> 0x00 | B_, SUB -> 0x28 | B_, XOR -> 0x30 | B_, AND -> 0x20 | B_, OR -> 0x08
   | (Q_ | L_ | W_), ADD -> 0x01 | (Q_ | L_ | W_), SUB -> 0x29 | (Q_ | L_ | W_), XOR -> 0x31
+  | (Q_ | L_ | W_), AND -> 0x21 | (Q_ | L_ | W_), OR -> 0x09
 
 (* claude: the immediate-group opcode (ModRM-extension-dispatched, used
  * by both Arith's and Cmp's own immediate forms) -- 0x80 for a true
@@ -295,6 +296,24 @@ let arith_rr_opcode (width : width) (op : arith_opcode) : int =
  * Arith's own imm32-not-wired comment for the *general*-immediate 0x81
  * form this doesn't cover). *)
 let imm_group_opcode (width : width) : int = match width with B_ -> 0x80 | Q_ | L_ | W_ -> 0x83
+
+(* claude: the "wide" (non-imm8) immediate range/encoding for Arith's
+ * own Zil_/Zilo_m rows (opcode 0x81/AX-implicit) -- W_'s own immediate
+ * is 2 bytes (confirmed: "ANDW $0x1234,AX" -> `66 25 34 12`), Q_/L_'s
+ * is 4 (sign-extended to 64 for Q_, same as every other wide-immediate
+ * form in this file). B_ never reaches either case (its own 0x80 form
+ * has no imm8-vs-wider split at all, see `imm_group_opcode`'s own
+ * comment), so both helpers are partial over width by design. *)
+let fits_wide_imm (width : width) (v : int) : bool =
+  match width with
+  | W_ -> v >= -0x8000 && v <= 0x7fff
+  | Q_ | L_ -> v >= -0x8000_0000 && v <= 0x7fff_ffff
+  | B_ -> raise (Impossible "B_ has no wide-immediate arith form")
+let wide_imm_bytes (width : width) (v : int) : int list =
+  match width with
+  | W_ -> le16 v
+  | Q_ | L_ -> le32 v
+  | B_ -> raise (Impossible "B_ has no wide-immediate arith form")
 
 (* claude: Cmp's own "gen,reg" (Zm_r) direction opcode -- same
  * B_-is-one-less pattern as `arith_rr_opcode` (CMP r/m8,r8 = 0x38 vs
@@ -307,6 +326,22 @@ let cmp_rm_opcode (width : width) : int = match width with B_ -> 0x38 | Q_ | L_ 
  * optab.c's ymovb/ymovl. *)
 let mov_store_opcode (width : width) : int = match width with B_ -> 0x88 | Q_ | L_ | W_ -> 0x89
 let mov_load_opcode (width : width) : int = match width with B_ -> 0x8a | Q_ | L_ | W_ -> 0x8b
+
+let shift_ext = function SHL -> 4 | SHR -> 5 | SAR -> 7
+(* claude: goken's own `yshl`/`yshb` tables (optab.c) have three shift-
+ * amount shapes, all three sharing the exact same B_-is-one-less
+ * pattern as every other arith-family opcode in this file: shift-by-1
+ * (goken's `Yi1` class -- opcode alone, no immediate byte at all, only
+ * reached when the immediate is *literally* 1, see Ast_asm6.ml's
+ * `Shift`/`shift_amount` comment), shift-by-immediate-N (`Yi32`,
+ * opcode+ModRM+1-byte immediate), and shift-by-CL/CX (`Ycl`/`Ycx`,
+ * opcode+ModRM, amount implicit). Confirmed against real 6a/6l: "SHLQ
+ * $1,AX" -> `48 d1 e0`, "SHLQ $4,AX" -> `48 c1 e0 04`, "SHLQ CX,AX" ->
+ * `48 d3 e0`; "SHRB $4,DX" -> `c0 ea 04` (0xc0, one less than L/Q/W's
+ * 0xc1); "SHLB CX,DX" -> `d2 e2` (0xd2, one less than 0xd3). *)
+let shift_by1_opcode (width : width) : int = match width with B_ -> 0xd0 | Q_ | L_ | W_ -> 0xd1
+let shift_byimm_opcode (width : width) : int = match width with B_ -> 0xc0 | Q_ | L_ | W_ -> 0xc1
+let shift_bycl_opcode (width : width) : int = match width with B_ -> 0xd2 | Q_ | L_ | W_ -> 0xd3
 
 (* claude: an `xgen` (XMM register-or-memory operand) coerced into the
  * *existing* `gen` type before resolution -- goken's own D_X0..D_X0+15
@@ -447,8 +482,37 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(arith_ext op) ~rm
                     @ [imm_group_opcode width] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Zil_ -- goken's own "Yi32,Yax,Zil_,1" row, the
+     * Q_/L_/W_-width mirror of B_'s own AL-special-case above: a
+     * destination of exactly AX (never RAX/EAX/AX generically -- Yax
+     * is register index 0 specifically) takes an opcode-alone,
+     * no-ModRM form ahead of the general Zilo_m row below, whenever
+     * the immediate doesn't already fit the narrower imm8 row above.
+     * Same `(ext<<3)|k` opcode-embedding family as the B_-width case,
+     * just `k=0x05` instead of `0x04` (confirmed against real 6a/6l:
+     * "ANDL $0xFF,AX" -> `25 ff 00 00 00`, "ADDQ $1000,AX" ->
+     * `48 05 e8 03 00 00`, "XORQ $1000,AX" -> `48 35 e8 03 00 00` --
+     * matching real x86's own ADD/OR/AND/SUB/XOR/CMP "op AX,imm"
+     * opcode family, `(ext<<3)|0x05`). W_'s own immediate is 2 bytes,
+     * not 4 (confirmed: "ANDW $0x1234,AX" -> `66 25 34 12`). REX.W
+     * still needs computing for Q_ even though there's no ModRM byte
+     * here -- `rm:(RReg r)` (AX, index 0) never itself contributes,
+     * but `rex_opt`'s own `width` parameter does. *)
+    | Arith (width, op, Imm v, GReg r) when reg_num r = 0 && fits_wide_imm width v ->
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:0 ~rm:(RReg r)
+                    @ [(arith_ext op lsl 3) lor 0x05] @ wide_imm_bytes width v in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Zilo_m -- the general ModRM form (opcode 0x81),
+     * reached whenever the destination isn't AX or the immediate
+     * doesn't fit imm8. Same imm16-for-W_/imm32-for-Q_/L_ split as the
+     * Zil_ case above. *)
+    | Arith (width, op, Imm v, dest) when fits_wide_imm width v ->
+        let rm = resolve_gen env node dest in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(arith_ext op) ~rm
+                    @ [0x81] @ encode_rm (arith_ext op) rm @ wide_imm_bytes width v in
+        { size = List.length bytes; binary = (fun () -> bytes) }
     | Arith (_, _op, Imm _, _dest) ->
-        raise Todo (* case Zilo_m (opcode 0x81) not wired, see prelude *)
+        raise Todo (* immediate too big even for Zilo_m's own imm32/imm16 -- see prelude *)
     (* claude: case Zr_m -- goken's yxorl/yxorb's own Yrl/Yrb,Yml/Ymb
      * row (register source, `encode_rm`'s own "reg-reg or reg-mem"
      * dest). *)
@@ -486,8 +550,25 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:7 ~rm
                     @ [imm_group_opcode width] @ encode_rm 7 rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Z_il -- ycmpl's own "Yax,Yi32,Z_il,1" row, Cmp's own
+     * mirror of Arith's Zil_ case above -- opcode 0x3d (matching the
+     * `(ext<<3)|0x05` family, ext=7 for CMP), reached whenever `g` is
+     * exactly AX and the immediate doesn't fit imm8. Confirmed against
+     * real 6a/6l: "CMPQ AX,$-1000" -> `48 3d 18 fc ff ff`. *)
+    | Cmp (width, GReg r, Imm v) when reg_num r = 0 && fits_wide_imm width v ->
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:0 ~rm:(RReg r)
+                    @ [(7 lsl 3) lor 0x05] @ wide_imm_bytes width v in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Zm_ilo -- the general ModRM form (opcode 0x81 /7),
+     * reached whenever `g` isn't AX or the immediate doesn't fit imm8.
+     * Confirmed: "CMPL CX,$0x100000" -> `81 f9 00 00 10 00`. *)
+    | Cmp (width, g, Imm v) when fits_wide_imm width v ->
+        let rm = resolve_gen env node g in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:7 ~rm
+                    @ [0x81] @ encode_rm 7 rm @ wide_imm_bytes width v in
+        { size = List.length bytes; binary = (fun () -> bytes) }
     | Cmp (_, _g, Imm _) ->
-        raise Todo (* case Zm_ilo (opcode 0x81) not wired, see prelude *)
+        raise Todo (* immediate too big even for Zm_ilo's own imm32/imm16 -- see prelude *)
     (* claude: case Zm_r -- "CMPQ gen,Rs", opcode 0x39 (0x38 for B_, see
      * `cmp_rm_opcode`), `gen` in ModRM r/m, Rs in ModRM reg (asmand
      * (from=gen,to=Rs), matching Ast_asm6.ml's Cmp comment). The
@@ -499,6 +580,34 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
                     @ [cmp_rm_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
+
+    (* claude: case Zo_m (shift-by-1) -- goken's own `Yi1` class only
+     * matches a *literal* immediate value of 1 (see `shift_by1_opcode`
+     * comment) -- a genuinely different encoding (no immediate byte)
+     * from any other constant, not just "1" happening to fit some
+     * narrower range the way Arith's own imm8-vs-imm32 split works. *)
+    | Shift (width, op, ShiftImm 1, dest) ->
+        let rm = resolve_gen env node dest in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(shift_ext op) ~rm
+                    @ [shift_by1_opcode width] @ encode_rm (shift_ext op) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Zibo_m (shift-by-immediate-N). *)
+    | Shift (width, op, ShiftImm v, dest) ->
+        let rm = resolve_gen env node dest in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(shift_ext op) ~rm
+                    @ [shift_byimm_opcode width] @ encode_rm (shift_ext op) rm @ [v land 0xff] in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Zo_m (shift-by-CL/CX) -- goken's own y-table only
+     * has a `Ycl`/`Ycx` row, no general `Yrl` one (real amd64 can only
+     * ever shift by CL), confirmed: any other register fails at `6l`
+     * with "notfound" -- guarded here the same way. *)
+    | Shift (width, op, ShiftReg r, dest) when reg_num r = 1 (* CX *) ->
+        let rm = resolve_gen env node dest in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(shift_ext op) ~rm
+                    @ [shift_bycl_opcode width] @ encode_rm (shift_ext op) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    | Shift (_, _, ShiftReg _, _) ->
+        raise Todo (* only CX is a valid shift-amount register in real amd64, see prelude *)
 
     (* --------------------------------------------------------------------- *)
     (* Memory / Move *)

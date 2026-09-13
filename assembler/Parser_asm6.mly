@@ -34,6 +34,7 @@ module L = Location_cpp
 
 %token <Ast_asm6.width * Ast_asm6.arith_opcode> TARITH
 %token <Ast_asm6.width> TCMP
+%token <Ast_asm6.width * Ast_asm6.shift_opcode> TSHIFT
 %token <Ast_asm6.width> TMOV
 %token TLEA
 %token TCALL
@@ -213,6 +214,18 @@ instr:
  /*(* goken's ycmpl-shaped compare: "CMPQ gen,imr" -- see Ast_asm6.ml's
     * Cmp comment for the reversed-from-Arith operand-role order. *)*/
  | TCMP gen TC imr               { Cmp ($1, $2, $4) }
+
+ /*(* goken's yshl/yshb-shaped shift: "SHLQ $imm,gen" / "SHLQ Rs,gen"
+    * -- reuses `imr` for the amount at the grammar level (no real
+    * ambiguity to resolve there), converted to the dedicated
+    * `shift_amount` type here since a *general* register isn't valid
+    * -- see Ast_asm6.ml's Shift comment. *)*/
+ | TSHIFT imr TC gen             { let (w, op) = $1 in
+                                    let amount = match $2 with
+                                      | Imm v -> ShiftImm v
+                                      | Reg r -> ShiftReg r
+                                    in
+                                    Shift (w, op, amount, $4) }
 
  /*(* goken's ymovq/ymovl-shaped move: covers register/memory/immediate
     * in every combination MOVQ/MOVL actually need -- see Ast_asm6.ml's

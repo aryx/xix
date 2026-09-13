@@ -171,8 +171,9 @@ type instr =
   (* claude: goken's yaddl/yxorl-shaped 2-operand arithmetic (optab.c):
    * source is an immediate-or-register (`imr`), destination is a
    * register-or-memory (`gen`) -- confirmed against real 6a/6l this is
-   * one shared grammar/encoding shape for ADD/SUB/XOR (AND/OR would
-   * follow the exact same shape, not wired yet -- see prelude). *)
+   * one shared grammar/encoding shape for ADD/SUB/XOR/AND/OR (they all
+   * literally share goken's own `yxorl`/`yxorb` tables -- see
+   * Codegen6.ml's `arith_ext`/`arith_rr_opcode`). *)
   | Arith of width * arith_opcode * imr * gen
   (* claude: goken's ycmpl-shaped compare (optab.c) -- CMP writes no
    * result, only flags, and (confirmed against real 6a byte output)
@@ -183,6 +184,23 @@ type instr =
    * row order genuinely differs (Yml,Yi8/Yml,Yrl -- gen-first --
    * unlike yaddl's Yi8,Yml/Yrl,Yml -- imr-first). *)
   | Cmp of width * gen * imr
+  (* claude: goken's yshl/yshb-shaped shift (optab.c) -- SHL(=SAL)/SHR/
+   * SAR, destination a register-or-memory (`gen`), amount either a
+   * literal immediate or CX (real x86's only two shift-amount forms;
+   * `imr`'s own `Reg` isn't reused here since a *general* register
+   * would be wrong -- real amd64 only ever shifts by CL/CX, and
+   * goken's own y-table only has a `Ycx`/`Ycl` row, no general `Yrl`
+   * one, confirmed: any other register fails at `6l` with
+   * "notfound"). A literal `1` is a genuinely different *encoding*
+   * from any other immediate (goken's own `Yi1` class, opcode `0xd0`/
+   * `0xd1`, no immediate byte at all -- confirmed against real 6a/6l:
+   * "SHLQ $1,AX" -> `48 d1 e0`, vs "SHLQ $4,AX" -> `48 c1 e0 04`), so
+   * `ShiftImm`'s own codegen clause must special-case that value, same
+   * "one AST case, two encodings picked by value" shape `Cvt*`'s
+   * width-generic split elsewhere in this file doesn't need but
+   * `Move`'s Zclr special case already established the precedent
+   * for. *)
+  | Shift of width * shift_opcode * shift_amount * gen
 
   (* Memory *)
   (* claude: goken's ymovq/ymovl-shaped move (optab.c) -- source is
@@ -284,7 +302,16 @@ type instr =
   (* System *)
   | Syscall
 
-  and arith_opcode = ADD | SUB | XOR
+  and arith_opcode = ADD | SUB | XOR | AND | OR
+  (* claude: goken's own real amd64 shift opcodes -- SHL and SAL are
+   * genuine aliases in real x86 (same opcode, ext=4, both spellings
+   * accepted by real 6a: `ASHLL`/`ASALL` are two separate optab.c
+   * entries with byte-for-byte identical rows) -- kept as one AST
+   * case here (`SHL`) rather than two, since nothing downstream ever
+   * needs to distinguish which spelling the user wrote; both mnemonic
+   * spellings map to it in Parse_asm6.ml. *)
+  and shift_opcode = SHL | SHR | SAR
+  and shift_amount = ShiftImm of int | ShiftReg of register
   (* claude: goken's own yxm table is shared verbatim across ADDSD/
    * SUBSD/MULSD/DIVSD *and* their SS-suffixed siblings (only the final
    * opcode byte differs per operation, not per precision -- see
@@ -364,7 +391,7 @@ let branch_opd_of_instr (instr : instr) : A.branch_operand option =
   | Call opd -> Some opd
   | Jmp opd -> Some opd
   | Jcc (_, opd) -> Some opd
-  | Arith _ | Cmp _ | Move _ | Lea _ | Ret | Syscall -> None
+  | Arith _ | Cmp _ | Shift _ | Move _ | Lea _ | Ret | Syscall -> None
   | MovF _ | ArithF _ | CmpF _ | CvtIntToF _ | CvtFToInt _ -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
@@ -391,6 +418,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | Call b | Jmp b | Jcc (_, b) -> A.visit_globals_branch_operand f b
   | Arith (_, _, _, gen1) -> gen_operand gen1
   | Cmp (_, gen1, _) -> gen_operand gen1
+  | Shift (_, _, _, gen1) -> gen_operand gen1
   | MovF (_, x1, x2) -> xgen_operand x1; xgen_operand x2
   | ArithF (_, _, x1, _) -> xgen_operand x1
   | CmpF (_, x1, _) -> xgen_operand x1

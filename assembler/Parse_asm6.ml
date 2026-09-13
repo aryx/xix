@@ -72,25 +72,50 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
 
   | T.TIDENT s ->
       (match s with
-      (* claude: goken's case shape "ADDQ/SUBQ/XORQ $imm|Rs,Rd" -- see
-       * Ast_asm6.ml's Arith comment. All four widths (Q/L/W/B) are
-       * wired -- see Ast_asm6.ml's own `width` comment. *)
+      (* claude: goken's case shape "ADDQ/SUBQ/XORQ/ANDQ/ORQ $imm|Rs,Rd"
+       * -- see Ast_asm6.ml's Arith comment. All four widths (Q/L/W/B)
+       * are wired -- see Ast_asm6.ml's own `width` comment. *)
       | "ADDQ" -> TARITH (Q_, ADD)
       | "SUBQ" -> TARITH (Q_, SUB)
       | "XORQ" -> TARITH (Q_, XOR)
+      | "ANDQ" -> TARITH (Q_, AND)
+      | "ORQ" -> TARITH (Q_, OR)
       | "CMPQ" -> TCMP Q_
       | "ADDL" -> TARITH (L_, ADD)
       | "SUBL" -> TARITH (L_, SUB)
       | "XORL" -> TARITH (L_, XOR)
+      | "ANDL" -> TARITH (L_, AND)
+      | "ORL" -> TARITH (L_, OR)
       | "CMPL" -> TCMP L_
       | "ADDW" -> TARITH (W_, ADD)
       | "SUBW" -> TARITH (W_, SUB)
       | "XORW" -> TARITH (W_, XOR)
+      | "ANDW" -> TARITH (W_, AND)
+      | "ORW" -> TARITH (W_, OR)
       | "CMPW" -> TCMP W_
       | "ADDB" -> TARITH (B_, ADD)
       | "SUBB" -> TARITH (B_, SUB)
       | "XORB" -> TARITH (B_, XOR)
+      | "ANDB" -> TARITH (B_, AND)
+      | "ORB" -> TARITH (B_, OR)
       | "CMPB" -> TCMP B_
+
+      (* claude: real x86 aliases -- SHL and SAL are the exact same
+       * opcode (ext=4), both spelled out as separate optab.c entries
+       * in goken with byte-for-byte identical rows -- see Ast_asm6.ml's
+       * `shift_opcode` comment. *)
+      | "SHLQ" | "SALQ" -> TSHIFT (Q_, SHL)
+      | "SHRQ" -> TSHIFT (Q_, SHR)
+      | "SARQ" -> TSHIFT (Q_, SAR)
+      | "SHLL" | "SALL" -> TSHIFT (L_, SHL)
+      | "SHRL" -> TSHIFT (L_, SHR)
+      | "SARL" -> TSHIFT (L_, SAR)
+      | "SHLW" | "SALW" -> TSHIFT (W_, SHL)
+      | "SHRW" -> TSHIFT (W_, SHR)
+      | "SARW" -> TSHIFT (W_, SAR)
+      | "SHLB" | "SALB" -> TSHIFT (B_, SHL)
+      | "SHRB" -> TSHIFT (B_, SHR)
+      | "SARB" -> TSHIFT (B_, SAR)
 
       | "MOVQ" -> TMOV Q_
       | "MOVL" -> TMOV L_

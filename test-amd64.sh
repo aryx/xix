@@ -18,6 +18,8 @@ CASES=(
     "tests/linker/amd64_diff/movb_arith.s:_start"
     "tests/linker/amd64_diff/float_sd.s:_start"
     "tests/linker/amd64_diff/float_ss.s:_start"
+    "tests/linker/amd64_diff/andorshift.s:_start"
+    "tests/linker/amd64_diff/imm32_arith.s:_start"
     "tests/linker/amd64_diff/indirect_call_jmp.s:_start"
     "tests/linker/amd64_diff/static_symbol.s:_start"
     "tests/linker/amd64_diff/imm64.s:_start"

@@ -1,7 +1,7 @@
 # Porting the amd64 toolchain (6a/6l) against goken, byte-equal
 
-**Status: twelfth checkpoint reached.** `o6a`/`o6l` exist, and
-fourteen fixtures assemble+link to executables **byte-identical** to
+**Status: thirteenth checkpoint reached.** `o6a`/`o6l` exist, and
+fifteen fixtures assemble+link to executables **byte-identical** to
 goken's real `6a`/`6l` output, with identical `qemu-x86_64` behavior:
 `hello_linux.s` (goken's own real hello-world, exit 0), `cmp_jcc.s`
 (CMPQ + JEQ/JNE/JLT/JGE, exit 42), `r8_r15.s` (R8-R15 across every
@@ -17,10 +17,12 @@ single precision, exit 12), `andorshift.s` (AND/OR, SHL/SHR/SAR across
 all three shift-amount shapes, and the AX-implicit-opcode imm32 form,
 exit 99), `imm32_arith.s` (the general, non-AX imm32 arith/cmp form,
 exit 88), `extend.s` (MOVBLSX/MOVBLZX/MOVWLSX/MOVWLZX/MOVLQSX/MOVLQZX,
-exit 236), `indirect_call_jmp.s` (indirect CALL/JMP through a
-register, exit 7), `static_symbol.s` (`foo<>` local symbols, exit 0),
-`imm64.s` (true 64-bit MOVQ immediates, exit 127).
-`./test-amd64.sh` runs all fourteen.
+exit 236), `imm_yi32.s` (Move's own widened `Yi32` immediate range --
+see "Real bugs/quirks" below, exit 77), `indirect_call_jmp.s`
+(indirect CALL/JMP through a register, exit 7), `static_symbol.s`
+(`foo<>` local symbols, exit 0), `imm64.s` (true 64-bit MOVQ
+immediates, exit 127).
+`./test-amd64.sh` runs all fifteen.
 Zero regressions across all 4 already-complete ports' own full suites
 (`test-arm.sh` 54/54, `test-mips.sh`, `test-arm64.sh`, `test-riscv.sh`,
 `test-riscv64.sh`) and `make test` (134/134) after every batch.
@@ -547,77 +549,79 @@ port's register model has no token for them -- see `Ast_asm6.ml`'s
   then `MOVQ u+-8(SP),AX`), already fully supported by this port's
   existing `MovF`/`Move`.
 
-- **A real, separate gap found while testing `Extend` (not fixed this
-  checkpoint, see "Suggested phase plan" below): `Move`'s own Q_/L_/W_
-  immediate-to-register/memory range guards are too narrow.** Goken's
-  own `oclass()` classifies a *positive* hex literal like
-  "$0xFFFFFFF6" (parsed as the literal value 4294967286, not -10) as
-  its own `Yi32` class -- distinct from `Ys32` (sign-extendable
-  32-bit) purely by *how the value was written*, not its final bit
-  pattern -- confirmed reading `span.c`'s `oclass()`: `l = v; if
-  ((vlong)l == v) return Ys32; if ((v>>32)==0) return Yi32;` (`l` is a
-  32-bit local, so this checks "does truncating-then-sign-extending
-  round-trip" for `Ys32`, then falls back to "does it fit as a plain
-  32-bit pattern, zero-extended" for `Yi32`). For a *register*
+- **A real gap found while testing `Extend`, fixed the next checkpoint:
+  `Move`'s own Q_/L_/W_ immediate-to-register/memory range guards were
+  too narrow.** Goken's own `oclass()` classifies a *positive* hex
+  literal like "$0xFFFFFFF6" (parsed as the literal value 4294967286,
+  not -10) as its own `Yi32` class -- distinct from `Ys32` (sign-
+  extendable 32-bit) purely by *how the value was written*, not its
+  final bit pattern -- confirmed reading `span.c`'s `oclass()`: `l =
+  v; if((vlong)l == v) return Ys32; if((v>>32)==0) return Yi32;` (`l`
+  is a 32-bit local, so this checks "does truncating-then-sign-
+  extending round-trip" for `Ys32`, then falls back to "does it fit as
+  a plain 32-bit pattern, zero-extended" for `Yi32`). For a *register*
   destination this reaches `Ziq_rp`'s own case body (span.c), which
   has an internal `l = v>>32; if(l==0){ clear REX.W; emit 0xb8+reg;
   put4(v); }` downgrade -- confirmed against real 6a/6l: "MOVQ
   $0xFFFFFFF6,AX" -> `b8 f6 ff ff ff`, no REX at all, *not* the
-  REX.W+0xc7 form this port's own existing Ys32-only guard produces
-  for the bit-pattern-identical "$-10". This port's earlier claim (in
-  an older revision of this doc) that Ziq_rp's own internal special
+  REX.W+0xc7 form this port's own earlier Ys32-only guard produced for
+  the bit-pattern-identical "$-10". This port's earlier claim (in an
+  even older revision of this doc) that Ziq_rp's own internal special
   cases were "provably unreachable for ymovq" turns out to only hold
   for the *other* internal branch (`l==-1`, sign-extending); the
-  `l==0` branch is genuinely reachable and this port doesn't handle it
-  -- caught by an `Extend` test fixture that happened to use such a
-  literal, not by design; the fixture was simplified to avoid it
-  rather than fixing this in the same batch.
+  `l==0` branch is genuinely reachable. Fixed with a shared
+  `fits_yi32` range check (`-0x8000_0000..0xFFFF_FFFF`) replacing the
+  narrower `Ys32`-only guards throughout `Move`'s own Q_/L_/W_
+  immediate clauses -- L_/W_ needed no encoding change at all (`ymovl`/
+  `ymovw` have no `Ys32`/`Yi32` split to begin with, confirmed: "MOVL
+  $0xFFFFFFF6,BX" -> `bb f6 ff ff ff`, same opcode family regardless;
+  "MOVW $0x12345678,CX" -> `66 b9 78 56`, truncating even a value far
+  exceeding 32 bits down to its own low 16 bits). Along the way, found
+  a genuinely surprising real semantic quirk worth its own note: the
+  *same* Yi32 immediate produces different 64-bit *values* depending
+  on the destination -- register (`Ziq_rp`'s downgrade) zero-extends,
+  memory (`Zilo_m`) sign-extends -- confirmed and pinned down by
+  `imm_yi32.s`'s own comparison (`$0xFFFFFFF6` to a register vs to
+  memory-then-reloaded genuinely differ, matching real amd64's own
+  ordinary-32-bit-write-zero-extends vs MOV-r/m64-imm32-sign-extends
+  semantics).
 
 ## Suggested phase plan (next checkpoints)
 
 Roughly in the order a next real fixture would need them, mirroring
 how ARM32/ARM64's own follow-up phases were sequenced:
-1. **The `Move` immediate-range gap found this checkpoint** (see "Real
-   bugs/quirks" above) -- widen the Q_/L_/W_ immediate-to-register/
-   memory guards to accept the full `Yi32` range (any value with
-   `(v>>32)==0`, i.e. `-0x8000_0000..0xFFFF_FFFF`, not just the
-   sign-extendable `Ys32` subset `-0x8000_0000..0x7fff_ffff` this port
-   currently checks), with `Ziq_rp`'s own internal no-REX.W downgrade
-   for a register destination in the newly-widened range. Likely the
-   highest-value fix left: any hand-written or 6c-emitted code using a
-   large unsigned hex constant (bitmasks especially) can hit this.
-2. Unary ops NEGL/NOTL (goken's `yscond`-adjacent `F6`/`F7` ModRM-
+1. Unary ops NEGL/NOTL (goken's `yscond`-adjacent `F6`/`F7` ModRM-
    extension group, ext=3/2) and INCL/DECL (`FE`/`FF` group, ext=0/1) --
    confirmed real (7/3/6/9 occurrences respectively across the sampled
    6c-output files this checkpoint's own batch was prioritized from).
-3. Multiply/divide: IMULL (signed multiply), DIVL/IDIVL (unsigned/
+2. Multiply/divide: IMULL (signed multiply), DIVL/IDIVL (unsigned/
    signed divide, real x86's own implicit-AX/DX-pair shape -- `CDQ`/
    `CQO` sign-extend AX into DX:AX first) -- genuinely more involved
    than everything else in this phase plan (fixed-register operands,
    `DX:AX`/`RDX:RAX` treated as one 128-bit dividend), confirmed real
    but lower-frequency (3/2/2 occurrences).
-4. `NAME = value` constants -- a real, cross-arch limitation, not
+3. `NAME = value` constants -- a real, cross-arch limitation, not
    amd64-specific, see [[hello-libc-integration-test]].
-5. A real fixture for `Jmp` itself (still not covered, per "What's
+4. A real fixture for `Jmp` itself (still not covered, per "What's
    covered" above) and Jcc/Jmp's near-form relaxation, and
    memory-indirect (not just register-indirect) CALL/JMP -- see "Real
    bugs/quirks" above for why the first two are genuinely harder than
    they looked (goken's own dead-code elision and loop rotation, and
    real multi-pass distance-dependent sizing, respectively).
-6. A raw GP<->XMM `MOVQ` (bit-reinterpretation, goken's own `yxmovq`-
+5. A raw GP<->XMM `MOVQ` (bit-reinterpretation, goken's own `yxmovq`-
    shaped `0x66 REX.W 0F 6E`/`0F 7E` -- confirmed real, used directly
    in `tests/s/regressions/amd64_psllq.s`, though goken's own `6c`
    itself always avoids it via a round-trip through memory instead,
    see "Real bugs/quirks" above) and SSE2 packed-integer instructions
    like `PSLLQ` (a real, if lower-priority, separate instruction
    family from the scalar-float SSE work already landed).
-7. RIP-relative addressing (needed the moment a fixture targets a
+6. RIP-relative addressing (needed the moment a fixture targets a
    non-Linux `HEADTYPE`, or if this project ever wants position-
    independent amd64 output), indexed addressing (SIB.index/REX.X),
    and the BP/R13 ModRM special case (note: BP still isn't even wired
    in this arch's own grammar as a plain register token yet -- only
    SP/AX/CX/DX/BX/SI/DI/R8-R15 are, see `Parse_asm6.ml`).
-8. x87 -- single- and double-precision SSE both landed across earlier
+7. x87 -- single- and double-precision SSE both landed across earlier
    checkpoints; x87 is deferred indefinitely absent a concrete need
    (real amd64 userspace code essentially never uses it; SSE is the
    real ABI convention). The 32-bit-int forms of the int<->float

@@ -304,6 +304,28 @@ let imm_group_opcode (width : width) : int = match width with B_ -> 0x80 | Q_ | 
  * form in this file). B_ never reaches either case (its own 0x80 form
  * has no imm8-vs-wider split at all, see `imm_group_opcode`'s own
  * comment), so both helpers are partial over width by design. *)
+(* claude: goken's own `oclass()` (span.c) classifies an immediate
+ * purely by its own value, regardless of the destination instruction's
+ * width: `Ys32` (sign-extendable 32-bit, -0x8000_0000..0x7fff_ffff) is
+ * a *subset* of the wider `Yi32` ("fits in 32 bits, zero-extended",
+ * i.e. `(v>>32)==0`) -- a value like 0xFFFFFFF6, written as a positive
+ * hex literal, lands in `Yi32` but *not* `Ys32` (confirmed reading
+ * `oclass()`: `l = v; if((vlong)l==v) return Ys32; if((v>>32)==0)
+ * return Yi32;`, `l` a 32-bit local). `Move`'s own immediate clauses
+ * need this exact range (not just `Ys32`'s narrower one) for Q_/L_/W_
+ * alike -- confirmed against real 6a/6l this port's own earlier,
+ * narrower guard was a real gap (see plan_amd64_port.md's own "Real
+ * bugs/quirks"): "MOVQ $0xFFFFFFF6,AX" -> `b8 f6 ff ff ff` (`Ziq_rp`'s
+ * own internal no-REX.W downgrade, see `move_q_wide_reg_opcode`),
+ * "MOVL $0xFFFFFFF6,BX" -> `bb f6 ff ff ff` (same opcode family,
+ * always, no split at all for L_), "MOVW $0x12345678,CX" ->
+ * `66 b9 78 56` (even a value exceeding 32 bits' own relevant range
+ * is accepted and simply truncated to the low 16 bits -- `wide_imm_bytes`'s
+ * own `land`-based truncation already produces the correct bytes for
+ * any of these regardless of magnitude, so only the *range guard*
+ * needed widening, no encoding logic). *)
+let fits_yi32 (v : int) : bool = v >= -0x8000_0000 && v <= 0xFFFF_FFFF
+
 let fits_wide_imm (width : width) (v : int) : bool =
   match width with
   | W_ -> v >= -0x8000 && v <= 0x7fff
@@ -695,24 +717,48 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (Q_, Either.Right (A.Int v), dest) when v >= -0x8000_0000 && v <= 0x7fff_ffff ->
         (* claude: case Zilo_m -- immediate (sign-extends to 64-bit) ->
-         * mem/reg, goken's Zilo_m (0xc7 /0) -- see prelude for the
-         * imm=0/true-imm64 cases not wired. *)
+         * mem/reg, goken's Zilo_m (0xc7 /0) -- Ys32's own range only;
+         * see the wider `Yi32` clause below for a value like
+         * "$0xFFFFFFF6" that doesn't sign-extend correctly but still
+         * fits 32 bits unsigned. *)
         let rm = resolve_gen_full env init_data node dest in
         let bytes = rex_opt ~reg_is_register:false ~width:Q_ ~reg_field:0 ~rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
-    (* claude: case Ziq_rp -- goken's own Yi64,Yrl,Ziq_rp row -- only reached when the
-     * immediate does *not* fit the Ys32 class above (Ziq_rp's own
-     * further internal l==0/l==-1-with-sign-bit special cases, see
-     * span.c, are provably unreachable *for ymovq specifically*, since
-     * both are already-narrower subsets of Ys32 and so are always
-     * caught by the row above first -- true only because Ys32 is
-     * checked before Yi64 in goken's own table order). Register
-     * destination only (goken's own Yrl, not Yml -- no memory form of
-     * a genuine 8-byte immediate move exists in real amd64 at all).
-     * Opcode is 0xb8+reg (REX.B-extendable, same opcode-embedding
-     * family as MOVL's own Zil_rp), *with* REX.W this time, followed
-     * by the full 8-byte immediate. Confirmed against real 6a:
-     * "MOVQ $0x123456789A,R9" -> "49 b9 9a 78 56 34 12 00 00 00". *)
+    (* claude: case Ziq_rp (register, `l==0` downgrade) -- goken's own
+     * Ziq_rp case body (span.c) checks `l = v>>32; if(l==0){ clear
+     * REX.W; emit 0xb8+reg; put4(v); }` *before* falling to the
+     * general 8-byte-immediate path -- a real gap in this port's own
+     * earlier claim that Ziq_rp's internal special cases were
+     * "provably unreachable for ymovq" (true only for the *other*
+     * internal branch, `l==-1`; this one is genuinely reachable
+     * whenever the immediate fits `Yi32` but not `Ys32` -- see
+     * plan_amd64_port.md's own "Real bugs/quirks"). Confirmed against
+     * real 6a/6l: "MOVQ $0xFFFFFFF6,AX" -> `b8 f6 ff ff ff`, no REX at
+     * all (REX.B still applies via `rex_opt`'s own `width:L_` for
+     * R8-R15, confirmed: "MOVQ $0xFFFFFFF6,R9" -> `41 b9 f6 ff ff ff`). *)
+    | Move (Q_, Either.Right (A.Int v), GReg r) when fits_yi32 v ->
+        let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm:(RReg r)
+                    @ [0xb8 lor (reg_num r land 7)] @ le32 v in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Zilo_m (memory, the wider `Yi32` row) -- only a
+     * memory destination reaches here (a register one is already
+     * claimed by `Ziq_rp`'s own downgrade above) -- opcode 0xc7,
+     * REX.W still set (unlike the register case, there's no
+     * downgrade for memory). Confirmed: "MOVQ $0xFFFFFFF6,-8(SP)" ->
+     * `48 c7 44 24 f8 f6 ff ff ff`. *)
+    | Move (Q_, Either.Right (A.Int v), dest) when fits_yi32 v ->
+        let rm = resolve_gen_full env init_data node dest in
+        let bytes = rex_opt ~reg_is_register:false ~width:Q_ ~reg_field:0 ~rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Ziq_rp (true 64-bit immediate) -- only reached now
+     * when the immediate fits neither `Ys32` nor the wider `Yi32`
+     * (i.e. genuinely needs more than 32 bits). Register destination
+     * only (goken's own Yrl, not Yml -- no memory form of a genuine
+     * 8-byte immediate move exists in real amd64 at all). Opcode is
+     * 0xb8+reg (REX.B-extendable, same opcode-embedding family as
+     * MOVL's own Zil_rp), *with* REX.W this time, followed by the
+     * full 8-byte immediate. Confirmed against real 6a: "MOVQ
+     * $0x123456789A,R9" -> "49 b9 9a 78 56 34 12 00 00 00". *)
     | Move (Q_, Either.Right (A.Int v), GReg r) ->
         let bytes = rex_opt ~reg_is_register:false ~width:Q_ ~reg_field:0 ~rm:(RReg r)
                     @ [0xb8 lor (reg_num r land 7)] @ le64 v in
@@ -733,11 +779,16 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * -> "b8 64 00 00 00" (5 bytes, no REX, no ModRM) and "MOVL $9,R9"
      * -> "41 b9 09 00 00 00" (REX.B extends the opcode's own embedded
      * register, exactly like ModRM.rm would). *)
-    | Move (L_, Either.Right (A.Int v), GReg r) when v >= -0x8000_0000 && v <= 0x7fff_ffff ->
+    (* claude: `fits_yi32`, not just `Ys32`'s narrower range -- ymovl
+     * has no Ys32/Yi32 split at all (a single `Yi32,Yrl,Zil_rp` row),
+     * so a value like "$0xFFFFFFF6" is accepted the exact same way as
+     * one in the sign-extendable range, same opcode either way.
+     * Confirmed: "MOVL $0xFFFFFFF6,BX" -> `bb f6 ff ff ff`. *)
+    | Move (L_, Either.Right (A.Int v), GReg r) when fits_yi32 v ->
         let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm:(RReg r)
                     @ [0xb8 lor (reg_num r land 7)] @ le32 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
-    | Move (L_, Either.Right (A.Int v), dest) when v >= -0x8000_0000 && v <= 0x7fff_ffff ->
+    | Move (L_, Either.Right (A.Int v), dest) when fits_yi32 v ->
         let rm = resolve_gen_full env init_data node dest in
         let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -750,14 +801,17 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * shapes), just with a 2-byte immediate and the mandatory 0x66
      * prefix instead of REX.W. Confirmed against real 6a: "MOVW
      * $100,AX" -> "66 b8 64 00" (4 bytes: prefix+opcode+imm16, no
-     * ModRM). Immediates outside the 16-bit signed range aren't
-     * representable at all here (goken's own Yi32 class would need
-     * truncation this port doesn't do) -- see prelude. *)
-    | Move (W_, Either.Right (A.Int v), GReg r) when v >= -0x8000 && v <= 0x7fff ->
+     * ModRM). `fits_yi32`, not just a 16-bit range -- goken's own
+     * oclass() never looks at the destination instruction's width at
+     * all, so even a value exceeding 32 bits' own relevant range is
+     * accepted and simply truncated to the low 16 bits by `le16`'s own
+     * masking. Confirmed: "MOVW $0x12345678,CX" -> `66 b9 78 56`
+     * (imm16 = the low 16 bits, 0x5678). *)
+    | Move (W_, Either.Right (A.Int v), GReg r) when fits_yi32 v ->
         let bytes = prefix66 W_ @ rex_opt ~reg_is_register:false ~width:W_ ~reg_field:0 ~rm:(RReg r)
                     @ [0xb8 lor (reg_num r land 7)] @ le16 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
-    | Move (W_, Either.Right (A.Int v), dest) when v >= -0x8000 && v <= 0x7fff ->
+    | Move (W_, Either.Right (A.Int v), dest) when fits_yi32 v ->
         let rm = resolve_gen_full env init_data node dest in
         let bytes = prefix66 W_ @ rex_opt ~reg_is_register:false ~width:W_ ~reg_field:0 ~rm
                     @ [0xc7] @ encode_rm 0 rm @ le16 v in

@@ -24,7 +24,7 @@ open Ast_asm6
 (* amd64 codegen -- REX/ModRM/SIB/immediate byte encoding, ported from
  * goken's real ~/goken/linkers/6l/span.c (doasm()/asmandsz()/asmand()),
  * grounded throughout against real 6a/6l byte output (see
- * docs/claude_notes/notes_amd64_port_plan.txt) rather than derived from
+ * docs/claude_notes/amd64_port.md) rather than derived from
  * reading span.c alone, since x86-64's encoding table (optab.c) is by
  * far the densest of any arch ported so far.
  *
@@ -38,26 +38,21 @@ open Ast_asm6
  * not "a multiple of 4". See linker/Types.ml's `bytes_of_words` comment
  * for how the shared executable writer was generalized to accept this.
  *
- * Scope for this first checkpoint (hello_linux_amd64.s only -- see
- * Ast_asm6.ml's own prelude): only the specific operand-class
- * combinations that fixture actually uses are implemented; every
- * unhandled shape raises Todo rather than silently emitting wrong
- * bytes (same convention as every other arch's own "not wired yet"
- * gaps). In particular:
- *  - Arith's immediate form only handles an immediate that fits a
- *    signed 8 bits (goken's Yi8 class, opcode 0x83) -- the imm32 form
- *    (opcode 0x81) isn't wired.
- *  - Move's immediate form handles $0 (goken's Zclr), anything that
- *    fits signed 32 bits sign-extended (Ys32/Yi32, opcode 0xc7, or for
- *    MOVL-to-register specifically, Zil_rp/0xb8+reg), and a true
- *    64-bit immediate to a *register* (Yi64/Ziq_rp, opcode 0xb8+reg
- *    with REX.W, full 8-byte immediate) -- a genuinely oversized
- *    immediate to *memory* isn't wired (goken has no such form either,
- *    real amd64 MOV has no 8-byte-immediate-to-memory encoding at all).
- *  - Memory operands only support SP as the base register (`Indirect`)
- *    -- goken's own asmandsz() has real special cases for BP/R13 as a
- *    base (mod=00/rm=101 means RIP-relative/absolute instead of
- *    "[BP+0]" in 64-bit mode) that aren't replicated.
+ * Scope (complete for this port's own feature set -- see
+ * Ast_asm6.ml's own prelude and amd64_port.md for the full writeup):
+ * every operand-class combination this port's own fixtures need is
+ * implemented; every unhandled shape raises Todo rather than silently
+ * emitting wrong bytes (same convention as every other arch's own
+ * "not wired yet" gaps). Real, deliberate gaps that remain:
+ *  - Arith/Cmp/Test/CmpXchg's own immediate forms don't cover every
+ *    real x86 immediate-group opcode variant (e.g. Arith/Cmp's own
+ *    imm32 form, `0x81`, IS wired; IMUL's 3-operand immediate forms
+ *    aren't).
+ *  - Memory operands support any *ordinary* register as the base
+ *    (`Indirect`) -- BP/R13 (goken's own asmandsz() has real special
+ *    cases for them: mod=00/rm=101 means RIP-relative/absolute instead
+ *    of "[BP+0]" in 64-bit mode) and R12 (needs the same mandatory-SIB
+ *    quirk as SP) aren't replicated.
  *  - No SIB-index (indexed addressing, e.g. "(R1)(R2*4)") -- REX.X is
  *    always 0 here. R8-R15 *are* wired (REX.R/.B, see the `rex`/
  *    `rex_b_of_resolved_gen` helpers below) for every ModRM.reg/rm
@@ -332,7 +327,7 @@ let imm_group_opcode (width : width) : int = match width with B_ -> 0x80 | Q_ | 
  * return Yi32;`, `l` a 32-bit local). `Move`'s own immediate clauses
  * need this exact range (not just `Ys32`'s narrower one) for Q_/L_/W_
  * alike -- confirmed against real 6a/6l this port's own earlier,
- * narrower guard was a real gap (see plan_amd64_port.md's own "Real
+ * narrower guard was a real gap (see amd64_port.md's own "Real
  * bugs/quirks"): "MOVQ $0xFFFFFFF6,AX" -> `b8 f6 ff ff ff` (`Ziq_rp`'s
  * own internal no-REX.W downgrade, see `move_q_wide_reg_opcode`),
  * "MOVL $0xFFFFFFF6,BX" -> `bb f6 ff ff ff` (same opcode family,
@@ -865,7 +860,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * "provably unreachable for ymovq" (true only for the *other*
      * internal branch, `l==-1`; this one is genuinely reachable
      * whenever the immediate fits `Yi32` but not `Ys32` -- see
-     * plan_amd64_port.md's own "Real bugs/quirks"). Confirmed against
+     * amd64_port.md's own "Real bugs/quirks"). Confirmed against
      * real 6a/6l: "MOVQ $0xFFFFFFF6,AX" -> `b8 f6 ff ff ff`, no REX at
      * all (REX.B still applies via `rex_opt`'s own `width:L_` for
      * R8-R15, confirmed: "MOVQ $0xFFFFFFF6,R9" -> `41 b9 f6 ff ff ff`). *)

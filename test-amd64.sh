@@ -1,6 +1,6 @@
 #!/bin/bash
-# Differential test driver for the amd64 port (in progress -- see
-# docs/claude_notes/plan_amd64_port.md). Mirrors test-arm64.sh's shape.
+# Differential test driver for the amd64 port (complete -- see
+# docs/claude_notes/amd64_port.md). Mirrors test-arm64.sh's shape.
 #
 # Usage: ./test-amd64.sh
 

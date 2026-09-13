@@ -22,7 +22,7 @@ open Ast_asm
 (*****************************************************************************)
 (* Abstract Syntax Tree (AST) for the assembly language supported by 6a/6l
  * (goken's Plan 9 amd64 assembler/linker). I call this language Asm6. See
- * docs/claude_notes/notes_amd64_port_plan.txt for the overall port plan.
+ * docs/claude_notes/amd64_port.md for the overall port plan.
  *
  * Real goken C source for this arch is checked out at
  * ~/goken/assemblers/6a (a.h/a.y/lex.c, the grammar) and ~/goken/linkers/6l
@@ -72,24 +72,29 @@ open Ast_asm
  * lexer rule (no special grammar case needed, unlike the named low
  * registers -- see Parser_asm6.mly).
  *
- * Scope so far (see plan_amd64_port.md): 64-, 32-, 16-, and 8-bit-width
- * (Q/L/W/B-suffixed) integer arithmetic (ADD/SUB/XOR/CMP, immediate-or-
- * register source, register-or-memory destination), move (register/
- * memory/immediate, all combinations MOVQ/MOVL/MOVW/MOVB actually need
- * -- note MOVL/MOVW/MOVB's own immediate-to-*register* form is a
+ * Scope (complete for this port's own feature set -- see amd64_port.md
+ * for the full writeup): 64-, 32-, 16-, and 8-bit-width (Q/L/W/B-
+ * suffixed) integer ADD/SUB/XOR/AND/OR/CMP/TEST (immediate-or-register
+ * source, register-or-memory destination), SHL(=SAL)/SHR/SAR shifts,
+ * sign/zero-extending "widening move" (MOVBLSX/MOVBLZX/etc), NEG/NOT/
+ * INC/DEC, MUL/IMUL/DIV/IDIV (single-operand and IMUL's own 2-operand
+ * form) plus CWD/CDQ/CQO, CMPXCHG+LOCK, move (register/memory/
+ * immediate, all combinations MOVQ/MOVL/MOVW/MOVB actually need --
+ * note MOVL/MOVW/MOVB's own immediate-to-*register* form is a
  * genuinely different encoding shape from MOVQ's, see Codegen6.ml),
  * LEAQ (address-of-global, 64-bit only), CALL/JMP (direct to a label,
  * or indirect through a register), short-form (rel8) Jcc, RET,
- * SYSCALL. Double-precision SSE floating point (MOVSD, ADDSD/SUBSD/
- * MULSD/DIVSD, UCOMISD, CVTSQ2SD/CVTTSD2SQ int<->float conversion) --
- * no single-precision (SS-suffixed) forms yet, no float immediates
- * (real amd64 has none either -- confirmed "MOVSD $0,X0" is rejected
- * by real 6a/6l), no x87. No literal pool (none of these instructions
- * need one -- LEAQ's absolute address, any 64-bit immediate that
- * doesn't fit sign-extended-32-bit, and any float value (always via
- * SSE register conversion, never an immediate) are all encoded inline
- * in the instruction stream on this arch, unlike ARM64/ARM32/MIPS/
- * RISC-V's separate pool mechanism).
+ * SYSCALL. Single- and double-precision SSE floating point (MOVSD/
+ * MOVSS, ADDSD/SUBSD/MULSD/DIVSD + SS siblings, UCOMISD/UCOMISS, both
+ * int widths of CVTS{L,Q}2S{D,S}/CVTTS{D,S}2S{L,Q}, CVTSD2SS/
+ * CVTSS2SD, XORPD/XORPS's self-clear idiom, a raw GP<->XMM MOVQ
+ * bit-copy, PSLLQ) -- no float immediates (real amd64 has none either
+ * -- confirmed "MOVSD $0,X0" is rejected by real 6a/6l), no x87. No
+ * literal pool (none of these instructions need one -- LEAQ's absolute
+ * address, any 64-bit immediate that doesn't fit sign-extended-32-bit,
+ * and any float value (always via SSE register conversion, never an
+ * immediate) are all encoded inline in the instruction stream on this
+ * arch, unlike ARM64/ARM32/MIPS/RISC-V's separate pool mechanism).
  *)
 
 (*****************************************************************************)

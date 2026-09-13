@@ -1,14 +1,15 @@
 # Porting the amd64 toolchain (6a/6l) against goken, byte-equal
 
-**Status: first checkpoint reached.** `o6a`/`o6l` exist, and
+**Status: second checkpoint reached.** `o6a`/`o6l` exist, and two
+fixtures assemble+link to executables **byte-identical** to goken's
+real `6a`/`6l` output, with identical `qemu-x86_64` behavior:
 `tests/linker/amd64_diff/hello_linux.s` (goken's own real
-`tests/s/hello_arch/hello_linux_amd64.s`, copied verbatim) assembles
-and links to an executable **byte-identical** to goken's real
-`6a`/`6l` output, and produces identical behavior under `qemu-x86_64`
-(both print "Hello, world" and exit 0). `./test-amd64.sh` runs this.
-Zero regressions across all 4 already-complete ports' own full
-suites (`test-arm.sh` 54/54, `test-mips.sh`, `test-arm64.sh`,
-`test-riscv.sh`, `test-riscv64.sh`).
+`tests/s/hello_arch/hello_linux_amd64.s`, copied verbatim; prints
+"Hello, world", exit 0) and `cmp_jcc.s` (CMPQ + JEQ/JNE/JLT/JGE, exit
+42). `./test-amd64.sh` runs both. Zero regressions across all 4
+already-complete ports' own full suites (`test-arm.sh` 54/54,
+`test-mips.sh`, `test-arm64.sh`, `test-riscv.sh`, `test-riscv64.sh`)
+and `make test` (134/134), both before and after this second batch.
 
 This follows the same "free rein between two review checkpoints"
 shape the ARM64 port used (see [[arm64-linker-port]] memory): this is
@@ -120,7 +121,24 @@ own prelude for the full scope statement:
 - `Call` (direct only, to a label): opcode `0xe8` + rel32. Always
   exactly 5 bytes regardless of the actual displacement (unlike ARM's
   own branch-range story), so no chicken-and-egg sizing problem here.
+- `Cmp` (CMPQ, immediate or register): goken's `ycmpl`-shaped compare,
+  same operand-role-order quirk documented in `Ast_asm6.ml`'s own `Cmp`
+  comment (the ModRM r/m operand is the *first* written operand here,
+  unlike `Arith`). Immediate form only wired for signed-8-bit
+  (`Zm_ibo`/`0x83 /7`), register form via `Zm_r`/`0x39` only (not the
+  reverse-direction `Zr_m`/`0x3b` row).
+- `Jcc` (JEQ/JNE/JLT/JGE/JGT/JLE/JCS/JCC/JHI/JLS): goken's `yjcond`,
+  **short (rel8) form only** -- see "Real bugs/quirks" below for why
+  the near form (and hence real branch-distance relaxation) isn't
+  worth chasing yet.
 - `Ret` (`0xc3`), `Syscall` (`0x0f 0x05`).
+- `Jmp` (JMP, direct only): goken's `yjmp`, short (rel8) form, same
+  scope as `Jcc`. Wired and believed correct, but **not yet covered by
+  a byte-identical fixture** -- see "Real bugs/quirks" below, goken's
+  own linker turned out to apply real control-flow transformations
+  (dead-code elision, loop rotation) to code around an unconditional
+  jump, neither of which is worth replicating for this checkpoint;
+  every fixture so far avoids the patterns that trigger them.
 - The static/local symbol `foo<>` suffix, `NAME = value` constant
   definitions -- **not** wired (see "Known gaps" below; not needed by
   this fixture, but real, findable gaps the same way they were for
@@ -169,6 +187,31 @@ CALL.
   fire on every rebuild, is still unknown) -- if this bites another
   port, prefer `bin_dune/oXX` over `_build/default/bin_dune/oXX`
   outright rather than re-debugging it.
+- **goken's real `6l` deletes unreachable code around an unconditional
+  jump, and the jump itself once its target collapses to "the next
+  instruction"** -- found while first trying to test `Jmp`/`JMP`:
+  a "JMP L; <dead code>; L:" fixture (dead code padding added to force
+  the near/rel32 form past the short form's 127-byte range) assembled
+  to *zero bytes* for the JMP and everything it skipped, confirmed
+  down to a minimal repro. Root cause not fully chased (plausible
+  given goken's own Go-toolchain lineage: real compiler-style
+  optimizations, not just assembly), but confirmed to also extend to
+  **loop rotation**: a `loop: cmp;jeq exit; body; jmp loop` structure
+  gets goken's own comparison duplicated into a trailing conditional
+  branch, eliminating the unconditional backward jump entirely (a
+  genuine "while → do-while with a duplicated leading check"
+  transformation). Both are specific to the *unconditional* jump --
+  confirmed a conditional (`Jcc`) forward skip's own fallthrough is
+  *not* elided (it's always statically reachable, values aside).
+  Consequence: byte-identical fixtures for `Jmp` need to avoid both
+  patterns, which rules out the two most natural ways to exercise it
+  in a small test -- `cmp_jcc.s` therefore doesn't test `Jmp` at all
+  yet (see "Suggested phase plan" below).
+- **Confirmed goken's real relaxation between a Jcc/JMP's short
+  (2-byte, rel8) and near (5/6-byte, rel32) forms is a genuine
+  multi-pass sizing problem** (span.c's `Zbr`/`Zjmp` cases pick based
+  on the actual resolved distance) -- not attempted; only the short
+  form is wired (`cmp_jcc.s`'s own four `Jcc` checks all use it).
 
 ## Suggested phase plan (next checkpoints)
 
@@ -180,9 +223,13 @@ how ARM32/ARM64's own follow-up phases were sequenced:
 2. R8-R15 (REX.B/.R/.X threading through every encoder in
    `Codegen6.ml` -- already parseable, per this file's own "What's
    covered" list).
-3. Indirect CALL/JMP (through a register or memory), and real
-   conditional jumps (Jcc) -- needed for anything with control flow
-   beyond a straight-line function.
+3. Indirect CALL/JMP (through a register or memory). Direct
+   conditional jumps landed this checkpoint (`Cmp`/`Jcc`, short form
+   only); a real fixture for `Jmp` itself and Jcc/Jmp's near-form
+   relaxation are still open -- see "Real bugs/quirks" above for why
+   both are genuinely harder than they looked (goken's own dead-code
+   elision and loop rotation, and real multi-pass distance-dependent
+   sizing, respectively).
 4. `foo<>` static/local symbols and `NAME = value` constants --
    same real, findable-in-goken's-own-hand-written-`.s` gaps
    documented for ARM in [[hello-libc-integration-test]]; likely to

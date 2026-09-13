@@ -33,9 +33,12 @@ module L = Location_cpp
 /*(*-----------------------------------------*)*/
 
 %token <Ast_asm6.arith_opcode> TARITH
+%token TCMP
 %token <Ast_asm6.move_size> TMOV
 %token TLEA
 %token TCALL
+%token TJMP
+%token <Ast_asm6.condition> TJcc
 %token TRET
 %token TSYSCALL
 %token TNOP
@@ -188,6 +191,10 @@ instr:
     * "ADDQ Rs,Rd" -- see Ast_asm6.ml's Arith comment. *)*/
  | TARITH imr TC gen             { Arith ($1, $2, $4) }
 
+ /*(* goken's ycmpl-shaped compare: "CMPQ gen,imr" -- see Ast_asm6.ml's
+    * Cmp comment for the reversed-from-Arith operand-role order. *)*/
+ | TCMP gen TC imr               { Cmp ($2, $4) }
+
  /*(* goken's ymovq-shaped move: covers register/memory/immediate in
     * every combination MOVQ actually needs -- see Ast_asm6.ml's Move
     * comment. *)*/
@@ -197,9 +204,13 @@ instr:
     * Ast_asm6.ml's Lea comment). *)*/
  | TLEA global_and_offset TC reg { Lea (fst $2, snd $2, $4) }
 
- /*(* direct near call, goken's ycall's 0xe8 rel32 form (the indirect-
-    * through-register/memory form, opcode 0xff /2, isn't wired). *)*/
+ /*(* direct near call/jump, goken's ycall/yjmp's 0xe8/0xe9 rel32 forms
+    * (the indirect-through-register/memory forms aren't wired). *)*/
  | TCALL branch                  { Call $2 }
+ | TJMP branch                   { Jmp $2 }
+ /*(* goken's yjcond-shaped conditional jump -- always to a label
+    * (goken's own Ybr class), never register-indirect. *)*/
+ | TJcc rel                      { Jcc ($1, $2) }
 
  | TRET                          { Ret }
  | TSYSCALL                      { Syscall }

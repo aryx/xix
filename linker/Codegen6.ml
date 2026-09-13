@@ -187,6 +187,15 @@ let encode_rm (reg_field : int) (rm : resolved_gen) : int list =
 let arith_ext = function ADD -> 0 | SUB -> 5 | XOR -> 6
 let arith_rr_opcode = function ADD -> 0x01 | SUB -> 0x29 | XOR -> 0x31
 
+(* claude: the *short* (rel8) Jcc opcode for each condition -- goken's
+ * optab.c AJEQ/AJNE/.../AJLS entries each list {short_op, near_op}
+ * (e.g. AJEQ: 0x74,0x84); only the short one is used here, see
+ * Jcc/Jmp's own comment below for why. *)
+let jcc_short_opcode = function
+  | EQ -> 0x74 | NE -> 0x75
+  | LT A.S -> 0x7c | GE A.S -> 0x7d | GT A.S -> 0x7f | LE A.S -> 0x7e
+  | LT A.U -> 0x72 | GE A.U -> 0x73 | GT A.U -> 0x77 | LE A.U -> 0x76
+
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
@@ -250,6 +259,29 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let bytes = [rexw; arith_rr_opcode op] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
+    (* claude: "CMPQ gen,$imm" -- goken's Zm_ibo case, opcode 0x83 /7,
+     * `gen` in ModRM r/m (see Ast_asm6.ml's Cmp comment: the ModRM
+     * operand is `gen` here even though it's the *first* operand,
+     * unlike Arith's own Zibo_m where `gen` -- the *second* operand --
+     * plays that role). Only the imm8 form is wired, same scope
+     * restriction as Arith's own immediate case. *)
+    | Cmp (g, Imm v) when v >= -128 && v < 128 ->
+        let rm = resolve_gen env node g in
+        let bytes = [rexw; 0x83] @ encode_rm 7 rm @ [v land 0xff] in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    | Cmp (_g, Imm _) ->
+        raise Todo (* imm32 form (opcode 0x81) not wired, see prelude *)
+    (* claude: "CMPQ gen,Rs" -- goken's Zm_r case, opcode 0x39, `gen`
+     * in ModRM r/m, Rs in ModRM reg (asmand(from=gen,to=Rs), matching
+     * Ast_asm6.ml's Cmp comment). The reverse-direction row (Zr_m,
+     * opcode 0x3b, for when `gen` should land in ModRM reg instead) is
+     * a separate goken y-table row this port doesn't need yet -- not
+     * wired. *)
+    | Cmp (g, Reg r) ->
+        let rm = resolve_gen env node g in
+        let bytes = [rexw; 0x39] @ encode_rm (reg_num r) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+
     (* --------------------------------------------------------------------- *)
     (* Memory / Move *)
     (* --------------------------------------------------------------------- *)
@@ -304,6 +336,55 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
             | Some ndst ->
                 let rel = ndst.T.real_pc - (node.T.real_pc + 5) in
                 [0xe8] @ le32 rel
+          )
+        }
+    (* claude: goken's yjmp/yjcond both real-relax between a 2-byte
+     * short (rel8) and a 5/6-byte near (rel32) form based on the
+     * actual distance (span.c's Zjmp/Zbr cases) -- genuinely a
+     * multi-pass sizing problem (this instruction's own SIZE depends
+     * on a distance only known once every node's real_pc is assigned,
+     * which itself depends on every instruction's size -- the same
+     * kind of chicken-and-egg problem ARM32/MIPS/RISC-V's own branch-
+     * range stories needed real relaxation passes for). Only the short
+     * form is wired here: a real, if surprising, *second* obstacle
+     * to a naive "always emit the near form and let goken match it"
+     * plan (which would have sufficed for sizing alone) is that
+     * goken's own linker deletes any code that's unreachable except by
+     * falling through an unconditional jump that skips it entirely,
+     * *and* deletes the now-redundant jump itself once its target
+     * becomes the next real instruction (confirmed empirically: a
+     * "JMP L; <dead code>; L:" fixture assembles to nothing at all
+     * for the JMP or the dead code) -- so artificially padding a
+     * fixture's jump distances past 127 bytes to force goken's own
+     * near form doesn't actually work either, unless the "dead" code
+     * is made genuinely reachable some other way. Short form only is
+     * therefore both simpler *and* the only form actually exercised by
+     * realistic small fixtures; guarded (raise Todo) rather than
+     * silently emitting a wrong rel8 if a future fixture's distance
+     * doesn't fit -- checked lazily inside `binary`'s own thunk, since
+     * real_pc isn't resolved yet during Layout6.ml's sizing pass (same
+     * "eager size / lazy check" split RISC-V's own far-branch guard
+     * uses). *)
+    | Jmp _ ->
+        { size = 2; binary = (fun () ->
+            match node.T.branch with
+            | None -> raise (Impossible "resolving should have set the branch field")
+            | Some ndst ->
+                let rel = ndst.T.real_pc - (node.T.real_pc + 2) in
+                if rel < -128 || rel > 127
+                then raise Todo (* target too far for the short form -- see prelude *);
+                [0xeb; rel land 0xff]
+          )
+        }
+    | Jcc (cond, _) ->
+        { size = 2; binary = (fun () ->
+            match node.T.branch with
+            | None -> raise (Impossible "resolving should have set the branch field")
+            | Some ndst ->
+                let rel = ndst.T.real_pc - (node.T.real_pc + 2) in
+                if rel < -128 || rel > 127
+                then raise Todo (* target too far for the short form -- see prelude *);
+                [jcc_short_opcode cond; rel land 0xff]
           )
         }
     (* claude: RET is control flow too (goken's own case shape puts it

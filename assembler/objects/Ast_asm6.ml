@@ -140,12 +140,24 @@ type gen =
 (* Instructions *)
 (* ------------------------------------------------------------------------- *)
 type instr =
+  (* Arithmetic *)
   (* claude: goken's yaddl/yxorl-shaped 2-operand arithmetic (optab.c):
    * source is an immediate-or-register (`imr`), destination is a
    * register-or-memory (`gen`) -- confirmed against real 6a/6l this is
-   * one shared grammar/encoding shape for ADD/SUB/XOR (AND/OR/CMP would
+   * one shared grammar/encoding shape for ADD/SUB/XOR (AND/OR would
    * follow the exact same shape, not wired yet -- see prelude). *)
   | Arith of arith_opcode * imr * gen
+  (* claude: goken's ycmpl-shaped compare (optab.c) -- CMP writes no
+   * result, only flags, and (confirmed against real 6a byte output)
+   * spells its two operands in the *opposite* role-order from Arith:
+   * "CMPQ gen,imr" ("compare gen against imr"), with `gen` -- not
+   * `imr` -- landing in the ModRM r/m field either way. Kept as its
+   * own constructor (not folded into Arith) since goken's own y-table
+   * row order genuinely differs (Yml,Yi8/Yml,Yrl -- gen-first --
+   * unlike yaddl's Yi8,Yml/Yrl,Yml -- imr-first). *)
+  | Cmp of gen * imr
+
+  (* Memory *)
   (* claude: goken's ymovq-shaped move (optab.c) -- source is either a
    * `gen` (register/memory/entity) or an immediate/address (`A.ximm`,
    * reusing the same shared type ARM64's own Move already uses),
@@ -171,13 +183,32 @@ type instr =
    * only; the indirect-through-register/memory form (opcode 0xff /2)
    * is a separate y-class row, not wired yet. *)
   | Call of A.branch_operand
+  (* claude: goken's yjmp-shaped unconditional jump -- direct (to a
+   * label) only, same indirect-form gap as Call. *)
+  | Jmp of A.branch_operand
+  (* claude: goken's yjcond-shaped conditional jump -- always to a
+   * label (goken's own Ybr class, never register-indirect). *)
+  | Jcc of condition * A.branch_operand
   | Ret
+
+  (* System *)
   | Syscall
 
   and arith_opcode = ADD | SUB | XOR
 
   and move_size = Q_ (* 64-bit/quadword only for now, bare "MOVQ" --
                        * see prelude's "Scope for this first checkpoint" *)
+
+  (* claude: goken's real amd64 condition codes -- EQ/NE plus signed
+   * (JLT/JGE/JGT/JLE) and unsigned (JCS/JCC/JHI/JLS) variants of
+   * less/greater-or-equal/greater/less-or-equal, same sign-parameterized
+   * shape as Ast_asm5.ml/Ast_asm7.ml's own `condition` type (ARM's
+   * identical signed-vs-unsigned split for its own Bxx family) --
+   * confirmed against goken's real optab.c (AJEQ/AJNE/AJLT/AJGE/AJGT/
+   * AJLE/AJCS/AJCC/AJHI/AJLS). *)
+  and condition =
+    | EQ | NE
+    | LT of A.sign | GE of A.sign | GT of A.sign | LE of A.sign
 
 [@@deriving show { with_path = false }]
 
@@ -218,7 +249,9 @@ type program = instr A.program
 let branch_opd_of_instr (instr : instr) : A.branch_operand option =
   match instr with
   | Call opd -> Some opd
-  | Arith _ | Move _ | Lea _ | Ret | Syscall -> None
+  | Jmp opd -> Some opd
+  | Jcc (_, opd) -> Some opd
+  | Arith _ | Cmp _ | Move _ | Lea _ | Ret | Syscall -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   let gen_operand x =
@@ -235,6 +268,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
       );
       gen_operand gen2
   | Lea (g, _, _) -> f g
-  | Call b -> A.visit_globals_branch_operand f b
+  | Call b | Jmp b | Jcc (_, b) -> A.visit_globals_branch_operand f b
   | Arith (_, _, gen1) -> gen_operand gen1
+  | Cmp (gen1, _) -> gen_operand gen1
   | Ret | Syscall -> ()

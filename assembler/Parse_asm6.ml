@@ -79,10 +79,20 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
       | "ADDQ" -> TARITH ADD
       | "SUBQ" -> TARITH SUB
       | "XORQ" -> TARITH XOR
+      | "CMPQ" -> TCMP
 
       | "MOVQ" -> TMOV Q_
       | "LEAQ" -> TLEA
       | "CALL" -> TCALL
+      (* claude: goken's real amd64 condition codes (optab.c's
+       * AJEQ/AJNE/.../AJLS) -- see Ast_asm6.ml's `condition` comment
+       * for the signed/unsigned split. *)
+      | "JMP" -> TJMP
+      | "JEQ" -> TJcc EQ | "JNE" -> TJcc NE
+      | "JLT" -> TJcc (LT A.S) | "JGE" -> TJcc (GE A.S)
+      | "JGT" -> TJcc (GT A.S) | "JLE" -> TJcc (LE A.S)
+      | "JCS" -> TJcc (LT A.U) | "JCC" -> TJcc (GE A.U)
+      | "JHI" -> TJcc (GT A.U) | "JLS" -> TJcc (LE A.U)
       | "RET" -> TRET
       | "SYSCALL" -> TSYSCALL
 

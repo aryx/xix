@@ -113,9 +113,14 @@ LIBC_ROOT="$GOKEN_ROOT/lib_core/libc"
 # (or tests/c/hello_libc) would use -- see mkfiles/mkfile.proto's
 # CFLAGS_COMMON and mkfiles/$OBJTYPE_MK/mkfile's own -I addition (e.g.
 # mkfiles/arm/mkfile: "-I$TOP/include/arch/arm", needed for u.h, which
-# is per-arch, not in include/ or include/ALL/).
+# is per-arch, not in include/ or include/ALL/). $LIBC_ROOT itself is
+# needed for libc's own internal headers (e.g. fmt/fmtdef.h) -- found
+# missing here (several files spuriously "failed to compile" for a
+# reason unrelated to any real gap) while writing
+# scripts/find-c-closure.py, see
+# docs/claude_notes/plan_hello_libc_linking.md.
 CFLAGS_LIBC=(-I"$GOKEN_ROOT/include" -I"$GOKEN_ROOT/include/ALL" \
-             -I"$GOKEN_ROOT/include/arch/$OBJTYPE_MK")
+             -I"$GOKEN_ROOT/include/arch/$OBJTYPE_MK" -I"$LIBC_ROOT")
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT

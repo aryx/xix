@@ -67,17 +67,19 @@ open Ast_asm
  * *encoding* order (AX=0,CX=1,DX=2,BX=3,SP=4,BP=5,SI=6,DI=7,R8-R15=8-15),
  * not the D_AL=0-based enum order 6.out.h itself uses (D_AX=16) -- i.e.
  * already-normalized-for-ModRM/REX values, since that's the only thing
- * Codegen6.ml ever needs them for. R8-R15 (needing REX.B/.R/.X to reach at
- * all) are not wired into the grammar yet -- see Parser_asm6.mly.
+ * Codegen6.ml ever needs them for. R8-R15 *are* wired now (REX.R/.B --
+ * see Codegen6.ml's `rex` helper), reachable via the shared "R"+digit
+ * lexer rule (no special grammar case needed, unlike the named low
+ * registers -- see Parser_asm6.mly).
  *
- * Scope for this first checkpoint (hello_linux_amd64.s only, see
- * notes_amd64_port_plan.txt): 64-bit-width (Q-suffixed) integer
- * arithmetic (ADD/SUB/XOR, immediate-or-register source, register-or-
- * memory destination) and move (register/memory/immediate, all
- * combinations MOVQ actually needs), LEAQ (address-of-global), CALL
- * (direct, to a label only -- no indirect-through-register form yet),
- * RET, SYSCALL. No byte/word/long (B/W/L-suffixed) forms, no floating
- * point/SSE, no conditional jumps, no R8-R15, no literal pool (none of
+ * Scope so far (hello_linux_amd64.s + cmp_jcc.s, see
+ * plan_amd64_port.md): 64-bit-width (Q-suffixed) integer arithmetic
+ * (ADD/SUB/XOR/CMP, immediate-or-register source, register-or-memory
+ * destination), move (register/memory/immediate, all combinations
+ * MOVQ actually needs), LEAQ (address-of-global), CALL (direct, to a
+ * label only -- no indirect-through-register form yet), short-form
+ * (rel8) JMP/Jcc, RET, SYSCALL. No byte/word/long (B/W/L-suffixed)
+ * forms, no floating point/SSE, no literal pool (none of
  * these instructions need one -- LEAQ's absolute address and any 64-bit
  * immediate that doesn't fit sign-extended-32-bit are both encoded
  * inline in the instruction stream on this arch, unlike ARM64/ARM32/

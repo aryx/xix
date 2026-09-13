@@ -56,11 +56,11 @@ open Ast_asm6
  *    -- goken's own asmandsz() has real special cases for BP/R13 as a
  *    base (mod=00/rm=101 means RIP-relative/absolute instead of
  *    "[BP+0]" in 64-bit mode) that aren't replicated.
- *  - No R8-R15 (would need REX.B/.R/.X threaded through every one of
- *    the encoders below -- deliberately deferred, see Ast_asm6.ml's
- *    prelude for why R8-R15 are still parseable as `reg` already
- *    (shared "R"+digit lexer rule) even though nothing here can encode
- *    them yet).
+ *  - No SIB-index (indexed addressing, e.g. "(R1)(R2*4)") -- REX.X is
+ *    always 0 here. R8-R15 *are* wired (REX.R/.B, see the `rex`/
+ *    `rex_b_of_resolved_gen` helpers below) for every ModRM.reg/rm
+ *    role every encoder already uses; only the SIB.index role (not
+ *    used by anything wired so far -- see prelude) is unhandled.
  *)
 
 (*****************************************************************************)
@@ -84,13 +84,6 @@ let reg_num (A.R i) = i
 let modrm ~md ~reg ~rm = ((md land 3) lsl 6) lor ((reg land 7) lsl 3) lor (rm land 7)
 let sib ~scale ~index ~base = ((scale land 3) lsl 6) lor ((index land 7) lsl 3) lor (base land 7)
 
-(* claude: REX prefix -- 0x40 | W<<3 | R<<2 | X<<1 | B. Every
- * instruction here is 64-bit (Q-suffixed), so W is always 1; R/X/B are
- * always 0 since no register used anywhere in this checkpoint needs
- * the REX extension bit (all of AX/CX/DX/BX/SP/BP/SI/DI are <8) -- see
- * this file's own prelude for the R8-R15 gap. *)
-let rexw = 0x48
-
 let le32 (v : int) : int list =
   [ v land 0xff; (v asr 8) land 0xff; (v asr 16) land 0xff; (v asr 24) land 0xff ]
 
@@ -105,6 +98,30 @@ type resolved_gen =
   | RMem of A.register * int (* base register (always SP here -- see
                                * this file's prelude), displacement *)
   | RAbs of int (* absolute virtual address (SB-relative global) *)
+
+(* claude: REX prefix -- 0x40 | W<<3 | R<<2 | X<<1 | B. Ported from
+ * goken's own obj.c reg[]/regrex[] table init (span.c/obj.c: register
+ * *encoding* is `(i - D_AX) & 7` uniformly for AX..DI *and* R8..R15 --
+ * already handled by `reg_num` returning the raw 0-15 value and
+ * `modrm`/`sib` masking with `land 7` -- but R8-R15 additionally set
+ * Rxr|Rxx|Rxb in regrex[], meaning "this register may need any of
+ * REX.R/.X/.B depending on which ModRM/SIB field it ends up in").
+ * W is always 1 here (every instruction wired so far is 64-bit/Q); X
+ * (SIB index) is always 0 (no indexed addressing implemented, see
+ * prelude); R comes from whichever register sits in ModRM.reg
+ * (`reg_field` below -- for the immediate-group opcodes this is a
+ * fixed 0-7 opcode-extension digit, never actually a register, so it
+ * never contributes); B comes from whichever register sits in
+ * ModRM.rm or SIB.base (`rex_b_of_resolved_gen` below -- RAbs's fixed
+ * no-base SIB pattern never contributes either). *)
+let rex_b_of_resolved_gen = function
+  | RReg (A.R n) | RMem (A.R n, _) -> if n >= 8 then 1 else 0
+  | RAbs _ -> 0
+
+let rex ~(reg_field : int) ~(rm : resolved_gen) : int =
+  let r = if reg_field >= 8 then 4 (* Rxr *) else 0 in
+  let b = rex_b_of_resolved_gen rm in
+  0x40 lor 8 (* W *) lor r lor b
 
 (* claude: `init_data` is `None` here (as opposed to `resolve_gen_full`
  * below) -- callers that only ever pass a `gen` built from this arch's
@@ -250,13 +267,13 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
 
     | Arith (op, Imm v, dest) when v >= -128 && v < 128 ->
         let rm = resolve_gen env node dest in
-        let bytes = [rexw; 0x83] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
+        let bytes = [rex ~reg_field:(arith_ext op) ~rm; 0x83] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Arith (_op, Imm _, _dest) ->
         raise Todo (* imm32 form (opcode 0x81) not wired, see prelude *)
     | Arith (op, Reg r, dest) ->
         let rm = resolve_gen env node dest in
-        let bytes = [rexw; arith_rr_opcode op] @ encode_rm (reg_num r) rm in
+        let bytes = [rex ~reg_field:(reg_num r) ~rm; arith_rr_opcode op] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
     (* claude: "CMPQ gen,$imm" -- goken's Zm_ibo case, opcode 0x83 /7,
@@ -267,7 +284,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * restriction as Arith's own immediate case. *)
     | Cmp (g, Imm v) when v >= -128 && v < 128 ->
         let rm = resolve_gen env node g in
-        let bytes = [rexw; 0x83] @ encode_rm 7 rm @ [v land 0xff] in
+        let bytes = [rex ~reg_field:7 ~rm; 0x83] @ encode_rm 7 rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Cmp (_g, Imm _) ->
         raise Todo (* imm32 form (opcode 0x81) not wired, see prelude *)
@@ -279,7 +296,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * wired. *)
     | Cmp (g, Reg r) ->
         let rm = resolve_gen env node g in
-        let bytes = [rexw; 0x39] @ encode_rm (reg_num r) rm in
+        let bytes = [rex ~reg_field:(reg_num r) ~rm; 0x39] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
     (* --------------------------------------------------------------------- *)
@@ -289,12 +306,12 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
     | Move (Q_, Either.Left (GReg r), dest) ->
         (* store: reg -> mem/reg, goken's Zr_m (0x89) *)
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = [rexw; 0x89] @ encode_rm (reg_num r) rm in
+        let bytes = [rex ~reg_field:(reg_num r) ~rm; 0x89] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (Q_, Either.Left src, GReg r) ->
         (* load: mem/reg -> reg, goken's Zm_r (0x8b) *)
         let rm = resolve_gen_full env init_data node src in
-        let bytes = [rexw; 0x8b] @ encode_rm (reg_num r) rm in
+        let bytes = [rex ~reg_field:(reg_num r) ~rm; 0x8b] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (Q_, Either.Left (Indirect _ | Entity _), (Indirect _ | Entity _)) ->
         raise (Impossible "real amd64 MOV never has both operands in memory")
@@ -303,7 +320,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
          * Zilo_m (0xc7 /0) -- see prelude for the imm=0/true-imm64
          * cases not wired. *)
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = [rexw; 0xc7] @ encode_rm 0 rm @ le32 v in
+        let bytes = [rex ~reg_field:0 ~rm; 0xc7] @ encode_rm 0 rm @ le32 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (Q_, Either.Right _, _) ->
         raise Todo (* true-64-bit-immediate / string / float src, or an
@@ -312,7 +329,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
 
     | Lea (glob, off, r) ->
         let addr = resolve_global_addr env init_data glob off in
-        let bytes = [rexw; 0x8d] @ encode_rm (reg_num r) (RAbs addr) in
+        let bytes = [rex ~reg_field:(reg_num r) ~rm:(RAbs addr); 0x8d] @ encode_rm (reg_num r) (RAbs addr) in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
     (* --------------------------------------------------------------------- *)

@@ -99,10 +99,10 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
       (* claude: named low registers -- goken's real 6a/lex.c has a
        * dedicated register-name hash table for these (a.h/D_AL..D_DI
        * etc), unlike the shared Lexer_asm.mll's generic "R" + digit
-       * rule (which already covers R8-R15 unchanged, once wired --
-       * see Ast_asm6.ml's prelude). SP is deliberately absent here:
-       * it's the shared TSP token (see Parser_asm6.mly's `reg`
-       * comment), not a plain TIDENT. BP/R8-R15 aren't wired yet. *)
+       * rule (which already covers R8-R15 directly, no mapping needed
+       * here -- see Ast_asm6.ml's prelude). SP is deliberately absent
+       * here: it's the shared TSP token (see Parser_asm6.mly's `reg`
+       * comment), not a plain TIDENT. BP isn't wired yet. *)
       | "AX" -> TRx (A.R 0)
       | "CX" -> TRx (A.R 1)
       | "DX" -> TRx (A.R 2)

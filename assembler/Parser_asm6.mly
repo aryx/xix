@@ -12,9 +12,9 @@ module L = Location_cpp
 (* Prelude *)
 (*****************************************************************************)
 (* The 6a amd64 assembly grammar -- see Ast_asm6.ml's own prelude for the
- * overall scope of this first version (hello_linux_amd64.s only: 64-bit
- * arithmetic/move/lea/call/ret/syscall, no byte/word/long forms, no
- * conditional jumps, no R8-R15, no floating point).
+ * overall scope so far (64-bit arithmetic/compare/move/lea/call/
+ * short-jumps/ret/syscall, R8-R15, no byte/word/long forms, no
+ * floating point).
  *)
 
 (*****************************************************************************)
@@ -233,9 +233,12 @@ imm: TDOLLAR con      { $2 }
    * shared token (TSP) -- see Ast_asm6.ml's prelude for why it's a
    * plain `reg` here (a real register on this arch) and *not* routed
    * through `pointer`'s virtual-addressing mechanism below, unlike
-   * every other arch. BP/R8-R15 aren't wired yet (R8-R15 would need
-   * REX.B threading through Codegen6.ml first -- see its own
-   * comment). *)*/
+   * every other arch. R8-R15 need no grammar case at all -- the shared
+   * "R"+digit lexer rule already produces them as plain TRx tokens,
+   * matched by the very next alternative below (Codegen6.ml's `rex`
+   * threads the needed REX.R/.B bits through). BP isn't wired yet
+   * (would just need its own TIDENT mapping, same shape as AX/CX/../
+   * DI below in Parse_asm6.ml). *)*/
 reg:
  | TRx                { $1 }
  | TSP                { rSP }

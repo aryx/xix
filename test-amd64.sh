@@ -12,6 +12,7 @@ cd "$(dirname "$0")"
 CASES=(
     "tests/linker/amd64_diff/hello_linux.s:_start"
     "tests/linker/amd64_diff/cmp_jcc.s:_start"
+    "tests/linker/amd64_diff/r8_r15.s:_start"
 )
 
 FAIL=0

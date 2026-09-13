@@ -72,14 +72,16 @@ open Ast_asm
  * lexer rule (no special grammar case needed, unlike the named low
  * registers -- see Parser_asm6.mly).
  *
- * Scope so far (hello_linux_amd64.s + cmp_jcc.s, see
- * plan_amd64_port.md): 64-bit-width (Q-suffixed) integer arithmetic
- * (ADD/SUB/XOR/CMP, immediate-or-register source, register-or-memory
- * destination), move (register/memory/immediate, all combinations
- * MOVQ actually needs), LEAQ (address-of-global), CALL (direct, to a
- * label only -- no indirect-through-register form yet), short-form
- * (rel8) JMP/Jcc, RET, SYSCALL. No byte/word/long (B/W/L-suffixed)
- * forms, no floating point/SSE, no literal pool (none of
+ * Scope so far (see plan_amd64_port.md): 64- and 32-bit-width
+ * (Q/L-suffixed) integer arithmetic (ADD/SUB/XOR/CMP, immediate-or-
+ * register source, register-or-memory destination), move (register/
+ * memory/immediate, all combinations MOVQ/MOVL actually need -- note
+ * MOVL's own immediate-to-*register* form is a genuinely different
+ * encoding shape from MOVQ's, see Codegen6.ml), LEAQ (address-of-
+ * global, 64-bit only), CALL (direct, to a label only -- no
+ * indirect-through-register form yet), short-form (rel8) JMP/Jcc,
+ * RET, SYSCALL. No byte/16-bit (B/W-suffixed) forms, no floating
+ * point/SSE, no literal pool (none of
  * these instructions need one -- LEAQ's absolute address and any 64-bit
  * immediate that doesn't fit sign-extended-32-bit are both encoded
  * inline in the instruction stream on this arch, unlike ARM64/ARM32/
@@ -148,7 +150,7 @@ type instr =
    * register-or-memory (`gen`) -- confirmed against real 6a/6l this is
    * one shared grammar/encoding shape for ADD/SUB/XOR (AND/OR would
    * follow the exact same shape, not wired yet -- see prelude). *)
-  | Arith of arith_opcode * imr * gen
+  | Arith of width * arith_opcode * imr * gen
   (* claude: goken's ycmpl-shaped compare (optab.c) -- CMP writes no
    * result, only flags, and (confirmed against real 6a byte output)
    * spells its two operands in the *opposite* role-order from Arith:
@@ -157,15 +159,15 @@ type instr =
    * own constructor (not folded into Arith) since goken's own y-table
    * row order genuinely differs (Yml,Yi8/Yml,Yrl -- gen-first --
    * unlike yaddl's Yi8,Yml/Yrl,Yml -- imr-first). *)
-  | Cmp of gen * imr
+  | Cmp of width * gen * imr
 
   (* Memory *)
-  (* claude: goken's ymovq-shaped move (optab.c) -- source is either a
-   * `gen` (register/memory/entity) or an immediate/address (`A.ximm`,
-   * reusing the same shared type ARM64's own Move already uses),
-   * destination is always a `gen` (real amd64 MOV can never write to an
-   * immediate, obviously). *)
-  | Move of move_size * (gen, A.ximm) Either_.t * gen
+  (* claude: goken's ymovq/ymovl-shaped move (optab.c) -- source is
+   * either a `gen` (register/memory/entity) or an immediate/address
+   * (`A.ximm`, reusing the same shared type ARM64's own Move already
+   * uses), destination is always a `gen` (real amd64 MOV can never
+   * write to an immediate, obviously). *)
+  | Move of width * (gen, A.ximm) Either_.t * gen
   (* claude: goken's Zaut_r/"built-in LEAQ" case (optab.c's ymovq table
    * has its own Zaut_r row just for this, span.c's doasm() `case
    * Zaut_r` comment literally says "leal" -- LEA is encoding-wise its
@@ -198,8 +200,13 @@ type instr =
 
   and arith_opcode = ADD | SUB | XOR
 
-  and move_size = Q_ (* 64-bit/quadword only for now, bare "MOVQ" --
-                       * see prelude's "Scope for this first checkpoint" *)
+  (* claude: operand width, shared by Arith/Cmp/Move -- Q_ (64-bit,
+   * REX.W set) and L_ (32-bit, no REX.W -- the *default* operand size
+   * in long mode, confirmed against real 6a: "ADDL BX,AX" needs no
+   * prefix byte at all when no R8-R15 register is involved, see
+   * Codegen6.ml's `rex_opt`). B_/W_ (byte/16-bit) aren't wired yet --
+   * see prelude. *)
+  and width = Q_ | L_
 
   (* claude: goken's real amd64 condition codes -- EQ/NE plus signed
    * (JLT/JGE/JGT/JLE) and unsigned (JCS/JCC/JHI/JLS) variants of
@@ -271,6 +278,6 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
       gen_operand gen2
   | Lea (g, _, _) -> f g
   | Call b | Jmp b | Jcc (_, b) -> A.visit_globals_branch_operand f b
-  | Arith (_, _, gen1) -> gen_operand gen1
-  | Cmp (gen1, _) -> gen_operand gen1
+  | Arith (_, _, _, gen1) -> gen_operand gen1
+  | Cmp (_, gen1, _) -> gen_operand gen1
   | Ret | Syscall -> ()

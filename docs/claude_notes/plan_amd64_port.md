@@ -1,15 +1,16 @@
 # Porting the amd64 toolchain (6a/6l) against goken, byte-equal
 
-**Status: second checkpoint reached.** `o6a`/`o6l` exist, and two
+**Status: fourth checkpoint reached.** `o6a`/`o6l` exist, and four
 fixtures assemble+link to executables **byte-identical** to goken's
 real `6a`/`6l` output, with identical `qemu-x86_64` behavior:
-`tests/linker/amd64_diff/hello_linux.s` (goken's own real
-`tests/s/hello_arch/hello_linux_amd64.s`, copied verbatim; prints
-"Hello, world", exit 0) and `cmp_jcc.s` (CMPQ + JEQ/JNE/JLT/JGE, exit
-42). `./test-amd64.sh` runs both. Zero regressions across all 4
-already-complete ports' own full suites (`test-arm.sh` 54/54,
-`test-mips.sh`, `test-arm64.sh`, `test-riscv.sh`, `test-riscv64.sh`)
-and `make test` (134/134), both before and after this second batch.
+`hello_linux.s` (goken's own real hello-world, exit 0), `cmp_jcc.s`
+(CMPQ + JEQ/JNE/JLT/JGE, exit 42), `r8_r15.s` (R8-R15 across every
+instruction, exit 12), `movl_arith.s` (32-bit MOVL/ADDL/CMPL,
+including the register- vs memory-destination MOVL-immediate split and
+the Zclr $0 optimization, exit 135). `./test-amd64.sh` runs all four.
+Zero regressions across all 4 already-complete ports' own full suites
+(`test-arm.sh` 54/54, `test-mips.sh`, `test-arm64.sh`, `test-riscv.sh`,
+`test-riscv64.sh`) and `make test` (134/134) after every batch.
 
 This follows the same "free rein between two review checkpoints"
 shape the ARM64 port used (see [[arm64-linker-port]] memory): this is
@@ -103,30 +104,38 @@ on intuition from:
 
 ## What's covered (Codegen6.ml)
 
-Only what `hello_linux_amd64.s` itself needs -- see `Ast_asm6.ml`'s
-own prelude for the full scope statement:
-- `Arith` (ADD/SUB/XOR): register destination, immediate source (only
-  when the immediate fits signed 8 bits, goken's `Yi8`/opcode `0x83`)
-  or register source (goken's `Zr_m`, one real opcode per mnemonic:
-  `0x01`/`0x29`/`0x31`).
-- `Move` (MOVQ only, no B/W/L-suffixed forms): register<->register,
+See `Ast_asm6.ml`'s own prelude for the full scope statement:
+- `Arith` (ADD/SUB/XOR, **Q and L width**): register destination,
+  immediate source (only when the immediate fits signed 8 bits,
+  goken's `Yi8`/opcode `0x83`) or register source (goken's `Zr_m`, one
+  real opcode per mnemonic: `0x01`/`0x29`/`0x31`).
+- `Move` (MOVQ/MOVL, no B/W-suffixed forms): register<->register,
   register<->memory (goken's `Zr_m`/`Zm_r`, opcodes `0x89`/`0x8b`),
-  and immediate-to-register-or-memory when the immediate fits signed
-  32 bits sign-extended (goken's `Zilo_m`, opcode `0xc7 /0`).
-- `Lea` (LEAQ, address-of-global only): goken's own "built-in LEAQ"
-  `Zaut_r` row, opcode `0x8d`, always the absolute-disp32-via-SIB
-  addressing shape (goken's non-PIE amd64 default -- confirmed
-  `HEADTYPE`-gated in `span.c`'s `asmandsz()`, macOS PIE uses
-  RIP-relative instead, not implemented here).
+  `$0`-to-register (goken's `Zclr` self-XOR optimization -- **both**
+  `ymovq` *and* `ymovl` have this row; a real bug in this port's own
+  first attempt assumed only `ymovq` did, see "Real bugs/quirks"), and
+  immediate-to-register-or-memory when the immediate fits signed 32
+  bits sign-extended -- MOVQ always via `Zilo_m`/`0xc7 /0`, but MOVL's
+  own table puts the simpler `Zil_rp`/`0xb8+reg` (no ModRM at all, same
+  family as `Ziq_rp`) *before* `Zilo_m`, so a register destination
+  takes that path instead and only a memory destination falls through
+  to `Zilo_m` -- a real, non-obvious shape difference from MOVQ.
+- `Lea` (LEAQ, address-of-global only, 64-bit only): goken's own
+  "built-in LEAQ" `Zaut_r` row, opcode `0x8d`, always the
+  absolute-disp32-via-SIB addressing shape (goken's non-PIE amd64
+  default -- confirmed `HEADTYPE`-gated in `span.c`'s `asmandsz()`,
+  macOS PIE uses RIP-relative instead, not implemented here).
 - `Call` (direct only, to a label): opcode `0xe8` + rel32. Always
   exactly 5 bytes regardless of the actual displacement (unlike ARM's
   own branch-range story), so no chicken-and-egg sizing problem here.
-- `Cmp` (CMPQ, immediate or register): goken's `ycmpl`-shaped compare,
-  same operand-role-order quirk documented in `Ast_asm6.ml`'s own `Cmp`
-  comment (the ModRM r/m operand is the *first* written operand here,
-  unlike `Arith`). Immediate form only wired for signed-8-bit
-  (`Zm_ibo`/`0x83 /7`), register form via `Zm_r`/`0x39` only (not the
-  reverse-direction `Zr_m`/`0x3b` row).
+- `Cmp` (CMPQ/CMPL, immediate or register): goken's `ycmpl`-shaped
+  compare, same operand-role-order quirk documented in `Ast_asm6.ml`'s
+  own `Cmp` comment (the ModRM r/m operand is the *first* written
+  operand here, unlike `Arith`). Immediate form only wired for
+  signed-8-bit (`Zm_ibo`/`0x83 /7`), register form via `Zm_r`/`0x39`
+  only (not the reverse-direction `Zr_m`/`0x3b` row). No `Yi0`/`Zclr`
+  row exists for CMP in goken's own `ycmpl` (unlike MOVQ/MOVL), so no
+  special-casing needed there.
 - `Jcc` (JEQ/JNE/JLT/JGE/JGT/JLE/JCS/JCC/JHI/JLS): goken's `yjcond`,
   **short (rel8) form only** -- see "Real bugs/quirks" below for why
   the near form (and hence real branch-distance relaxation) isn't
@@ -139,20 +148,27 @@ own prelude for the full scope statement:
   (dead-code elision, loop rotation) to code around an unconditional
   jump, neither of which is worth replicating for this checkpoint;
   every fixture so far avoids the patterns that trigger them.
+- **R8-R15**, across every instruction above: REX.R (whichever
+  register sits in ModRM.reg) and REX.B (ModRM.rm or SIB.base, or the
+  opcode-embedded register for MOVL/MOVQ's `Zil_rp`/`Ziq_rp` forms),
+  computed by `rex_opt`/`rex_b_of_resolved_gen`. For a 32-bit (L)
+  instruction the whole REX byte is optional and omitted entirely when
+  neither R8-R15 register is involved (confirmed against real 6a:
+  "ADDL BX,AX" is just `01 d8`, no prefix byte at all). REX.X (SIB
+  index) is never set -- no indexed addressing implemented.
 - The static/local symbol `foo<>` suffix, `NAME = value` constant
-  definitions -- **not** wired (see "Known gaps" below; not needed by
-  this fixture, but real, findable gaps the same way they were for
-  ARM -- see [[hello-libc-integration-test]]).
+  definitions -- **not** wired (not needed by any fixture yet, but
+  real, findable gaps the same way they were for ARM -- see
+  [[hello-libc-integration-test]]).
 
 Deliberately not wired (all raise `Todo` rather than emit wrong
-bytes): the imm32 arith form (`0x81`), the imm=0 move optimization
-(`Zclr`/`0x31`) and true-64-bit-immediate move (`Ziq_rp`/`0xb8`), any
-memory base register other than SP (BP/R13 need a real ModRM/SIB
-special case for `[rip+disp32]` this port doesn't have), R8-R15
-(parseable already via the shared "R"+digit lexer rule, but nothing in
-`Codegen6.ml` threads REX.B/.R/.X yet), byte/word/long-suffixed
-arithmetic and moves, floating point/SSE, conditional jumps, indirect
-CALL.
+bytes): the imm32 arith form (`0x81`), true-64-bit-immediate move
+(`Ziq_rp`'s own full-8-byte-immediate sub-case, `0xb8`), any memory
+base register other than SP (BP/R13 need a real ModRM/SIB special case
+for `[rip+disp32]` this port doesn't have), indexed addressing
+(SIB.index, hence REX.X), byte/16-bit-suffixed (B/W) arithmetic and
+moves, floating point/SSE, indirect CALL/JMP, Jcc/Jmp near-form
+relaxation.
 
 ## Real bugs/quirks found via differential testing against goken directly
 
@@ -212,33 +228,48 @@ CALL.
   multi-pass sizing problem** (span.c's `Zbr`/`Zjmp` cases pick based
   on the actual resolved distance) -- not attempted; only the short
   form is wired (`cmp_jcc.s`'s own four `Jcc` checks all use it).
+- **A real bug in this port's own first attempt at MOVL's immediate
+  form**: assumed (by loose analogy with CMP's own `ycmpl`, which
+  genuinely has no `Yi0` row) that `ymovl`, like `ymovq`, would need
+  `MOVL $0,R` special-cased separately -- but actually just skipped
+  wiring `Zclr` for *either* width at first, on the wrong assumption
+  neither table had the row. Both do (confirmed reading `ymovl`'s own
+  table more carefully, then empirically: `MOVL $0,AX` assembles to
+  `31 c0`, a bare self-XOR, not `Zilo_m`). Fixed for both `Q_` and `L_`
+  uniformly, one `Move (width, Right (Int 0), GReg r)` case.
+- **R8-R15's REX.R/.B computation confirmed exactly against real 6a
+  byte output** for every instruction shape wired so far, including
+  the trickiest one (`ADDQ R8,R9`, needing REX.R *and* REX.B set
+  simultaneously since one register sits in ModRM.reg and the other in
+  ModRM.rm) and MOVL's own opcode-embedded-register forms (`MOVL
+  $9,R9` -> REX.B extends the `0xb8+reg` opcode byte itself, not a
+  ModRM field, confirmed `41 b9 09 00 00 00`). No surprises here --
+  goken's own reg[]/regrex[] scheme (`obj.c`) turned out to already
+  generalize cleanly to every ModRM/opcode-embedding shape used.
 
 ## Suggested phase plan (next checkpoints)
 
 Roughly in the order a next real fixture would need them, mirroring
 how ARM32/ARM64's own follow-up phases were sequenced:
-1. Byte/word/long-suffixed (`B`/`W`/`L`) arithmetic and moves, and the
-   `-0x81`/imm32 arith form -- likely needed almost immediately by any
-   fixture beyond a hello-world.
-2. R8-R15 (REX.B/.R/.X threading through every encoder in
-   `Codegen6.ml` -- already parseable, per this file's own "What's
-   covered" list).
-3. Indirect CALL/JMP (through a register or memory). Direct
-   conditional jumps landed this checkpoint (`Cmp`/`Jcc`, short form
-   only); a real fixture for `Jmp` itself and Jcc/Jmp's near-form
-   relaxation are still open -- see "Real bugs/quirks" above for why
-   both are genuinely harder than they looked (goken's own dead-code
-   elision and loop rotation, and real multi-pass distance-dependent
-   sizing, respectively).
-4. `foo<>` static/local symbols and `NAME = value` constants --
+1. Indirect CALL/JMP (through a register or memory). Direct
+   conditional jumps and Q/L-width arithmetic/move/compare landed in
+   this checkpoint's batches; a real fixture for `Jmp` itself and
+   Jcc/Jmp's near-form relaxation are still open -- see "Real
+   bugs/quirks" above for why both are genuinely harder than they
+   looked (goken's own dead-code elision and loop rotation, and real
+   multi-pass distance-dependent sizing, respectively).
+2. `foo<>` static/local symbols and `NAME = value` constants --
    same real, findable-in-goken's-own-hand-written-`.s` gaps
    documented for ARM in [[hello-libc-integration-test]]; likely to
    surface again the moment a real (not synthetic) amd64 `.s` file is
    tried.
-5. True 64-bit immediates (`Ziq_rp`) and the imm-zero optimization
-   (`Zclr`) for MOVQ.
-6. RIP-relative addressing (needed the moment a fixture targets a
+3. Byte/16-bit-suffixed (`B`/`W`) arithmetic and moves, and the
+   `0x81`/imm32 arith form -- the remaining width gaps (Q/L landed
+   this checkpoint).
+4. True 64-bit immediates (`Ziq_rp`'s own full-width sub-case).
+5. RIP-relative addressing (needed the moment a fixture targets a
    non-Linux `HEADTYPE`, or if this project ever wants position-
-   independent amd64 output) and the BP/R13 ModRM special case.
-7. Floating point/SSE -- large, deferred indefinitely absent a
+   independent amd64 output), indexed addressing (SIB.index/REX.X),
+   and the BP/R13 ModRM special case.
+6. Floating point/SSE -- large, deferred indefinitely absent a
    concrete need.

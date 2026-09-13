@@ -32,9 +32,9 @@ module L = Location_cpp
 /*(*2 opcodes *)*/
 /*(*-----------------------------------------*)*/
 
-%token <Ast_asm6.arith_opcode> TARITH
-%token TCMP
-%token <Ast_asm6.move_size> TMOV
+%token <Ast_asm6.width * Ast_asm6.arith_opcode> TARITH
+%token <Ast_asm6.width> TCMP
+%token <Ast_asm6.width> TMOV
 %token TLEA
 %token TCALL
 %token TJMP
@@ -188,16 +188,17 @@ global_and_offset: name
 /*(*************************************************************************)*/
 instr:
  /*(* goken's yaddl/yxorl-shaped 2-operand arithmetic: "ADDQ $imm,Rd" /
-    * "ADDQ Rs,Rd" -- see Ast_asm6.ml's Arith comment. *)*/
- | TARITH imr TC gen             { Arith ($1, $2, $4) }
+    * "ADDQ Rs,Rd" (or ADDL/etc for the 32-bit form) -- see
+    * Ast_asm6.ml's Arith comment. *)*/
+ | TARITH imr TC gen             { let (w, op) = $1 in Arith (w, op, $2, $4) }
 
  /*(* goken's ycmpl-shaped compare: "CMPQ gen,imr" -- see Ast_asm6.ml's
     * Cmp comment for the reversed-from-Arith operand-role order. *)*/
- | TCMP gen TC imr               { Cmp ($2, $4) }
+ | TCMP gen TC imr               { Cmp ($1, $2, $4) }
 
- /*(* goken's ymovq-shaped move: covers register/memory/immediate in
-    * every combination MOVQ actually needs -- see Ast_asm6.ml's Move
-    * comment. *)*/
+ /*(* goken's ymovq/ymovl-shaped move: covers register/memory/immediate
+    * in every combination MOVQ/MOVL actually need -- see Ast_asm6.ml's
+    * Move comment. *)*/
  | TMOV lgen TC gen              { Move ($1, $2, $4) }
 
  /*(* goken's Zaut_r "built-in LEAQ" -- address-of-global only (see

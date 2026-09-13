@@ -390,8 +390,9 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
     (* Arithmetic *)
     (* --------------------------------------------------------------------- *)
 
-    (* claude: goken's own yxorb table has its "Yi32,Yal,Zib_,1" row
-     * (opcode alone + imm8, no ModRM at all -- real x86's dedicated
+    (* claude: case Zib_ -- goken's own yxorb table has its
+     * "Yi32,Yal,Zib_,1" row (opcode alone + imm8, no ModRM at all --
+     * real x86's dedicated
      * "op AL,imm8" encoding) listed *before* the general
      * "Yi32,Ymb,Zibo_m,2" ModRM row, so a destination of exactly AX
      * (goken's Yal, i.e. register index 0 -- *not* R8, whose low 3
@@ -412,7 +413,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let bytes = [(arith_ext op lsl 3) lor 0x04; v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Arith (B_, op, Imm v, dest) when v >= -128 && v <= 255 ->
-        (* claude: B_'s own 0x80 immediate-group form has no "does it
+        (* claude: case Zibo_m -- B_'s own 0x80 immediate-group form has no "does it
          * fit imm8" question at all -- the immediate byte *is* the
          * whole destination width, so (unlike Q_/L_/W_'s Yi8-vs-Yi32
          * split below) there's no larger form to fall back to; the
@@ -421,53 +422,61 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:(arith_ext op) ~rm
                     @ [imm_group_opcode B_] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Zibo_m -- goken's yxorl/yaddl's own Yi8 row, same
+     * shape as B_'s own case above (which never reaches here, see
+     * that clause), just L_/Q_/W_'s wider sign-extended-imm8 form. *)
     | Arith (width, op, Imm v, dest) when v >= -128 && v < 128 ->
         let rm = resolve_gen env node dest in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(arith_ext op) ~rm
                     @ [imm_group_opcode width] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Arith (_, _op, Imm _, _dest) ->
-        raise Todo (* imm32 form (opcode 0x81) not wired, see prelude *)
+        raise Todo (* case Zilo_m (opcode 0x81) not wired, see prelude *)
+    (* claude: case Zr_m -- goken's yxorl/yxorb's own Yrl/Yrb,Yml/Ymb
+     * row (register source, `encode_rm`'s own "reg-reg or reg-mem"
+     * dest). *)
     | Arith (width, op, Reg r, dest) ->
         let rm = resolve_gen env node dest in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
                     @ [arith_rr_opcode width op] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
-    (* claude: "CMPQ gen,$imm" -- goken's Zm_ibo case, opcode 0x83 /7,
-     * `gen` in ModRM r/m (see Ast_asm6.ml's Cmp comment: the ModRM
-     * operand is `gen` here even though it's the *first* operand,
-     * unlike Arith's own Zibo_m where `gen` -- the *second* operand --
-     * plays that role). Only the imm8 form is wired, same scope
-     * restriction as Arith's own immediate case. *)
-    (* claude: ycmpb's own "Yal,Yi32,Z_ib,1" row -- goken's byte-width
-     * mirror of Arith's own AL-special-case above (same reg-index-0-
-     * only, opcode-alone-no-ModRM shape, opcode 0x3c). Confirmed
-     * against real 6a/6l: "CMPB AX,$5" -> "3c 05". Placed before the
-     * general B_ clause below for the same reason. *)
+    (* claude: case Zm_ibo -- "CMPQ gen,$imm", opcode 0x83 /7, `gen` in
+     * ModRM r/m (see Ast_asm6.ml's Cmp comment: the ModRM operand is
+     * `gen` here even though it's the *first* operand, unlike Arith's
+     * own Zibo_m where `gen` -- the *second* operand -- plays that
+     * role). Only the imm8 form is wired, same scope restriction as
+     * Arith's own immediate case. *)
+    (* claude: case Z_ib -- ycmpb's own "Yal,Yi32,Z_ib,1" row -- goken's
+     * byte-width mirror of Arith's own AL-special-case above (same
+     * reg-index-0-only, opcode-alone-no-ModRM shape, opcode 0x3c).
+     * Confirmed against real 6a/6l: "CMPB AX,$5" -> "3c 05". Placed
+     * before the general B_ clause below for the same reason. *)
     | Cmp (B_, GReg r, Imm v) when reg_num r = 0 && v >= -128 && v <= 255 ->
         let bytes = [0x3c; v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Zm_ibo (B_) -- same "no imm8-vs-imm32 split, the
+     * byte IS the whole value" reasoning as Arith's own B_ clause
+     * above. *)
     | Cmp (B_, g, Imm v) when v >= -128 && v <= 255 ->
-        (* claude: same "no imm8-vs-imm32 split, the byte IS the whole
-         * value" reasoning as Arith's own B_ clause above. *)
         let rm = resolve_gen env node g in
         let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:7 ~rm
                     @ [imm_group_opcode B_] @ encode_rm 7 rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Zm_ibo (Q_/L_/W_). *)
     | Cmp (width, g, Imm v) when v >= -128 && v < 128 ->
         let rm = resolve_gen env node g in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:7 ~rm
                     @ [imm_group_opcode width] @ encode_rm 7 rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Cmp (_, _g, Imm _) ->
-        raise Todo (* imm32 form (opcode 0x81) not wired, see prelude *)
-    (* claude: "CMPQ gen,Rs" -- goken's Zm_r case, opcode 0x39 (0x38 for
-     * B_, see `cmp_rm_opcode`), `gen` in ModRM r/m, Rs in ModRM reg
-     * (asmand(from=gen,to=Rs), matching Ast_asm6.ml's Cmp comment). The
-     * reverse-direction row (Zr_m, opcode 0x3b/0x3a, for when `gen`
-     * should land in ModRM reg instead) is a separate goken y-table row
-     * this port doesn't need yet -- not wired. *)
+        raise Todo (* case Zm_ilo (opcode 0x81) not wired, see prelude *)
+    (* claude: case Zm_r -- "CMPQ gen,Rs", opcode 0x39 (0x38 for B_, see
+     * `cmp_rm_opcode`), `gen` in ModRM r/m, Rs in ModRM reg (asmand
+     * (from=gen,to=Rs), matching Ast_asm6.ml's Cmp comment). The
+     * reverse-direction row (case Zr_m, opcode 0x3b/0x3a, for when
+     * `gen` should land in ModRM reg instead) is a separate goken
+     * y-table row this port doesn't need yet -- not wired. *)
     | Cmp (width, g, Reg r) ->
         let rm = resolve_gen env node g in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
@@ -479,24 +488,26 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
     (* --------------------------------------------------------------------- *)
 
     | Move (width, Either.Left (GReg r), dest) ->
-        (* store: reg -> mem/reg, goken's Zr_m (0x89, or 0x88 for B_ --
-         * see `mov_store_opcode`) -- same shape for MOVQ/MOVL/MOVW/
-         * MOVB alike. *)
+        (* claude: case Zr_m -- store: reg -> mem/reg, goken's Zr_m
+         * (0x89, or 0x88 for B_ -- see `mov_store_opcode`) -- same
+         * shape for MOVQ/MOVL/MOVW/MOVB alike. *)
         let rm = resolve_gen_full env init_data node dest in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
                     @ [mov_store_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (width, Either.Left src, GReg r) ->
-        (* load: mem/reg -> reg, goken's Zm_r (0x8b, or 0x8a for B_ --
-         * see `mov_load_opcode`) -- same for all. *)
+        (* claude: case Zm_r -- load: mem/reg -> reg, goken's Zm_r
+         * (0x8b, or 0x8a for B_ -- see `mov_load_opcode`) -- same for
+         * all. *)
         let rm = resolve_gen_full env init_data node src in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
                     @ [mov_load_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (_, Either.Left (Indirect _ | Entity _), (Indirect _ | Entity _)) ->
         raise (Impossible "real amd64 MOV never has both operands in memory")
-    (* claude: "MOVQ/MOVL/MOVW $0,Rd" -- goken's Zclr optimization
-     * (ymovq/ymovl/ymovw each have their own "Yi0,Yrl,Zclr" row, ahead
+    (* claude: case Zclr -- "MOVQ/MOVL/MOVW $0,Rd" -- goken's Zclr
+     * optimization (ymovq/ymovl/ymovw each have their own
+     * "Yi0,Yrl,Zclr" row, ahead
      * of the general Ys32/Yi32 rows below -- a real bug in this port's
      * earlier assumption that only CMP's table lacked a Yi0 row and
      * MOVL's had one too like MOVQ's; found the hard way when a
@@ -515,13 +526,13 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
                     @ [0x31] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (Q_, Either.Right (A.Int v), dest) when v >= -0x8000_0000 && v <= 0x7fff_ffff ->
-        (* immediate (sign-extends to 64-bit) -> mem/reg, goken's
-         * Zilo_m (0xc7 /0) -- see prelude for the imm=0/true-imm64
-         * cases not wired. *)
+        (* claude: case Zilo_m -- immediate (sign-extends to 64-bit) ->
+         * mem/reg, goken's Zilo_m (0xc7 /0) -- see prelude for the
+         * imm=0/true-imm64 cases not wired. *)
         let rm = resolve_gen_full env init_data node dest in
         let bytes = rex_opt ~reg_is_register:false ~width:Q_ ~reg_field:0 ~rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
-    (* claude: goken's own Yi64,Yrl,Ziq_rp row -- only reached when the
+    (* claude: case Ziq_rp -- goken's own Yi64,Yrl,Ziq_rp row -- only reached when the
      * immediate does *not* fit the Ys32 class above (Ziq_rp's own
      * further internal l==0/l==-1-with-sign-bit special cases, see
      * span.c, are provably unreachable *for ymovq specifically*, since
@@ -542,8 +553,9 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         raise Todo (* string/float src, or a too-big-for-imm64
                      * immediate to a *memory* destination (impossible
                      * in real amd64 anyway) -- not wired, see prelude *)
-    (* claude: MOVL's own immediate form is a genuinely different shape
-     * from MOVQ's -- goken's ymovl table puts "Yi32,Yrl,Zil_rp" (op+reg,
+    (* claude: case Zil_rp / Zilo_m -- MOVL's own immediate form is a
+     * genuinely different shape from MOVQ's -- goken's ymovl table
+     * puts "Yi32,Yrl,Zil_rp" (op+reg,
      * *no* ModRM, register embedded directly in the opcode byte, same
      * family as Ziq_rp) *before* "Yi32,Yml,Zilo_m" (0xc7 /0, *with*
      * ModRM), so a register destination takes the simpler Zil_rp path
@@ -564,8 +576,9 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
     | Move (L_, Either.Right _, _) ->
         raise Todo (* string/float src, or an immediate that doesn't
                      * fit 32 bits -- not wired, see prelude *)
-    (* claude: MOVW mirrors MOVL's own Zil_rp-for-register/Zilo_m-for-
-     * memory split exactly (goken's ymovw table has the same row
+    (* claude: case Zil_rp / Zilo_m (W_) -- MOVW mirrors MOVL's own
+     * Zil_rp-for-register/Zilo_m-for-memory split exactly (goken's
+     * ymovw table has the same row
      * shapes), just with a 2-byte immediate and the mandatory 0x66
      * prefix instead of REX.W. Confirmed against real 6a: "MOVW
      * $100,AX" -> "66 b8 64 00" (4 bytes: prefix+opcode+imm16, no
@@ -584,7 +597,8 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
     | Move (W_, Either.Right _, _) ->
         raise Todo (* string/float src, or an immediate that doesn't
                      * fit 16 bits -- not wired, see prelude *)
-    (* claude: MOVB mirrors MOVL/MOVW's own Zil_rp-for-register (here
+    (* claude: case Zib_rp / Zibo_m (B_) -- MOVB mirrors MOVL/MOVW's own
+     * Zil_rp-for-register (here
      * goken's own Zib_rp -- same "op+reg, no ModRM" shape, just the
      * 0xb0+reg family instead of 0xb8+reg) / Zibo_m-for-memory (0xc6
      * /0, not 0xc7) split, with a single-byte immediate and no prefix
@@ -609,7 +623,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
                      * fit 8 bits -- not wired, see prelude *)
 
     | Lea (glob, off, r) ->
-        (* claude: real address resolved lazily in `binary`'s own
+        (* claude: case Zaut_r -- real address resolved lazily in `binary`'s own
          * thunk, not here -- a forward reference to a *TEXT* global
          * (e.g. "LEAQ later_proc(SB),R" naming a procedure declared
          * further down the same file) genuinely isn't in env.syms yet
@@ -643,8 +657,8 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
     (* --------------------------------------------------------------------- *)
 
     | Call { contents = A.IndirectJump r } ->
-        (* opcode 0xff /2, goken's ycall's indirect form (Zo_m64) --
-         * plain ModRM, no REX needed for a low register (confirmed
+        (* claude: case Zo_m64 -- opcode 0xff /2, goken's ycall's
+         * indirect form -- plain ModRM, no REX needed for a low register (confirmed
          * against real 6a: "CALL AX" -> "ff d0"). Reuses the shared
          * A.branch_operand's own IndirectJump constructor (already
          * produced by this arch's `branch: | ... | ireg { ref
@@ -661,7 +675,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm @ [0xff] @ encode_rm 2 rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Call _ ->
-        (* opcode 0xe8 + rel32; goken's ycall's direct form. rel32 is
+        (* claude: case Zcall -- opcode 0xe8 + rel32; goken's ycall's direct form. rel32 is
          * relative to the address right after this 5-byte
          * instruction -- real_pc isn't known yet during the sizing
          * pass (Layout6.ml calls this same `rules` before real_pc is
@@ -706,14 +720,16 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * real_pc isn't resolved yet during Layout6.ml's sizing pass (same
      * "eager size / lazy check" split RISC-V's own far-branch guard
      * uses). *)
-    (* claude: opcode 0xff /4, goken's yjmp indirect form -- same shape
-     * and same "width:L_ just for REX.W=0" caveat as Call's own
-     * indirect case above. Confirmed against real 6a: "JMP BX" ->
-     * "ff e3". *)
+    (* claude: case Zo_m64 -- opcode 0xff /4, goken's yjmp indirect form
+     * -- same shape and same "width:L_ just for REX.W=0" caveat as
+     * Call's own indirect case above. Confirmed against real 6a: "JMP
+     * BX" -> "ff e3". *)
     | Jmp { contents = A.IndirectJump r } ->
         let rm = RReg r in
         let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm @ [0xff] @ encode_rm 4 rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Zjmp -- direct JMP, short (rel8) form only, see the
+     * long prelude comment above for why. *)
     | Jmp _ ->
         { size = 2; binary = (fun () ->
             match node.T.branch with
@@ -725,6 +741,8 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
                 [0xeb; rel land 0xff]
           )
         }
+    (* claude: case Zbr -- Jcc, short (rel8) form only, same story as
+     * Zjmp above (yjcond's own near-form row isn't wired). *)
     | Jcc (cond, _) ->
         { size = 2; binary = (fun () ->
             match node.T.branch with
@@ -736,27 +754,32 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
                 [jcc_short_opcode cond; rel land 0xff]
           )
         }
-    (* claude: RET is control flow too (goken's own case shape puts it
-     * right after CALL) -- kept in this section rather than its own,
-     * matching Codegen7.ml's own RET placement right after B/BL/Bxx. *)
+    (* claude: case Zlit (ynone's own row -- RET is a single fixed
+     * opcode byte, no operand) -- RET is control flow too (goken's own
+     * case shape puts it right after CALL) -- kept in this section
+     * rather than its own, matching Codegen7.ml's own RET placement
+     * right after B/BL/Bxx. *)
     | Ret -> { size = 1; binary = (fun () -> [0xc3]) }
 
     (* --------------------------------------------------------------------- *)
     (* Floating point *)
     (* --------------------------------------------------------------------- *)
 
-    (* claude: goken's yxmov-shaped MOVSD -- the *load* form (`Zm_r_xm`,
-     * opcode 0x10) is tried first in goken's own table, so it wins even
-     * for a plain register-to-register move (confirmed against real
-     * 6a/6l: "MOVSD X0,X1" -> `f2 0f 10 c8`, not the store opcode) --
-     * the *opposite* clause order from `Move`'s own store-first split
-     * above, see Ast_asm6.ml's `MovF` comment. Prefix `0xf2` (Pf2), no
-     * REX.W. *)
+    (* claude: case Zm_r_xm (load direction) -- goken's yxmov-shaped
+     * MOVSD -- the *load* form (`Zm_r_xm`, opcode 0x10) is tried first
+     * in goken's own table, so it wins even for a plain register-to-
+     * register move (confirmed against real 6a/6l: "MOVSD X0,X1" ->
+     * `f2 0f 10 c8`, not the store opcode) -- the *opposite* clause
+     * order from `Move`'s own store-first split above, see
+     * Ast_asm6.ml's `MovF` comment. Prefix `0xf2` (Pf2), no REX.W. *)
     | MovF (src, XReg r) ->
         let rm = resolve_gen env node (gen_of_xgen src) in
         let bytes = [0xf2] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm
                     @ [0x0f; 0x10] @ encode_rm (xreg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Zr_m_xm (store direction) -- only reached when the
+     * destination isn't a register (the load clause above already
+     * claims every `XReg` destination, reg-reg included). *)
     | MovF (XReg r, dest) ->
         let rm = resolve_gen env node (gen_of_xgen dest) in
         let bytes = [0xf2] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm
@@ -765,43 +788,44 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
     | MovF ((XIndirect _ | XEntity _), (XIndirect _ | XEntity _)) ->
         raise (Impossible "real amd64 MOVSD never has both operands in memory")
 
-    (* claude: goken's yxm-shaped dyadic SSE arithmetic -- real x86's
-     * own in-place 2-operand shape ("dst := dst op src"), ModRM.reg is
-     * always the destination, ModRM.rm the source (confirmed: "ADDSD
-     * X1,X0" -> `f2 0f 58 c1`, reg=X0, rm=X1). Prefix `0xf2`, no
-     * REX.W. *)
+    (* claude: case Zm_r_xm -- goken's yxm-shaped dyadic SSE arithmetic
+     * -- real x86's own in-place 2-operand shape ("dst := dst op
+     * src"), ModRM.reg is always the destination, ModRM.rm the source
+     * (confirmed: "ADDSD X1,X0" -> `f2 0f 58 c1`, reg=X0, rm=X1).
+     * Prefix `0xf2`, no REX.W. *)
     | ArithF (op, src, dst) ->
         let rm = resolve_gen env node (gen_of_xgen src) in
         let bytes = [0xf2] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm
                     @ [0x0f; arithf_opcode_byte op] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
-    (* claude: goken's yxcmp-shaped UCOMISD -- unlike ADDSD/etc, this
-     * one's real prefix is `Pe` (0x66), *not* `Pf2` (confirmed against
-     * both optab.c and real 6a/6l: "UCOMISD X1,X0" -> `66 0f 2e c1`, no
-     * `f2` byte at all). Sets integer EFLAGS the same way an unsigned
-     * CMP does -- see Ast_asm6.ml's `CmpF` comment for why this port
-     * reuses the existing unsigned `Jcc` conditions as-is afterward. *)
+    (* claude: case Zm_r_xm -- goken's yxcmp-shaped UCOMISD -- unlike
+     * ADDSD/etc, this one's real prefix is `Pe` (0x66), *not* `Pf2`
+     * (confirmed against both optab.c and real 6a/6l: "UCOMISD X1,X0"
+     * -> `66 0f 2e c1`, no `f2` byte at all). Sets integer EFLAGS the
+     * same way an unsigned CMP does -- see Ast_asm6.ml's `CmpF`
+     * comment for why this port reuses the existing unsigned `Jcc`
+     * conditions as-is afterward. *)
     | CmpF (src, dst) ->
         let rm = resolve_gen env node (gen_of_xgen src) in
         let bytes = [0x66] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm
                     @ [0x0f; 0x2e] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
-    (* claude: goken's yxcvlf-shaped CVTSQ2SD (64-bit int -> double) --
-     * confirmed against real 6a/6l this needs REX.W (goken's own `Pw`
-     * alongside `Pf2`): "CVTSQ2SD AX,X3" -> `f2 48 0f 2a d8` (REX
-     * present even though both registers are < 8, since `width:Q_`
-     * unconditionally forces it here, exactly as it does for the
-     * integer-only instructions above). *)
+    (* claude: case Zm_r_xm -- goken's yxcvlf-shaped CVTSQ2SD (64-bit
+     * int -> double) -- confirmed against real 6a/6l this needs REX.W
+     * (goken's own `Pw` alongside `Pf2`): "CVTSQ2SD AX,X3" ->
+     * `f2 48 0f 2a d8` (REX present even though both registers are <
+     * 8, since `width:Q_` unconditionally forces it here, exactly as
+     * it does for the integer-only instructions above). *)
     | CvtIntToF (src, dst) ->
         let rm = resolve_gen env node src in
         let bytes = [0xf2] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(xreg_num dst) ~rm
                     @ [0x0f; 0x2a] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
-    (* claude: goken's yxcvfq-shaped CVTTSD2SQ (double -> 64-bit int,
-     * truncating) -- same REX.W-forcing story. Confirmed: "CVTTSD2SQ
-     * X3,BX" -> `f2 48 0f 2c db`. *)
+    (* claude: case Zm_r_xm -- goken's yxcvfq-shaped CVTTSD2SQ (double
+     * -> 64-bit int, truncating) -- same REX.W-forcing story.
+     * Confirmed: "CVTTSD2SQ X3,BX" -> `f2 48 0f 2c db`. *)
     | CvtFToInt (src, dst) ->
         let rm = resolve_gen env node (gen_of_xgen src) in
         let bytes = [0xf2] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(reg_num dst) ~rm
@@ -812,6 +836,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
     (* System *)
     (* --------------------------------------------------------------------- *)
 
+    (* claude: case Zlit (ynone's own row, same as RET above). *)
     | Syscall -> { size = 2; binary = (fun () -> [0x0f; 0x05]) }
     )
 

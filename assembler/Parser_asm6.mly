@@ -42,6 +42,13 @@ module L = Location_cpp
 %token TRET
 %token TSYSCALL
 %token TNOP
+/*(* claude: double-precision SSE only -- see Ast_asm6.ml's own "Scope
+   * so far" note. *)*/
+%token TMOVF
+%token <Ast_asm6.arithf_opcode> TARITHF
+%token TUCOMISD
+%token TCVTINTTOF
+%token TCVTFTOINT
 
 %token TTEXT TGLOBL
 %token TDATA TWORD
@@ -58,10 +65,19 @@ module L = Location_cpp
 
 %token <Ast_asm.register> TRx
 %token TR
-/*(* claude: float registers -- not wired (no floating point yet, see
-   * Ast_asm6.ml's prelude), same shared-but-unused convention. *)*/
+/*(* claude: shared-but-unused here -- see Ast_asm.ml/Token_asm.ml's own
+   * comments for what these are for on other archs (this arch's own
+   * XMM registers, below, are a completely separate token/type, *not*
+   * this shared `fregister`). *)*/
 %token <Ast_asm.fregister> TFx
 %token TF
+/*(* claude: XMM registers (X0-X15) -- goken's own lex.c lists these as
+   * 16 individual named tokens ("X0".."X15"), not a generic "letter +
+   * digit" rule the way R8-R15 get one in the shared Lexer_asm.mll, so
+   * this port mirrors that with 16 explicit TIDENT cases in
+   * Parse_asm6.ml (same convention as AX/CX/DX/BX/SI/DI's own named-
+   * register cases there) rather than touching the shared lexer. *)*/
+%token <Ast_asm6.xregister> TXx
 %token TPC TSB TFP TSP
 
 %token TC
@@ -216,6 +232,20 @@ instr:
  | TRET                          { Ret }
  | TSYSCALL                      { Syscall }
 
+ /*(* goken's yxmov-shaped MOVSD -- see Ast_asm6.ml's MovF comment for
+    * why its codegen clause order is opposite from TMOV's own. *)*/
+ | TMOVF xgen TC xgen            { MovF ($2, $4) }
+ /*(* goken's yxm-shaped dyadic SSE arithmetic: "ADDSD Xm/mem,Xn" (in-
+    * place, "Xn += Xm/mem") -- see Ast_asm6.ml's ArithF comment. *)*/
+ | TARITHF xgen TC xreg          { ArithF ($1, $2, $4) }
+ /*(* goken's yxcmp-shaped UCOMISD -- see Ast_asm6.ml's CmpF comment. *)*/
+ | TUCOMISD xgen TC xreg         { CmpF ($2, $4) }
+ /*(* goken's yxcvlf-shaped CVTSQ2SD (int64 -> double) and yxcvfq-shaped
+    * CVTTSD2SQ (double -> int64, truncating) -- see Ast_asm6.ml's
+    * CvtIntToF/CvtFToInt comments. *)*/
+ | TCVTINTTOF gen TC xreg        { CvtIntToF ($2, $4) }
+ | TCVTFTOINT xgen TC reg        { CvtFToInt ($2, $4) }
+
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/
 /*(*************************************************************************)*/
@@ -261,6 +291,19 @@ gen:
  | reg                 { GReg $1 }
  | con TOPAR reg TCPAR { Indirect ($3, $1) }
  | name                { Entity $1 }
+
+/*(* claude: XMM register-or-memory operand -- same addressing modes as
+   * `gen` above (memory is still addressed through an ordinary GP
+   * `reg`, e.g. "-8(SP)"; only the *register* alternative differs) --
+   * see Ast_asm6.ml's `xgen` comment for why this isn't just `gen`
+   * with an extra case. *)*/
+xreg:
+ | TXx { $1 }
+
+xgen:
+ | xreg                { XReg $1 }
+ | con TOPAR reg TCPAR { XIndirect ($3, $1) }
+ | name                { XEntity $1 }
 
 ximm:
  | imm             { Int $1 }

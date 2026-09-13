@@ -1,6 +1,6 @@
 # Porting the amd64 toolchain (6a/6l) against goken, byte-equal
 
-**Status: eighth checkpoint reached.** `o6a`/`o6l` exist, and nine
+**Status: ninth checkpoint reached.** `o6a`/`o6l` exist, and ten
 fixtures assemble+link to executables **byte-identical** to goken's
 real `6a`/`6l` output, with identical `qemu-x86_64` behavior:
 `hello_linux.s` (goken's own real hello-world, exit 0), `cmp_jcc.s`
@@ -11,10 +11,11 @@ the Zclr $0 optimization, exit 135), `movw_arith.s` (the same shape at
 16-bit width, exit 135), `movb_arith.s` (the same shape at 8-bit width,
 exercising the AL-implicit-opcode special case and the SI/DI
 REX-forcing quirk -- see "Real bugs/quirks" below, exit 135),
-`indirect_call_jmp.s` (indirect CALL/JMP through a register, exit 7),
-`static_symbol.s` (`foo<>` local symbols, exit 0), `imm64.s` (true
-64-bit MOVQ immediates, exit 127).
-`./test-amd64.sh` runs all nine.
+`float_sd.s` (double-precision SSE: MOVSD/ADDSD/SUBSD/MULSD/DIVSD/
+UCOMISD/CVTSQ2SD/CVTTSD2SQ, exit 12), `indirect_call_jmp.s` (indirect
+CALL/JMP through a register, exit 7), `static_symbol.s` (`foo<>` local
+symbols, exit 0), `imm64.s` (true 64-bit MOVQ immediates, exit 127).
+`./test-amd64.sh` runs all ten.
 Zero regressions across all 4 already-complete ports' own full suites
 (`test-arm.sh` 54/54, `test-mips.sh`, `test-arm64.sh`, `test-riscv.sh`,
 `test-riscv64.sh`) and `make test` (134/134) after every batch.
@@ -237,6 +238,26 @@ See `Ast_asm6.ml`'s own prelude for the full scope statement:
   Real amd64 has no memory-destination equivalent (an 8-byte immediate
   can't be encoded as a MOV operand to memory at all), so that's not a
   gap, just architecturally impossible.
+- **Floating point (double-precision SSE only)**: `MovF` (MOVSD,
+  register<->register/memory), `ArithF` (ADDSD/SUBSD/MULSD/DIVSD, real
+  x86's own 2-operand in-place shape), `CmpF` (UCOMISD, sets integer
+  EFLAGS -- this port's *existing* unsigned `Jcc` conditions are reused
+  as-is for a float branch, no new condition type needed), `CvtIntToF`/
+  `CvtFToInt` (CVTSQ2SD/CVTTSD2SQ, 64-bit-int<->double, truncating on
+  the float-to-int direction). The XMM register file (`xregister =
+  X of int`, D_X0..D_X0+15 in goken's own numbering) reuses the *same*
+  REX/ModRM encoding this whole file already built for GP registers
+  (X8-X15 need REX.R/.B exactly like R8-R15) -- an `xgen` operand is
+  simply coerced into the existing `gen` type (`gen_of_xgen`) and
+  threaded through the unchanged `resolve_gen`/`encode_rm`/`rex_opt`
+  machinery, rather than duplicating it for a second register file.
+  Two real, non-obvious quirks confirmed against real 6a/6l (see "Real
+  bugs/quirks" below): MOVSD's own reg-reg move always picks the
+  *load* opcode (the opposite row-order choice from every integer
+  `Move`), and UCOMISD's prefix is `0x66` (Pe), not the `0xf2` (Pf2)
+  every other SSE instruction here uses. No float immediates (real
+  amd64 has none at all -- confirmed "MOVSD $0,X0" is rejected outright
+  by real 6a/6l), no single-precision (SS-suffixed) forms, no x87.
 
 Deliberately not wired (all raise `Todo` rather than emit wrong
 bytes): the imm32 arith form (`0x81`), any memory
@@ -244,11 +265,11 @@ base register other than SP (BP/R13 need a real ModRM/SIB special case
 for `[rip+disp32]` this port doesn't have -- also, unrelatedly, SP
 itself can't be used as a byte-width *register value* at all, not even
 by goken -- see "Real bugs/quirks" below), indexed addressing
-(SIB.index, hence REX.X), floating point/SSE, indirect CALL/JMP
-*through memory* (only through a register is wired), Jcc/Jmp near-form
-relaxation, legacy AH/BH/CH/DH byte-register forms (this port's
-register model has no token for them -- see `Ast_asm6.ml`'s `width`
-comment).
+(SIB.index, hence REX.X), single-precision SSE and x87, indirect
+CALL/JMP *through memory* (only through a register is wired), Jcc/Jmp
+near-form relaxation, legacy AH/BH/CH/DH byte-register forms (this
+port's register model has no token for them -- see `Ast_asm6.ml`'s
+`width` comment).
 
 ## Real bugs/quirks found via differential testing against goken directly
 
@@ -387,6 +408,37 @@ comment).
   correctly keeps its own `RMem` case). Caught immediately by
   `movb_arith.s`'s own byte comparison before this checkpoint's commit,
   not after.
+- **A real, non-obvious row-order asymmetry between `ymovq`/`ymovl`
+  (integer MOV) and `yxmov` (MOVSD)**: `ymovl`'s own table checks the
+  *store* row (`Zr_m`, opcode `0x89`) before the *load* row (`Zm_r`,
+  `0x8b`), so this port's `Move` deliberately matches its store clause
+  first (see `Move`'s own comment) -- `yxmov` lists them in the
+  *opposite* order (`Zm_r_xm`/load first), confirmed against real
+  6a/6l: "MOVSD X0,X1" (a plain register-to-register move, where both
+  rows would otherwise apply) -> `f2 0f 10 c8`, the *load* opcode, not
+  `0x11`. Caught by checking real byte output *before* writing
+  `MovF`'s own codegen clauses, not as a bug fix afterward -- worth
+  recording since assuming "MOV-shaped instructions all order their
+  y-table rows the same way" would have produced a fixture that failed
+  only on the specific reg-reg case, not the reg-mem ones (which agree
+  either way, since only one row can ever match when memory is
+  involved).
+- **Confirmed UCOMISD's own prefix in goken's real `optab.c` is `Pe`
+  (0x66), not `Pf2`** (0xf2) -- every *other* SSE instruction wired
+  this checkpoint (MOVSD, ADDSD/SUBSD/MULSD/DIVSD, CVTSQ2SD/CVTTSD2SQ)
+  uses `Pf2`, so this was checked explicitly rather than assumed by
+  analogy; confirmed against real 6a/6l byte output ("UCOMISD X1,X0"
+  -> `66 0f 2e c1`, no `f2` byte anywhere in the instruction).
+- **Confirmed real amd64 (and real 6a/6l) has no float-immediate
+  encoding at all**: "MOVSD $0,X0" is accepted by `6a`'s own parser but
+  rejected by `6l`'s `doasm()` with `notfound`, the same "6a parses,
+  6l encodes" split already seen for the SP-byte-register gap above --
+  matching every other arch's own choice to skip float immediates
+  entirely (e.g. ARM64's `Ast_asm7.ml` `FArith` comment: goken's own
+  reference implementation has the exact same feature as literal dead
+  code). This port's own float values are always built via
+  `CvtIntToF` from an integer instead, confirmed working end-to-end in
+  `float_sd.s`.
 
 ## Suggested phase plan (next checkpoints)
 
@@ -401,16 +453,20 @@ how ARM32/ARM64's own follow-up phases were sequenced:
    bugs/quirks" above for why the first two are genuinely harder than
    they looked (goken's own dead-code elision and loop rotation, and
    real multi-pass distance-dependent sizing, respectively).
-3. The `0x81`/imm32 arith form (Q/L/W and the true-64-bit-immediate
-   move all landed two checkpoints ago; B needs no such form at all,
-   see `Ast_asm6.ml`'s own `width` comment; byte-suffixed arithmetic/
-   moves and their AL-special-case/REX-forcing quirks landed this
-   checkpoint).
+3. The `0x81`/imm32 arith form (every integer width's own MOV-immediate
+   story is otherwise complete: Q/L/W/B and the true-64-bit-immediate
+   move all landed across earlier checkpoints; B needs no `0x81`-style
+   form at all, see `Ast_asm6.ml`'s own `width` comment).
 4. RIP-relative addressing (needed the moment a fixture targets a
    non-Linux `HEADTYPE`, or if this project ever wants position-
    independent amd64 output), indexed addressing (SIB.index/REX.X),
    and the BP/R13 ModRM special case (note: BP still isn't even wired
    in this arch's own grammar as a plain register token yet -- only
    SP/AX/CX/DX/BX/SI/DI/R8-R15 are, see `Parse_asm6.ml`).
-5. Floating point/SSE -- large, deferred indefinitely absent a
-   concrete need.
+5. Single-precision SSE (MOVSS/ADDSS/etc -- double-precision landed
+   this checkpoint; goken's own tables share the exact same shapes,
+   just a `Pf3` prefix instead of `Pf2` and 32-bit operands, so this
+   should mostly mirror the double-precision work directly) and x87 --
+   the latter deferred indefinitely absent a concrete need (real amd64
+   userspace code essentially never uses it; SSE is the real ABI
+   convention).

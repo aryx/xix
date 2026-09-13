@@ -110,6 +110,19 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
       | "RET" -> TRET
       | "SYSCALL" -> TSYSCALL
 
+      (* claude: double-precision SSE only -- see Ast_asm6.ml's own
+       * "Scope so far" note. goken's optab.c lists ADDSD/SUBSD/MULSD/
+       * DIVSD all sharing the exact same `yxm` table (only the final
+       * opcode byte differs, see Codegen6.ml's `arithf_rr_opcode`). *)
+      | "MOVSD" -> TMOVF
+      | "ADDSD" -> TARITHF FADD
+      | "SUBSD" -> TARITHF FSUB
+      | "MULSD" -> TARITHF FMUL
+      | "DIVSD" -> TARITHF FDIV
+      | "UCOMISD" -> TUCOMISD
+      | "CVTSQ2SD" -> TCVTINTTOF
+      | "CVTTSD2SQ" -> TCVTFTOINT
+
       (* claude: named low registers -- goken's real 6a/lex.c has a
        * dedicated register-name hash table for these (a.h/D_AL..D_DI
        * etc), unlike the shared Lexer_asm.mll's generic "R" + digit
@@ -123,6 +136,21 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
       | "BX" -> TRx (A.R 3)
       | "SI" -> TRx (A.R 6)
       | "DI" -> TRx (A.R 7)
+
+      (* claude: XMM registers -- goken's own lex.c lists these as 16
+       * individual named tokens too (not a generic "letter+digit"
+       * rule), so this port mirrors that here rather than adding a
+       * generic "X"+digit case to the shared Lexer_asm.mll (which
+       * would ripple across every other arch's own grammar for no
+       * benefit -- see Parser_asm6.mly's own TXx comment). *)
+      | "X0" -> TXx (X 0) | "X1" -> TXx (X 1)
+      | "X2" -> TXx (X 2) | "X3" -> TXx (X 3)
+      | "X4" -> TXx (X 4) | "X5" -> TXx (X 5)
+      | "X6" -> TXx (X 6) | "X7" -> TXx (X 7)
+      | "X8" -> TXx (X 8) | "X9" -> TXx (X 9)
+      | "X10" -> TXx (X 10) | "X11" -> TXx (X 11)
+      | "X12" -> TXx (X 12) | "X13" -> TXx (X 13)
+      | "X14" -> TXx (X 14) | "X15" -> TXx (X 15)
 
       | _ -> TIDENT s
       )

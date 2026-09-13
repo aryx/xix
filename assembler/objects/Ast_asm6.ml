@@ -80,11 +80,16 @@ open Ast_asm
  * genuinely different encoding shape from MOVQ's, see Codegen6.ml),
  * LEAQ (address-of-global, 64-bit only), CALL/JMP (direct to a label,
  * or indirect through a register), short-form (rel8) Jcc, RET,
- * SYSCALL. No floating point/SSE, no literal pool (none of these
- * instructions need one -- LEAQ's absolute address and any 64-bit
- * immediate that doesn't fit sign-extended-32-bit are both encoded
- * inline in the instruction stream on this arch, unlike ARM64/ARM32/
- * MIPS/RISC-V's separate pool mechanism).
+ * SYSCALL. Double-precision SSE floating point (MOVSD, ADDSD/SUBSD/
+ * MULSD/DIVSD, UCOMISD, CVTSQ2SD/CVTTSD2SQ int<->float conversion) --
+ * no single-precision (SS-suffixed) forms yet, no float immediates
+ * (real amd64 has none either -- confirmed "MOVSD $0,X0" is rejected
+ * by real 6a/6l), no x87. No literal pool (none of these instructions
+ * need one -- LEAQ's absolute address, any 64-bit immediate that
+ * doesn't fit sign-extended-32-bit, and any float value (always via
+ * SSE register conversion, never an immediate) are all encoded inline
+ * in the instruction stream on this arch, unlike ARM64/ARM32/MIPS/
+ * RISC-V's separate pool mechanism).
  *)
 
 (*****************************************************************************)
@@ -107,8 +112,27 @@ type fregister = A.fregister (* between 0 and 7 *)
 type mregister = M of int (* between 0 and 7 *)
 [@@deriving show]
 
+(* claude: goken's own D_X0..D_X0+15 (obj.c's reg[]/regrex[] init) --
+ * the SSE XMM register file, a separate 16-register bank from `register`
+ * above but numbered/REX-extended (X8-X15 need REX.R/.B, exactly like
+ * R8-R15) the *same* way -- see Codegen6.ml's `resolved_gen_of_xgen`
+ * for why this port reuses the existing GP-register REX/ModRM helpers
+ * unchanged rather than duplicating them for a second register file. *)
 type xregister = X of int (* between 0 and 15 *)
 [@@deriving show]
+
+(* claude: goken's "Yxm"-shaped operand (an XMM register, or memory
+ * addressed exactly like `gen`'s own Indirect/Entity, but *never* a GP
+ * `register` value) -- used everywhere a real SSE instruction's
+ * register-or-memory operand can go (MovF's src/dst, ArithF/CmpF's
+ * src). Named `XIndirect`/`XEntity` rather than reusing `gen`'s own
+ * `Indirect`/`Entity` constructor names to avoid shadowing them in this
+ * shared module. *)
+type xgen =
+  | XReg of xregister
+  | XIndirect of register * A.offset
+  | XEntity of A.entity
+[@@deriving show { with_path = false }]
 
 type crregister = CR of int (* between 0 and 15 *)
 [@@deriving show]
@@ -194,10 +218,64 @@ type instr =
   | Jcc of condition * A.branch_operand
   | Ret
 
+  (* Floating point *)
+  (* claude: goken's yxmov-shaped MOVSD (optab.c) -- double-precision
+   * only (see this file's own "Scope so far" note); note SSE reg-reg
+   * moves take the *load*-shaped row (`Zm_r_xm`, opcode 0x10) ahead of
+   * the store-shaped one (`Zr_m_xm`, opcode 0x11) in goken's own
+   * `yxmov` table -- the *opposite* row order from `ymovq`/`ymovl`'s
+   * own `Zr_m`-before-`Zm_r`, confirmed against real 6a/6l ("MOVSD
+   * X0,X1" -> `f2 0f 10 c8`, the load opcode, even though both
+   * operands are plain registers) -- so `MovF`'s own codegen clauses
+   * must be ordered opposite from `Move`'s (see Codegen6.ml). No
+   * float-immediate form exists at all (confirmed: real 6a rejects
+   * "MOVSD $0,X0" outright), matching every other arch's own choice
+   * to skip float immediates (e.g. Ast_asm7.ml's `FArith` comment). *)
+  | MovF of xgen * xgen
+  (* claude: goken's yxm-shaped dyadic SSE arithmetic (optab.c) --
+   * ADDSD/SUBSD/MULSD/DIVSD, real x86's own 2-operand in-place shape
+   * (`dst := dst op src`, no 3-operand form the way VFP/NEON have) --
+   * confirmed against real 6a/6l ("ADDSD X1,X0" -> `f2 0f 58 c1`,
+   * ModRM.reg=X0 (dst), ModRM.rm=X1 (src)). *)
+  | ArithF of arithf_opcode * xgen * xregister
+  (* claude: goken's yxcmp-shaped UCOMISD (optab.c) -- unlike ADDSD/etc,
+   * this one's own real prefix is `Pe` (0x66), *not* `Pf2` (confirmed
+   * against real optab.c and real 6a/6l byte output: "UCOMISD
+   * X1,X0" -> `66 0f 2e c1`, no `f2` byte at all). Sets integer
+   * EFLAGS (ZF/PF/CF) the same way an unsigned integer CMP does, so
+   * this port's *existing* unsigned `Jcc` conditions (JCS/JCC/JHI/JLS)
+   * are reused as-is for a float branch -- no separate float condition
+   * type needed (matching real x86 usage: a NaN operand sets
+   * PF as well as ZF+CF, which this port doesn't attempt to
+   * special-case, same "don't model IEEE unordered comparisons
+   * precisely" scope choice ARM64's own `FCmp` comment makes). *)
+  | CmpF of xgen * xregister
+  (* claude: goken's yxcvlf-shaped CVTSQ2SD (optab.c) -- 64-bit integer
+   * (register or memory, goken's own `Yml`) to double-precision float,
+   * confirmed against real 6a/6l this needs REX.W (goken's `Pw`
+   * prefix, alongside `Pf2`) -- "CVTSQ2SD AX,X3" -> `f2 48 0f 2a d8`.
+   * The 32-bit-int form (`CVTSL2SD`, no REX.W) isn't wired -- not
+   * needed by this checkpoint's own fixture, and every GP register in
+   * this port's own scope is already treated as 64-bit-wide by
+   * convention (see `width`'s own `Q_` case). *)
+  | CvtIntToF of gen * xregister
+  (* claude: goken's yxcvfq-shaped CVTTSD2SQ (optab.c) -- the reverse
+   * conversion, *truncating* (not rounding -- real x86 also has a
+   * separate, non-truncating CVTSD2SQ this port doesn't wire, matching
+   * ARM64's own choice to skip the round-to-nearest FCVTNS variant and
+   * only carry FCVTZS). Also REX.W-forced, confirmed: "CVTTSD2SQ
+   * X3,BX" -> `f2 48 0f 2c db`. *)
+  | CvtFToInt of xgen * register
+
   (* System *)
   | Syscall
 
   and arith_opcode = ADD | SUB | XOR
+  (* claude: goken's own yxm table is shared verbatim across ADDSD/
+   * SUBSD/MULSD/DIVSD (only the final opcode byte differs -- see
+   * Codegen6.ml's `arithf_opcode`), same "one AST case per real
+   * mnemonic family" choice `arith_opcode` above already makes. *)
+  and arithf_opcode = FADD | FSUB | FMUL | FDIV
 
   (* claude: operand width, shared by Arith/Cmp/Move -- Q_ (64-bit,
    * REX.W set), L_ (32-bit, no REX.W -- the *default* operand size in
@@ -272,6 +350,7 @@ let branch_opd_of_instr (instr : instr) : A.branch_operand option =
   | Jmp opd -> Some opd
   | Jcc (_, opd) -> Some opd
   | Arith _ | Cmp _ | Move _ | Lea _ | Ret | Syscall -> None
+  | MovF _ | ArithF _ | CmpF _ | CvtIntToF _ | CvtFToInt _ -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   let gen_operand x =
@@ -279,6 +358,12 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
     | Entity (A.Global (x, _)) -> f x
     | Entity (A.Param _ | A.Local _) -> ()
     | GReg _ | Indirect _ -> ()
+  in
+  let xgen_operand x =
+    match x with
+    | XEntity (A.Global (x, _)) -> f x
+    | XEntity (A.Param _ | A.Local _) -> ()
+    | XReg _ | XIndirect _ -> ()
   in
   match i with
   | Move (_, x1, gen2) ->
@@ -291,4 +376,9 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | Call b | Jmp b | Jcc (_, b) -> A.visit_globals_branch_operand f b
   | Arith (_, _, _, gen1) -> gen_operand gen1
   | Cmp (_, gen1, _) -> gen_operand gen1
+  | MovF (x1, x2) -> xgen_operand x1; xgen_operand x2
+  | ArithF (_, x1, _) -> xgen_operand x1
+  | CmpF (x1, _) -> xgen_operand x1
+  | CvtIntToF (g1, _) -> gen_operand g1
+  | CvtFToInt (x1, _) -> xgen_operand x1
   | Ret | Syscall -> ()

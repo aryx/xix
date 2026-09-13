@@ -171,10 +171,15 @@ let rewrite (cg : 'a T.code_graph) : 'a T.code_graph =
         n.instr <- T.I (Arith (op', aopt, Imm (- i), ropt, rd), cond);
         autosize_opt
 
+     (* claude: CASE/BCASE need no frame-size-dependent expansion here
+      * (unlike CRET) -- CASE's "LDR.cond PC,[PC,Rn,LSL#2]" and
+      * BCASE's raw address word are both fixed, context-independent
+      * encodings, computed directly in Codegen5.ml from the already-
+      * resolved node.branch (see Ast_asm5.CASE/BCASE's own comment). *)
      | T.I (
             ( RFE | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | MOVE _ | MOVEF _
             | SWAP _ | B _ | BL _ | Cmp _ | CmpF _ | Bxx _
-            | SWI _ | MULL _ | MOVM _
+            | SWI _ | MULL _ | MOVM _ | CASE _ | BCASE _
             )
             , _) ->
         autosize_opt

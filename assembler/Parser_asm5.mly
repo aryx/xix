@@ -48,6 +48,7 @@ module L = Location_cpp
 %token TMVN
 %token <Ast_asm.move_size> TMOV TSWAP
 %token TB  TBL
+%token TCASE TBCASE
 %token <Ast_asm5.cmp_opcode> TCMP   
 %token <Ast_asm5.condition> TBx TCOND
 %token TSWI TRFE
@@ -283,6 +284,14 @@ instr:
  | TBx       rel              { (Bxx ($1, $2), AL) }
  | TBL  cond branch           { (BL $3, $2)}
  | TCMP cond imsr TC reg  { (Cmp ($1, $3, $5), $2) }
+
+ /*(* claude: switch-statement jump-table dispatch -- see
+    * Ast_asm5.CASE/BCASE's own comment. CASE carries a real condition
+    * (real 5c -S output always emits ".LS", but nothing here
+    * hardcodes that); BCASE is a table entry, not a predicated
+    * instruction, so no cond -- same shape as plain TB above. *)*/
+ | TCASE  cond reg  { (CASE $3, $2) }
+ | TBCASE branch    { (BCASE $2, AL) }
 
  | TSWI cond imm { (SWI $3, $2) }
  | TRFE cond     { (RFE, $2) }

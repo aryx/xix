@@ -1062,6 +1062,40 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | _ -> raise (Impossible "5a or 5l should have resolved this branch")
         )
 
+    (* case 62: /* case R -> movw R<<2(PC),PC */ *)
+    (* claude: switch-statement jump-table dispatch -- see
+     * Ast_asm5.CASE's own comment. Real final encoding (goken's
+     * codegen.c case 62): "LDR{cond} PC,[PC,Rm,LSL#2]" -- same bit
+     * layout gmem's register-offset (Either.Right) form already
+     * builds (P=1/pre-indexed, U=1/add, LDR, word), just with the
+     * shift-by-2 (LSL #2) field gmem's shared register-offset path
+     * never needed before (every other register-offset user is a
+     * plain, unshifted index) ORed in on top -- ARM's shift-imm field
+     * is bits[11:7], so a shift amount of 2 is `(2, 7)`. *)
+    | CASE (R rm) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ gmem cond LDR Word None (Either.Right (R rm)) rPC rPC @ [(2, 7)] ]
+        )}
+
+    (* case 63: /* bcase */ *)
+    (* claude: one entry of CASE's jump table -- NOT a real
+     * instruction, just a raw data word holding its target's final
+     * resolved address (goken's codegen.c case 63: "o1 =
+     * p->cond->pc", no encoding at all) -- same idea as Codegen.ml's
+     * shared WORD/SText2 case (a symbol's resolved real_pc, written
+     * directly with no INITTEXT/base adjustment, since real_pc is
+     * already the final absolute address for a TEXT-segment target),
+     * just reached via node.branch (set by Resolve.build_graph
+     * through Ast_asm5.branch_opd_of_instr's own BCASE case) instead
+     * of a symbol-table lookup, since a switch case's target is a
+     * local jump destination, not a named global. *)
+    | BCASE _ ->
+        { size = 4; x = None; binary = (fun () ->
+          match node.branch with
+          | None -> raise (Impossible "BCASE should have been resolved by Resolve.ml")
+          | Some ndst -> [ [(ndst.real_pc land 0xffffffff, 0)] ]
+        )}
+
     (* case 5:		/* bra s */ *)
     (* claude: conditional branches (ABEQ/ABNE/...) share the same
      * optab case as unconditional B/BL -- only p->scond differs,

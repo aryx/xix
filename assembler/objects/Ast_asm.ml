@@ -212,9 +212,26 @@ type virtual_instr =
   (* TODO: generalize at some point, but enough for now for o5c/ovc *)
   | Cmp of integer * register
   | JEq of branch_operand
-  (* TODO? 
-   * | Case of ??? (* compiler-only virtual instr *) 
-   *)
+  (* claude: switch-statement jump-table dispatch (goken's compiler-
+   * internal OCASE/ACASE/ABCASE -- 5c/7c and their matching 5l/7l/vl
+   * all have an equivalent) ended up implemented as ARM-specific
+   * Ast_asm5.CASE/BCASE instead of here, mirroring CRET's own
+   * precedent just above RET's removal comment used to be: the real
+   * ACASE instruction carries a genuine per-instance ARM condition
+   * (5c always emits ".LS" in practice, but the concrete syntax and
+   * AST do carry a real condition value, not a hardcoded one), which
+   * needs the T.I-level condition/branch-operand-ref plumbing this
+   * shared, condition-less type doesn't have. Also: unlike RET,
+   * *neither* goken's real 5a/7a grammar has any parseable syntax for
+   * this at all -- it's purely an internal 5c<->5l/7c<->7l pipeline
+   * construct (see docs/claude_notes/plan_hello_libc_linking.md), so
+   * ARM's own CASE/BCASE textual syntax is itself a xix-only
+   * extension, not a real-5a-parity feature. A future arch
+   * implementing the same construct (e.g. ARM64/o7a-o7l, MIPS/ovl)
+   * should follow the same per-arch pattern (its own condition type,
+   * its own real final encoding), not this shared one -- there's
+   * little to actually share beyond the two-pseudo-op concept this
+   * comment documents. *)
 
 (*e: type [[Ast_asm.virtual_instr]] *)
 [@@deriving show { with_path = false}]

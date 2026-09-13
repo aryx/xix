@@ -106,6 +106,14 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
 
       | "SWPW" -> TSWAP A.Word | "SWPBU" -> TSWAP (A.Byte A.U)
 
+      (* claude: switch-statement jump-table dispatch -- see
+       * Ast_asm5.CASE/BCASE's own comment. Real 5c -S output uses
+       * these exact mnemonics ("CASE.LS Rn", "BCASE target"), even
+       * though there's no real 5a grammar rule for them at all (this
+       * concrete syntax is a xix-only extension for that reason). *)
+      | "CASE" -> TCASE
+      | "BCASE" -> TBCASE
+
       (* conditions *)
       | ".EQ" -> TCOND EQ | ".NE" -> TCOND NE
       | ".GT" -> TCOND (GT A.S)   | ".LT" -> TCOND (LT A.S) 

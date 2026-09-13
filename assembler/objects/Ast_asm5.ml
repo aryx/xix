@@ -280,7 +280,31 @@ type instr =
   | BL of A.branch_operand (* branch and link *)
   | Cmp of cmp_opcode * arith_operand * reg
   (* just Relative or LabelUse here for branch_operand *)
-  | Bxx of condition * A.branch_operand (* virtual, sugar for B.XX *) 
+  | Bxx of condition * A.branch_operand (* virtual, sugar for B.XX *)
+  (* claude: switch-statement jump-table dispatch, e.g. real 5c -S
+   * output for a dense-range switch: "CMP $range,Rn; CASE.LS Rn;
+   * BHI default; BCASE case0; BCASE case1; ...". Ported from goken's
+   * real 5c (compilers/5c/swt.c's swit2, "direct:" label) and 5l
+   * (linkers/5l/codegen.c's case 62/63): CASE Rn (real final encoding
+   * "LDR{cond} PC,[PC,Rn,LSL#2]", goken's own comment: "movw
+   * R<<2(PC),PC") is the indexed jump into the table that immediately
+   * follows it in the instruction stream; each BCASE entry is NOT a
+   * real instruction at all, just a raw data word holding its
+   * target's final resolved address (goken's codegen.c case 63:
+   * "o1 = p->cond->pc", no encoding, see Codegen5.ml). Unlike every
+   * other instr here, this pair has NO real 5a/7a grammar to match at
+   * all -- 5c never round-trips switch-statement code through the
+   * assembler's text parser, it builds these Prog structures directly
+   * -- so this concrete syntax (and the choice to give BCASE no
+   * condition, since a table entry isn't a predicated instruction) is
+   * a xix-only extension for this pipeline, not real-5a parity. See
+   * Ast_asm.virtual_instr's own comment on why this lives here
+   * instead of that shared type, and
+   * docs/claude_notes/plan_hello_libc_linking.md for how this was
+   * found (stress-testing against goken's real lib_core/libc, e.g.
+   * fmt/dofmt.c and the strtol family, which need it). *)
+  | CASE of reg
+  | BCASE of A.branch_operand
   (*x: [[Ast_asm5.instr]] control-flow instructions cases *)
   | CmpF of A.floatp_precision * freg * freg
   (*e: [[Ast_asm5.instr]] control-flow instructions cases *)
@@ -436,8 +460,9 @@ let branch_opd_of_instr (instr : instr_with_cond) : A.branch_operand option =
   | B opd -> Some opd
   | BL opd -> Some opd
   | Bxx (_cond, opd) -> Some opd
+  | BCASE opd -> Some opd
   | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | MOVE _ | MOVEF _ | SWAP _
-  | Cmp _ | CmpF _ | SWI _ | RFE | MULL _ | MOVM _ | CRET -> None
+  | Cmp _ | CmpF _ | SWI _ | RFE | MULL _ | MOVM _ | CRET | CASE _ -> None
 (*e: function [[Ast_asm5.branch_opd_of_instr]] *)
 
 (*s: function [[Ast_asm5.visit_globals_instr]] *)
@@ -457,7 +482,8 @@ let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
   | B b -> A.visit_globals_branch_operand f b
   | BL b -> A.visit_globals_branch_operand f b
   | Bxx (_, b) -> A.visit_globals_branch_operand f b
+  | BCASE b -> A.visit_globals_branch_operand f b
   | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | SWAP _ | Cmp _ | CmpF _ | SWI _
-  | RFE | MULL _ | CRET -> ()
+  | RFE | MULL _ | CRET | CASE _ -> ()
 (*e: function [[Ast_asm5.visit_globals_instr]] *)
 (*e: objects/Ast_asm5.ml *)

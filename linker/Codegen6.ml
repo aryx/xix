@@ -380,15 +380,57 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
                      * fit 32 bits -- not wired, see prelude *)
 
     | Lea (glob, off, r) ->
-        let addr = resolve_global_addr env init_data glob off in
-        let bytes = rex_opt ~width:Q_ ~reg_field:(reg_num r) ~rm:(RAbs addr)
-                    @ [0x8d] @ encode_rm (reg_num r) (RAbs addr) in
-        { size = List.length bytes; binary = (fun () -> bytes) }
+        (* claude: real address resolved lazily in `binary`'s own
+         * thunk, not here -- a forward reference to a *TEXT* global
+         * (e.g. "LEAQ later_proc(SB),R" naming a procedure declared
+         * further down the same file) genuinely isn't in env.syms yet
+         * during Layout6.ml's sizing pass, which populates each TEXT
+         * symbol's own SText2 entry incrementally as it walks the
+         * program -- confirmed the hard way (Not_found) with
+         * indirect_call_jmp.s's own forward-referenced "exitnow". A
+         * DATA global doesn't have this problem (Layout.layout_data
+         * resolves the whole data segment upfront, before Layout6.ml
+         * ever runs), but there's no way to tell which case a given
+         * `glob` is without the same lookup that fails for TEXT --
+         * so this is unconditionally deferred, same "eager size /
+         * lazy value" split as Call/Jmp/Jcc's own real_pc-dependent
+         * values. The size itself never depends on the resolved
+         * address's actual numeric value (`encode_rm`'s RAbs case is
+         * always the same 6-byte ModRM+SIB+disp32 shape), so an eager,
+         * placeholder-free size computation is still safe. *)
+        let rm_placeholder = RAbs 0 in
+        let bytes_placeholder =
+          rex_opt ~width:Q_ ~reg_field:(reg_num r) ~rm:rm_placeholder
+          @ [0x8d] @ encode_rm (reg_num r) rm_placeholder in
+        { size = List.length bytes_placeholder; binary = (fun () ->
+            let addr = resolve_global_addr env init_data glob off in
+            rex_opt ~width:Q_ ~reg_field:(reg_num r) ~rm:(RAbs addr)
+            @ [0x8d] @ encode_rm (reg_num r) (RAbs addr)
+          )
+        }
 
     (* --------------------------------------------------------------------- *)
     (* Control flow *)
     (* --------------------------------------------------------------------- *)
 
+    | Call { contents = A.IndirectJump r } ->
+        (* opcode 0xff /2, goken's ycall's indirect form (Zo_m64) --
+         * plain ModRM, no REX needed for a low register (confirmed
+         * against real 6a: "CALL AX" -> "ff d0"). Reuses the shared
+         * A.branch_operand's own IndirectJump constructor (already
+         * produced by this arch's `branch: | ... | ireg { ref
+         * (IndirectJump $1) }` rule, copied from ARM64's own grammar
+         * template) rather than inventing a new AST case -- register-
+         * indirect only, no memory-indirect form wired (goken's own
+         * Yml class also accepts memory here, not implemented). *)
+        (* claude: `width:L_` here only for its "REX.W=0" side effect
+         * (see `rex_opt`) -- indirect CALL/JMP is *always* full
+         * address-width in long mode regardless of any REX.W bit, it's
+         * simply never needed (confirmed: no REX at all for a plain
+         * low register). Not an actual 32-bit operation. *)
+        let rm = RReg r in
+        let bytes = rex_opt ~width:L_ ~reg_field:0 ~rm @ [0xff] @ encode_rm 2 rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
     | Call _ ->
         (* opcode 0xe8 + rel32; goken's ycall's direct form. rel32 is
          * relative to the address right after this 5-byte
@@ -435,6 +477,14 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * real_pc isn't resolved yet during Layout6.ml's sizing pass (same
      * "eager size / lazy check" split RISC-V's own far-branch guard
      * uses). *)
+    (* claude: opcode 0xff /4, goken's yjmp indirect form -- same shape
+     * and same "width:L_ just for REX.W=0" caveat as Call's own
+     * indirect case above. Confirmed against real 6a: "JMP BX" ->
+     * "ff e3". *)
+    | Jmp { contents = A.IndirectJump r } ->
+        let rm = RReg r in
+        let bytes = rex_opt ~width:L_ ~reg_field:0 ~rm @ [0xff] @ encode_rm 4 rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
     | Jmp _ ->
         { size = 2; binary = (fun () ->
             match node.T.branch with

@@ -278,6 +278,13 @@ branch:
  | rel               { $1 }
  | global             { ref (SymbolJump $1) }
  | ireg              { ref (IndirectJump $1) }
+ /*(* claude: real 6a's own indirect CALL/JMP takes a *bare* register,
+    * no parens (confirmed against real 6a: "CALL BX"/"JMP BX") --
+    * unlike ARM64's own "(R1)" convention this file's `ireg`
+    * alternative above was copied from. Both are accepted here (`reg`
+    * alone is unambiguous with `rel`'s own TIDENT-based start, so no
+    * conflict), but only the bare form is real amd64 syntax. *)*/
+ | reg               { ref (IndirectJump $1) }
 
 rel:
  | TIDENT offset        { ref (LabelUse ($1, $2)) }

@@ -1,13 +1,14 @@
 # Porting the amd64 toolchain (6a/6l) against goken, byte-equal
 
-**Status: fourth checkpoint reached.** `o6a`/`o6l` exist, and four
+**Status: fifth checkpoint reached.** `o6a`/`o6l` exist, and five
 fixtures assemble+link to executables **byte-identical** to goken's
 real `6a`/`6l` output, with identical `qemu-x86_64` behavior:
 `hello_linux.s` (goken's own real hello-world, exit 0), `cmp_jcc.s`
 (CMPQ + JEQ/JNE/JLT/JGE, exit 42), `r8_r15.s` (R8-R15 across every
 instruction, exit 12), `movl_arith.s` (32-bit MOVL/ADDL/CMPL,
 including the register- vs memory-destination MOVL-immediate split and
-the Zclr $0 optimization, exit 135). `./test-amd64.sh` runs all four.
+the Zclr $0 optimization, exit 135), `indirect_call_jmp.s` (indirect
+CALL/JMP through a register, exit 7). `./test-amd64.sh` runs all five.
 Zero regressions across all 4 already-complete ports' own full suites
 (`test-arm.sh` 54/54, `test-mips.sh`, `test-arm64.sh`, `test-riscv.sh`,
 `test-riscv64.sh`) and `make test` (134/134) after every batch.
@@ -156,6 +157,15 @@ See `Ast_asm6.ml`'s own prelude for the full scope statement:
   neither R8-R15 register is involved (confirmed against real 6a:
   "ADDL BX,AX" is just `01 d8`, no prefix byte at all). REX.X (SIB
   index) is never set -- no indexed addressing implemented.
+- **Indirect `Call`/`Jmp`** (through a register only, no memory
+  operand): goken's own `ycall`/`yjmp` `Zo_m64` row, opcode `0xff /2`
+  (CALL) or `0xff /4` (JMP), plain ModRM with no mandatory REX (a
+  low-register indirect call/jmp needs no prefix at all -- confirmed
+  "CALL BX" -> `ff d3`). Reuses the shared `A.branch_operand`'s
+  existing `IndirectJump` constructor (no new AST needed) -- and
+  confirmed real 6a accepts *both* a bare register ("CALL BX") *and* a
+  parenthesized one ("CALL (BX)") as the target, so this arch's own
+  grammar wires both.
 - The static/local symbol `foo<>` suffix, `NAME = value` constant
   definitions -- **not** wired (not needed by any fixture yet, but
   real, findable gaps the same way they were for ARM -- see
@@ -167,8 +177,8 @@ bytes): the imm32 arith form (`0x81`), true-64-bit-immediate move
 base register other than SP (BP/R13 need a real ModRM/SIB special case
 for `[rip+disp32]` this port doesn't have), indexed addressing
 (SIB.index, hence REX.X), byte/16-bit-suffixed (B/W) arithmetic and
-moves, floating point/SSE, indirect CALL/JMP, Jcc/Jmp near-form
-relaxation.
+moves, floating point/SSE, indirect CALL/JMP *through memory* (only
+through a register is wired), Jcc/Jmp near-form relaxation.
 
 ## Real bugs/quirks found via differential testing against goken directly
 
@@ -246,23 +256,49 @@ relaxation.
   ModRM field, confirmed `41 b9 09 00 00 00`). No surprises here --
   goken's own reg[]/regrex[] scheme (`obj.c`) turned out to already
   generalize cleanly to every ModRM/opcode-embedding shape used.
+- **A real forward-reference bug in `Lea`**: "LEAQ later_proc(SB),R"
+  naming a *procedure* (TEXT symbol) declared further down the same
+  file crashed with `Not_found` during `Layout6.ml`'s sizing pass --
+  unlike a DATA global (fully resolved upfront by the separate
+  `Layout.layout_data` pass before `Layout6.layout_text` even starts),
+  a TEXT symbol's own `SText2` entry is only added *incrementally* as
+  the sizing walk reaches each `TEXT` pseudo-op, so a forward reference
+  genuinely isn't in the table yet when the referencing `LEAQ` is
+  sized. Fixed the same way as `Call`/`Jmp`/`Jcc`'s own real_pc-
+  dependent values: size computed eagerly with a placeholder address
+  (safe, since `encode_rm`'s absolute-address shape is always the same
+  6 bytes regardless of the value), the real lookup deferred into
+  `binary`'s own thunk (only ever invoked by `Codegen6.gen`'s pass,
+  which runs *after* `Layout6.layout_text` has fully finished and
+  every TEXT symbol -- forward or not -- is in the table). Found via
+  `indirect_call_jmp.s`'s own forward-referenced `exitnow`.
+- **Confirmed real 6a's indirect CALL/JMP takes a bare register with
+  no parens** ("CALL BX", not "CALL (BX)") -- a real difference from
+  the parenthesized `(R1)` convention this arch's own `ireg` grammar
+  rule was copied from ARM64's template with. Both forms turned out to
+  be valid real 6a syntax once actually checked (confirmed
+  independently), so this arch's grammar now accepts both.
+- **Confirmed a same-function local label's address can't be taken
+  with LEAQ** in real 6a ("LEAQ label(SB),R" for a label inside the
+  same TEXT errors) -- only real global symbols (other TEXT/DATA
+  entries) work as LEAQ's target. Shaped `indirect_call_jmp.s` around
+  this (both indirect-jump targets are genuine separate TEXT globals).
 
 ## Suggested phase plan (next checkpoints)
 
 Roughly in the order a next real fixture would need them, mirroring
 how ARM32/ARM64's own follow-up phases were sequenced:
-1. Indirect CALL/JMP (through a register or memory). Direct
-   conditional jumps and Q/L-width arithmetic/move/compare landed in
-   this checkpoint's batches; a real fixture for `Jmp` itself and
-   Jcc/Jmp's near-form relaxation are still open -- see "Real
-   bugs/quirks" above for why both are genuinely harder than they
-   looked (goken's own dead-code elision and loop rotation, and real
-   multi-pass distance-dependent sizing, respectively).
-2. `foo<>` static/local symbols and `NAME = value` constants --
+1. `foo<>` static/local symbols and `NAME = value` constants --
    same real, findable-in-goken's-own-hand-written-`.s` gaps
    documented for ARM in [[hello-libc-integration-test]]; likely to
    surface again the moment a real (not synthetic) amd64 `.s` file is
    tried.
+2. A real fixture for `Jmp` itself (still not covered, per "What's
+   covered" above) and Jcc/Jmp's near-form relaxation, and
+   memory-indirect (not just register-indirect) CALL/JMP -- see "Real
+   bugs/quirks" above for why the first two are genuinely harder than
+   they looked (goken's own dead-code elision and loop rotation, and
+   real multi-pass distance-dependent sizing, respectively).
 3. Byte/16-bit-suffixed (`B`/`W`) arithmetic and moves, and the
    `0x81`/imm32 arith form -- the remaining width gaps (Q/L landed
    this checkpoint).

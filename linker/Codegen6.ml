@@ -47,11 +47,13 @@ open Ast_asm6
  *  - Arith's immediate form only handles an immediate that fits a
  *    signed 8 bits (goken's Yi8 class, opcode 0x83) -- the imm32 form
  *    (opcode 0x81) isn't wired.
- *  - Move's immediate form handles $0 (goken's Zclr) and anything
- *    that fits signed 32 bits sign-extended (Ys32/Yi32, opcode 0xc7,
- *    or for MOVL-to-register specifically, Zil_rp/0xb8+reg) -- the
- *    true-64-bit-immediate form (opcode 0xb8 by itself, goken's
- *    Ziq_rp) isn't wired.
+ *  - Move's immediate form handles $0 (goken's Zclr), anything that
+ *    fits signed 32 bits sign-extended (Ys32/Yi32, opcode 0xc7, or for
+ *    MOVL-to-register specifically, Zil_rp/0xb8+reg), and a true
+ *    64-bit immediate to a *register* (Yi64/Ziq_rp, opcode 0xb8+reg
+ *    with REX.W, full 8-byte immediate) -- a genuinely oversized
+ *    immediate to *memory* isn't wired (goken has no such form either,
+ *    real amd64 MOV has no 8-byte-immediate-to-memory encoding at all).
  *  - Memory operands only support SP as the base register (`Indirect`)
  *    -- goken's own asmandsz() has real special cases for BP/R13 as a
  *    base (mod=00/rm=101 means RIP-relative/absolute instead of
@@ -86,6 +88,9 @@ let sib ~scale ~index ~base = ((scale land 3) lsl 6) lor ((index land 7) lsl 3) 
 
 let le32 (v : int) : int list =
   [ v land 0xff; (v asr 8) land 0xff; (v asr 16) land 0xff; (v asr 24) land 0xff ]
+
+let le64 (v : int) : int list =
+  le32 v @ le32 (v asr 32)
 
 (* claude: a `gen` operand, resolved to its final addressing-mode shape
  * -- `Entity`'s two real cases (SB-relative global, FP-relative local)
@@ -352,10 +357,27 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let rm = resolve_gen_full env init_data node dest in
         let bytes = rex_opt ~width:Q_ ~reg_field:0 ~rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: goken's own Yi64,Yrl,Ziq_rp row -- only reached when the
+     * immediate does *not* fit the Ys32 class above (Ziq_rp's own
+     * further internal l==0/l==-1-with-sign-bit special cases, see
+     * span.c, are provably unreachable *for ymovq specifically*, since
+     * both are already-narrower subsets of Ys32 and so are always
+     * caught by the row above first -- true only because Ys32 is
+     * checked before Yi64 in goken's own table order). Register
+     * destination only (goken's own Yrl, not Yml -- no memory form of
+     * a genuine 8-byte immediate move exists in real amd64 at all).
+     * Opcode is 0xb8+reg (REX.B-extendable, same opcode-embedding
+     * family as MOVL's own Zil_rp), *with* REX.W this time, followed
+     * by the full 8-byte immediate. Confirmed against real 6a:
+     * "MOVQ $0x123456789A,R9" -> "49 b9 9a 78 56 34 12 00 00 00". *)
+    | Move (Q_, Either.Right (A.Int v), GReg r) ->
+        let bytes = rex_opt ~width:Q_ ~reg_field:0 ~rm:(RReg r)
+                    @ [0xb8 lor (reg_num r land 7)] @ le64 v in
+        { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (Q_, Either.Right _, _) ->
-        raise Todo (* true-64-bit-immediate / string / float src, or an
-                     * immediate too big for sign-extended-32-bit --
-                     * not wired, see prelude *)
+        raise Todo (* string/float src, or a too-big-for-imm64
+                     * immediate to a *memory* destination (impossible
+                     * in real amd64 anyway) -- not wired, see prelude *)
     (* claude: MOVL's own immediate form is a genuinely different shape
      * from MOVQ's -- goken's ymovl table puts "Yi32,Yrl,Zil_rp" (op+reg,
      * *no* ModRM, register embedded directly in the opcode byte, same

@@ -1,6 +1,6 @@
 # Porting the amd64 toolchain (6a/6l) against goken, byte-equal
 
-**Status: fifth checkpoint reached.** `o6a`/`o6l` exist, and five
+**Status: sixth checkpoint reached.** `o6a`/`o6l` exist, and seven
 fixtures assemble+link to executables **byte-identical** to goken's
 real `6a`/`6l` output, with identical `qemu-x86_64` behavior:
 `hello_linux.s` (goken's own real hello-world, exit 0), `cmp_jcc.s`
@@ -8,7 +8,9 @@ real `6a`/`6l` output, with identical `qemu-x86_64` behavior:
 instruction, exit 12), `movl_arith.s` (32-bit MOVL/ADDL/CMPL,
 including the register- vs memory-destination MOVL-immediate split and
 the Zclr $0 optimization, exit 135), `indirect_call_jmp.s` (indirect
-CALL/JMP through a register, exit 7). `./test-amd64.sh` runs all five.
+CALL/JMP through a register, exit 7), `static_symbol.s` (`foo<>`
+local symbols, exit 0), `imm64.s` (true 64-bit MOVQ immediates, exit
+127). `./test-amd64.sh` runs all seven.
 Zero regressions across all 4 already-complete ports' own full suites
 (`test-arm.sh` 54/54, `test-mips.sh`, `test-arm64.sh`, `test-riscv.sh`,
 `test-riscv64.sh`) and `make test` (134/134) after every batch.
@@ -166,14 +168,26 @@ See `Ast_asm6.ml`'s own prelude for the full scope statement:
   confirmed real 6a accepts *both* a bare register ("CALL BX") *and* a
   parenthesized one ("CALL (BX)") as the target, so this arch's own
   grammar wires both.
-- The static/local symbol `foo<>` suffix, `NAME = value` constant
-  definitions -- **not** wired (not needed by any fixture yet, but
-  real, findable gaps the same way they were for ARM -- see
-  [[hello-libc-integration-test]]).
+- The static/local symbol `foo<>` suffix: already plumbed through the
+  shared `Lexer_asm.mll`/`Parser_asm.mk_g` machinery (the same TLT/TGT
+  fix the ARM port added), and this arch's own grammar copied the
+  `name`/`pointer` rule for it from the start -- now actually
+  exercised and confirmed byte-identical (`static_symbol.s`, LEAQ of a
+  `<>`-scoped `DATA`/`GLOBL`). `NAME = value` constant definitions are
+  a separate, real, *cross-arch* limitation (`Parser_asm.ml`'s own
+  header comment: deliberately unimplemented everywhere, not amd64-
+  specific) -- still not wired, see [[hello-libc-integration-test]]
+  for the same gap found on ARM.
+- `Move`'s immediate form to a **register** also handles a true 64-bit
+  immediate now (goken's `Yi64`/`Ziq_rp` row, opcode `0xb8+reg` with
+  REX.W and a full 8-byte immediate) -- reached whenever the value
+  doesn't fit the `Ys32` class the `0xc7` form above already covers.
+  Real amd64 has no memory-destination equivalent (an 8-byte immediate
+  can't be encoded as a MOV operand to memory at all), so that's not a
+  gap, just architecturally impossible.
 
 Deliberately not wired (all raise `Todo` rather than emit wrong
-bytes): the imm32 arith form (`0x81`), true-64-bit-immediate move
-(`Ziq_rp`'s own full-8-byte-immediate sub-case, `0xb8`), any memory
+bytes): the imm32 arith form (`0x81`), any memory
 base register other than SP (BP/R13 need a real ModRM/SIB special case
 for `[rip+disp32]` this port doesn't have), indexed addressing
 (SIB.index, hence REX.X), byte/16-bit-suffixed (B/W) arithmetic and
@@ -288,11 +302,9 @@ through a register is wired), Jcc/Jmp near-form relaxation.
 
 Roughly in the order a next real fixture would need them, mirroring
 how ARM32/ARM64's own follow-up phases were sequenced:
-1. `foo<>` static/local symbols and `NAME = value` constants --
-   same real, findable-in-goken's-own-hand-written-`.s` gaps
-   documented for ARM in [[hello-libc-integration-test]]; likely to
-   surface again the moment a real (not synthetic) amd64 `.s` file is
-   tried.
+1. `NAME = value` constants -- the one remaining piece of the previous
+   phase's item 1 (`foo<>` landed this checkpoint); a real, cross-arch
+   limitation, not amd64-specific, see [[hello-libc-integration-test]].
 2. A real fixture for `Jmp` itself (still not covered, per "What's
    covered" above) and Jcc/Jmp's near-form relaxation, and
    memory-indirect (not just register-indirect) CALL/JMP -- see "Real
@@ -300,12 +312,11 @@ how ARM32/ARM64's own follow-up phases were sequenced:
    they looked (goken's own dead-code elision and loop rotation, and
    real multi-pass distance-dependent sizing, respectively).
 3. Byte/16-bit-suffixed (`B`/`W`) arithmetic and moves, and the
-   `0x81`/imm32 arith form -- the remaining width gaps (Q/L landed
-   this checkpoint).
-4. True 64-bit immediates (`Ziq_rp`'s own full-width sub-case).
-5. RIP-relative addressing (needed the moment a fixture targets a
+   `0x81`/imm32 arith form -- the remaining width gaps (Q/L and the
+   true-64-bit-immediate move landed this checkpoint).
+4. RIP-relative addressing (needed the moment a fixture targets a
    non-Linux `HEADTYPE`, or if this project ever wants position-
    independent amd64 output), indexed addressing (SIB.index/REX.X),
    and the BP/R13 ModRM special case.
-6. Floating point/SSE -- large, deferred indefinitely absent a
+5. Floating point/SSE -- large, deferred indefinitely absent a
    concrete need.

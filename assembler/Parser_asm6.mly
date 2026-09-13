@@ -22,6 +22,15 @@ module L = Location_cpp
 (*****************************************************************************)
 (* See Parser_asm.ml *)
 
+(* claude: purely a parser-internal helper type -- see `move_operand`'s
+ * own grammar comment for why MOVQ's grammar production needs a
+ * 3-way union of `gen`/`ximm`/`xreg` rather than three separate
+ * competing productions. *)
+type move_operand_ =
+  | MOGen of gen
+  | MOImm of A.ximm
+  | MOXreg of xregister
+
 %}
 
 /*(*************************************************************************)*/
@@ -34,6 +43,10 @@ module L = Location_cpp
 
 %token <Ast_asm6.width * Ast_asm6.arith_opcode> TARITH
 %token <Ast_asm6.width> TCMP
+%token <Ast_asm6.width> TTEST
+%token <Ast_asm6.width> TCMPXCHG
+%token TLOCK
+%token TPSLLQ
 %token <Ast_asm6.width * Ast_asm6.shift_opcode> TSHIFT
 %token <Ast_asm6.width> TMOV
 %token <Ast_asm6.extend_opcode> TEXTEND
@@ -61,8 +74,10 @@ module L = Location_cpp
 %token <Ast_asm.floatp_precision> TMOVF
 %token <Ast_asm6.arithf_opcode * Ast_asm.floatp_precision> TARITHF
 %token <Ast_asm.floatp_precision> TUCOMISF
-%token <Ast_asm.floatp_precision> TCVTINTTOF
-%token <Ast_asm.floatp_precision> TCVTFTOINT
+%token <Ast_asm6.width * Ast_asm.floatp_precision> TCVTINTTOF
+%token <Ast_asm6.width * Ast_asm.floatp_precision> TCVTFTOINT
+%token <Ast_asm.floatp_precision> TCVTFPREC
+%token <Ast_asm.floatp_precision> TXORCLEARF
 
 %token TTEXT TGLOBL
 %token TDATA TWORD
@@ -226,6 +241,16 @@ instr:
     * Cmp comment for the reversed-from-Arith operand-role order. *)*/
  | TCMP gen TC imr               { Cmp ($1, $2, $4) }
 
+ /*(* goken's ytestl/ytestb-shaped TEST: "TESTQ Rs,gen" -- see
+    * Ast_asm6.ml's Test comment for the register-first role order
+    * (a third, distinct convention from both Arith's and Cmp's own). *)*/
+ | TTEST reg TC gen              { Test ($1, $2, $4) }
+
+ /*(* goken's yrl_ml/yrb_mb-shaped CMPXCHG: "CMPXCHGQ Rs,gen" -- see
+    * Ast_asm6.ml's CmpXchg comment. *)*/
+ | TCMPXCHG reg TC gen           { CmpXchg ($1, $2, $4) }
+ | TLOCK                         { Lock }
+
  /*(* goken's yshl/yshb-shaped shift: "SHLQ $imm,gen" / "SHLQ Rs,gen"
     * -- reuses `imr` for the amount at the grammar level (no real
     * ambiguity to resolve there), converted to the dedicated
@@ -239,9 +264,28 @@ instr:
                                     Shift (w, op, amount, $4) }
 
  /*(* goken's ymovq/ymovl-shaped move: covers register/memory/immediate
-    * in every combination MOVQ/MOVL actually need -- see Ast_asm6.ml's
-    * Move comment. *)*/
- | TMOV lgen TC gen              { Move ($1, $2, $4) }
+    * in every combination MOVQ/MOVL actually need, *and* (MOVQ only)
+    * the raw GP<->XMM bit-copy shape (see Ast_asm6.ml's Move/
+    * MovQToXmm/MovQFromXmm comments) -- left-factored into one shared
+    * "TMOV move_operand TC move_operand" production (disambiguated by
+    * a semantic-action match, not by competing grammar productions)
+    * since `gen` and `lgen` sharing a prefix with a *third* operand
+    * kind (`xreg`) at the grammar level is a genuine LALR(1) shift/
+    * reduce conflict, confirmed the hard way: ocamlyacc silently
+    * picked one interpretation, breaking every ordinary "MOVQ
+    * Rs,Rd"/"MOVQ $imm,Rd" fixture until this was left-factored. *)*/
+ | TMOV move_operand TC move_operand {
+     match $1, $2, $4 with
+     | w, MOGen g1, MOGen g2 -> Move (w, Either.Left g1, g2)
+     | w, MOImm i1, MOGen g2 -> Move (w, Either.Right i1, g2)
+     | Q_, MOGen g1, MOXreg x2 -> MovQToXmm (g1, x2)
+     | Q_, MOXreg x1, MOGen g2 -> MovQFromXmm (x1, g2)
+     | _ -> error "invalid MOV operand combination (raw GP<->XMM MOV is only wired for MOVQ)"
+   }
+
+ /*(* goken's yps-shaped PSLLQ (shift-by-immediate only) -- see
+    * Ast_asm6.ml's PsllQXmm comment. *)*/
+ | TPSLLQ imm TC xreg            { PsllQXmm ($4, $2) }
 
  /*(* goken's ymb_rl/yml_rl-shaped sign/zero-extending move -- see
     * Ast_asm6.ml's Extend comment ("MOVLQZX" is deliberately absent
@@ -295,8 +339,16 @@ instr:
  /*(* goken's yxcvlf/yxcvqf-shaped CVTSQ2SD/CVTSQ2SS (int64 -> float)
     * and yxcvfq-shaped CVTTSD2SQ/CVTTSS2SQ (float -> int64, truncating)
     * -- see Ast_asm6.ml's CvtIntToF/CvtFToInt comments. *)*/
- | TCVTINTTOF gen TC xreg        { CvtIntToF ($1, $2, $4) }
- | TCVTFTOINT xgen TC reg        { CvtFToInt ($1, $2, $4) }
+ | TCVTINTTOF gen TC xreg        { let (w, prec) = $1 in CvtIntToF (w, prec, $2, $4) }
+ | TCVTFTOINT xgen TC reg        { let (w, prec) = $1 in CvtFToInt (w, prec, $2, $4) }
+ /*(* goken's yxm-shaped CVTSD2SS/CVTSS2SD (float precision conversion,
+    * one real opcode both directions, disambiguated by prefix) -- see
+    * Ast_asm6.ml's CvtFPrec comment. *)*/
+ | TCVTFPREC xgen TC xreg        { CvtFPrec ($1, $2, $4) }
+ /*(* goken's yxm-shaped XORPD/XORPS -- only the self-clear "Xn,Xn"
+    * idiom is wired, see Ast_asm6.ml's XorClearF comment. *)*/
+ | TXORCLEARF xreg TC xreg       { if $2 = $4 then XorClearF ($1, $2)
+                                    else error "XORPD/XORPS only wired for the self-clear Xn,Xn idiom" }
 
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/
@@ -363,9 +415,14 @@ ximm:
  | TDOLLAR TSTRING { String $2 }
  | TDOLLAR name    { Address $2 }
 
-lgen:
- | gen  { Left $1 }
- | ximm { Right $1 }
+/*(* claude: `move_operand` -- the left-factored union of `gen`/`ximm`/
+   * `xreg` used by MOVQ's own shared grammar production above (see
+   * that production's own comment for why this couldn't stay three
+   * separate rules). *)*/
+move_operand:
+ | gen  { MOGen $1 }
+ | ximm { MOImm $1 }
+ | xreg { MOXreg $1 }
 
 ireg: TOPAR reg TCPAR { $2 }
 

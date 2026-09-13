@@ -264,8 +264,26 @@ let encode_rm (reg_field : int) (rm : resolved_gen) : int list =
       else if off >= -128 && off < 128
       then [ modrm ~md:1 ~reg:reg_field ~rm:4; sib_byte; off land 0xff ]
       else [ modrm ~md:2 ~reg:reg_field ~rm:4; sib_byte ] @ le32 off
+  (* claude: any *ordinary* register as a plain memory base (no SIB
+   * needed at all) -- confirmed against real 6a/6l: "CMPXCHGL
+   * CX,0(BX)" -> `0f b1 0b` (ModRM alone, mod=0,rm=3(BX), no SIB
+   * byte). BP/R13 (rm=101 mod=00 means RIP-relative in real amd64,
+   * not "no displacement") and R12 (rm=100, same SIB-needed quirk as
+   * SP) both need their own special cases this port doesn't have yet
+   * -- see prelude -- so they're excluded here and still raise `Todo`
+   * below; every *other* register (including R8-R11/R14-R15) needs
+   * nothing beyond the ordinary mod/disp encoding every other arch's
+   * own indirect addressing already uses. *)
+  | RMem (r, off) when reg_num r land 7 <> 4 && reg_num r land 7 <> 5 ->
+      let rmv = reg_num r land 7 in
+      if off = 0
+      then [ modrm ~md:0 ~reg:reg_field ~rm:rmv ]
+      else if off >= -128 && off < 128
+      then [ modrm ~md:1 ~reg:reg_field ~rm:rmv; off land 0xff ]
+      else [ modrm ~md:2 ~reg:reg_field ~rm:rmv ] @ le32 off
   | RMem (_, _) ->
-      raise Todo (* only SP as a memory base is wired, see prelude *)
+      raise Todo (* BP/R13 (rip-relative mod=00 quirk) and R12 (mandatory
+                   * SIB, like SP) as a memory base aren't wired, see prelude *)
   | RAbs addr ->
       (* claude: mod=00/rm=100(SIB)/SIB=no-index,no-base(base=101) ->
        * absolute disp32 -- goken's own non-PIE amd64 addressing
@@ -341,6 +359,16 @@ let wide_imm_bytes (width : width) (v : int) : int list =
  * B_-is-one-less pattern as `arith_rr_opcode` (CMP r/m8,r8 = 0x38 vs
  * r/m32,r32 = 0x39), confirmed against optab.c's ycmpb/ycmpl. *)
 let cmp_rm_opcode (width : width) : int = match width with B_ -> 0x38 | Q_ | L_ | W_ -> 0x39
+
+(* claude: goken's own ytestl/ytestb tables -- same B_-is-one-less
+ * opcode pair, confirmed against real 6a/6l: "TESTL BX,CX" -> `85 d9`,
+ * "TESTB DX,DX" -> `84 d2`. *)
+let test_opcode (width : width) : int = match width with B_ -> 0x84 | Q_ | L_ | W_ -> 0x85
+
+(* claude: goken's own yrl_ml/yrb_mb tables -- same B_-is-one-less
+ * opcode pair, both `0x0f`-escaped. Confirmed against real 6a/6l:
+ * "CMPXCHGL CX,0(BX)" -> `0f b1 0b`, "CMPXCHGB DX,0(BX)" -> `0f b0 13`. *)
+let cmpxchg_opcode (width : width) : int = match width with B_ -> 0xb0 | Q_ | L_ | W_ -> 0xb1
 
 (* claude: Move's own store (Zr_m) / load (Zm_r) opcodes -- same
  * B_-is-one-less pattern yet again (MOV r/m8,r8 = 0x88 vs r/m32,r32 =
@@ -651,6 +679,59 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let rm = resolve_gen env node g in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
                     @ [cmp_rm_opcode width] @ encode_rm (reg_num r) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+
+    (* claude: case Zr_m -- "TESTQ Rs,gen", opcode 0x85 (0x84 for B_),
+     * reg_field=Rs (the *first* written operand -- a third role-order,
+     * distinct from both Arith's and Cmp's own, see Ast_asm6.ml's Test
+     * comment), rm=gen. *)
+    | Test (width, r, g) ->
+        let rm = resolve_gen env node g in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+                    @ [test_opcode width] @ encode_rm (reg_num r) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+
+    (* claude: case Zr_m -- "CMPXCHGQ Rs,gen", opcode 0x0f 0xb1 (0x0f
+     * 0xb0 for B_), same role order as Arith's own Reg-source case and
+     * Move's own store clause (reg_field=Rs, rm=gen). *)
+    | CmpXchg (width, r, dest) ->
+        let rm = resolve_gen env node dest in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+                    @ [0x0f; cmpxchg_opcode width] @ encode_rm (reg_num r) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+
+    (* claude: case Zlit -- LOCK, a single fixed opcode byte (0xf0). *)
+    | Lock -> { size = 1; binary = (fun () -> [0xf0]) }
+
+    (* claude: case Zm_r_xm -- raw GP->XMM MOVQ (real x86's "MOVQ
+     * xmm,r/m64", opcode `0x66 REX.W 0F 6E`) -- see Ast_asm6.ml's
+     * MovQToXmm comment. Always REX.W (unlike every other `0x66`-
+     * prefixed instruction in this file, this one's REX.W is
+     * mandatory, not width-selected -- there's no 32-bit "MOVQ" to
+     * confuse it with, since this whole shape is MOVQ-only). *)
+    | MovQToXmm (src, dst) ->
+        let rm = resolve_gen env node src in
+        let bytes = [0x66] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(xreg_num dst) ~rm
+                    @ [0x0f; 0x6e] @ encode_rm (xreg_num dst) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Zr_m_xm -- the reverse direction, "MOVQ r/m64,xmm",
+     * opcode `0x66 REX.W 0F 7E`. *)
+    | MovQFromXmm (src, dst) ->
+        let rm = resolve_gen_full env init_data node dst in
+        let bytes = [0x66] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(xreg_num src) ~rm
+                    @ [0x0f; 0x7e] @ encode_rm (xreg_num src) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+
+    (* claude: case Zibo_m_xm -- PSLLQ's own shift-by-immediate form
+     * (goken's `yps` table) -- opcode `0x66 0F 73 /6`, no REX at all
+     * (SSE2 packed ops don't need REX.W; the `0x66` here comes from an
+     * *embedded* prefix byte in the row's own op array, the same
+     * mechanism `CvtIntToF`'s `Pf2`/`Pf3` embedding already uses, not
+     * from `prefix66`/`width`). *)
+    | PsllQXmm (r, imm) ->
+        let rm = RReg (A.R (xreg_num r)) in
+        let bytes = [0x66] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:6 ~rm
+                    @ [0x0f; 0x73] @ encode_rm 6 rm @ [imm land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
     (* claude: case Zo_m (shift-by-1) -- goken's own `Yi1` class only
@@ -1086,26 +1167,47 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         { size = List.length bytes; binary = (fun () -> bytes) }
 
     (* claude: case Zm_r_xm -- goken's yxcvlf/yxcvqf-shaped
-     * CVTSQ2SD/CVTSQ2SS (64-bit int -> float) -- confirmed against
-     * real 6a/6l both need REX.W regardless of precision (goken's own
-     * `Pw` alongside `Pf2`/`Pf3`): "CVTSQ2SD AX,X3" ->
-     * `f2 48 0f 2a d8`, "CVTSQ2SS AX,X3" -> `f3 48 0f 2a d8` (REX
-     * present even though both registers are < 8, since `width:Q_`
-     * unconditionally forces it here, exactly as it does for the
-     * integer-only instructions above). *)
-    | CvtIntToF (prec, src, dst) ->
+     * CVTS{L,Q}2S{D,S} (32-/64-bit int -> float) -- REX.W tracks the
+     * *int* width, not the float precision (confirmed against real
+     * 6a/6l: "CVTSQ2SD AX,X3" -> `f2 48 0f 2a d8` vs "CVTSL2SD AX,X0"
+     * -> `f2 0f 2a c0`, no REX at all -- REX.B for R8-R15 still
+     * applies to either, via `rex_opt`'s own `rm`-side check
+     * regardless of `width`). `int_width` is always `Q_` or `L_`
+     * here, never `W_`/`B_` -- grammar/parser never construct those. *)
+    | CvtIntToF (int_width, prec, src, dst) ->
         let rm = resolve_gen env node src in
-        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(xreg_num dst) ~rm
+        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:int_width ~reg_field:(xreg_num dst) ~rm
                     @ [0x0f; 0x2a] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
-    (* claude: case Zm_r_xm -- goken's yxcvfq-shaped CVTTSD2SQ/
-     * CVTTSS2SQ (float -> 64-bit int, truncating) -- same REX.W-
-     * forcing story regardless of precision. Confirmed: "CVTTSD2SQ
-     * X3,BX" -> `f2 48 0f 2c db`, "CVTTSS2SQ X3,BX" -> `f3 48 0f 2c db`. *)
-    | CvtFToInt (prec, src, dst) ->
+    (* claude: case Zm_r_xm -- goken's yxcvfq/yxcvfl-shaped
+     * CVTTS{D,S}2S{Q,L} (float -> 32-/64-bit int, truncating) -- same
+     * int-width-tracks-REX.W story. Confirmed: "CVTTSD2SQ X3,BX" ->
+     * `f2 48 0f 2c db` vs "CVTTSD2SL X0,BX" -> `f2 0f 2c d8`. *)
+    | CvtFToInt (int_width, prec, src, dst) ->
         let rm = resolve_gen env node (gen_of_xgen src) in
-        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(reg_num dst) ~rm
+        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:int_width ~reg_field:(reg_num dst) ~rm
                     @ [0x0f; 0x2c] @ encode_rm (reg_num dst) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+
+    (* claude: case Zm_r_xm -- goken's yxm-shaped CVTSD2SS/CVTSS2SD --
+     * one real opcode (0x5a) both directions, `sse_prefix`'s own
+     * argument here is the *source* precision (see Ast_asm6.ml's
+     * CvtFPrec comment), no REX.W either direction. *)
+    | CvtFPrec (src_prec, src, dst) ->
+        let rm = resolve_gen env node (gen_of_xgen src) in
+        let bytes = [sse_prefix src_prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm
+                    @ [0x0f; 0x5a] @ encode_rm (xreg_num dst) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+
+    (* claude: case Zm_r_xm -- goken's yxm-shaped XORPD/XORPS, only the
+     * self-XOR-to-zero idiom (see Ast_asm6.ml's XorClearF comment) --
+     * XORPD's own prefix is `Pe` (0x66), XORPS's is `Pm` (no real
+     * prefix at all). *)
+    | XorClearF (prec, r) ->
+        let rm = RReg (A.R (xreg_num r)) in
+        let opt_prefix = match prec with A.D -> [0x66] | A.F -> [] in
+        let bytes = opt_prefix @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm
+                    @ [0x0f; 0x57] @ encode_rm (xreg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
     (* --------------------------------------------------------------------- *)

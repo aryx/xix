@@ -99,6 +99,16 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
       | "ANDB" -> TARITH (B_, AND)
       | "ORB" -> TARITH (B_, OR)
       | "CMPB" -> TCMP B_
+      | "TESTQ" -> TTEST Q_
+      | "TESTL" -> TTEST L_
+      | "TESTW" -> TTEST W_
+      | "TESTB" -> TTEST B_
+      | "CMPXCHGQ" -> TCMPXCHG Q_
+      | "CMPXCHGL" -> TCMPXCHG L_
+      | "CMPXCHGW" -> TCMPXCHG W_
+      | "CMPXCHGB" -> TCMPXCHG B_
+      | "LOCK" -> TLOCK
+      | "PSLLQ" -> TPSLLQ
 
       (* claude: real x86 aliases -- SHL and SAL are the exact same
        * opcode (ext=4), both spelled out as separate optab.c entries
@@ -174,7 +184,10 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
        * AJEQ/AJNE/.../AJLS) -- see Ast_asm6.ml's `condition` comment
        * for the signed/unsigned split. *)
       | "JMP" -> TJMP
-      | "JEQ" -> TJcc EQ | "JNE" -> TJcc NE
+      (* claude: goken's own lex.c has "JZ" as a real, hand-maintained
+       * alternate spelling for JEQ ("JZ", LTYPER, AJEQ, /* alternate
+       * */) -- confirmed same opcode either way. *)
+      | "JEQ" | "JZ" -> TJcc EQ | "JNE" -> TJcc NE
       | "JLT" -> TJcc (LT A.S) | "JGE" -> TJcc (GE A.S)
       | "JGT" -> TJcc (GT A.S) | "JLE" -> TJcc (LE A.S)
       | "JCS" -> TJcc (LT A.U) | "JCC" -> TJcc (GE A.U)
@@ -194,16 +207,27 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
       | "MULSD" -> TARITHF (FMUL, A.D)
       | "DIVSD" -> TARITHF (FDIV, A.D)
       | "UCOMISD" -> TUCOMISF A.D
-      | "CVTSQ2SD" -> TCVTINTTOF A.D
-      | "CVTTSD2SQ" -> TCVTFTOINT A.D
+      | "CVTSQ2SD" -> TCVTINTTOF (Q_, A.D)
+      | "CVTSL2SD" -> TCVTINTTOF (L_, A.D)
+      | "CVTTSD2SQ" -> TCVTFTOINT (Q_, A.D)
+      | "CVTTSD2SL" -> TCVTFTOINT (L_, A.D)
       | "MOVSS" -> TMOVF A.F
       | "ADDSS" -> TARITHF (FADD, A.F)
       | "SUBSS" -> TARITHF (FSUB, A.F)
       | "MULSS" -> TARITHF (FMUL, A.F)
       | "DIVSS" -> TARITHF (FDIV, A.F)
       | "UCOMISS" -> TUCOMISF A.F
-      | "CVTSQ2SS" -> TCVTINTTOF A.F
-      | "CVTTSS2SQ" -> TCVTFTOINT A.F
+      | "CVTSQ2SS" -> TCVTINTTOF (Q_, A.F)
+      | "CVTSL2SS" -> TCVTINTTOF (L_, A.F)
+      | "CVTTSS2SQ" -> TCVTFTOINT (Q_, A.F)
+      | "CVTTSS2SL" -> TCVTFTOINT (L_, A.F)
+      (* claude: goken's own yxm-shaped precision conversion -- prefix
+       * (hence which mnemonic) picks the *source* precision, see
+       * Ast_asm6.ml's CvtFPrec comment. *)
+      | "CVTSD2SS" -> TCVTFPREC A.D
+      | "CVTSS2SD" -> TCVTFPREC A.F
+      | "XORPD" -> TXORCLEARF A.D
+      | "XORPS" -> TXORCLEARF A.F
 
       (* claude: named low registers -- goken's real 6a/lex.c has a
        * dedicated register-name hash table for these (a.h/D_AL..D_DI

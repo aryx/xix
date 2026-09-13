@@ -1,7 +1,7 @@
 # Porting the amd64 toolchain (6a/6l) against goken, byte-equal
 
-**Status: fifteenth checkpoint reached.** `o6a`/`o6l` exist, and
-seventeen fixtures assemble+link to executables **byte-identical** to
+**Status: sixteenth checkpoint reached.** `o6a`/`o6l` exist, and
+twenty-one fixtures assemble+link to executables **byte-identical** to
 goken's real `6a`/`6l` output, with identical `qemu-x86_64` behavior:
 `hello_linux.s` (goken's own real hello-world, exit 0), `cmp_jcc.s`
 (CMPQ + JEQ/JNE/JLT/JGE, exit 42), `r8_r15.s` (R8-R15 across every
@@ -21,10 +21,15 @@ exit 236), `imm_yi32.s` (Move's own widened `Yi32` immediate range --
 see "Real bugs/quirks" below, exit 77), `unary.s` (NEG/NOT/INC/DEC
 across Q/L/B width and R8-R15, exit 115), `muldiv.s` (single-operand
 MUL/DIV/IDIV, IMUL's own 2-operand form, and CDQ/CQO, exit 220),
+`test_instr.s` (TEST, exit 77), `float_ext.s` (CVTSL2SD/CVTSL2SS/
+CVTTSD2SL/CVTTSS2SL, CVTSD2SS/CVTSS2SD, XORPD's self-clear idiom,
+exit 26), `cmpxchg.s` (LOCK/CMPXCHGL/JZ and a non-SP register as a
+memory base, exit 10), `psllq.s` (copied verbatim from goken's own
+regression test: raw GP<->XMM MOVQ and PSLLQ, exit 16),
 `indirect_call_jmp.s` (indirect CALL/JMP through a register, exit 7),
 `static_symbol.s` (`foo<>` local symbols, exit 0), `imm64.s` (true
 64-bit MOVQ immediates, exit 127).
-`./test-amd64.sh` runs all seventeen.
+`./test-amd64.sh` runs all twenty-one.
 Zero regressions across all 4 already-complete ports' own full suites
 (`test-arm.sh` 54/54, `test-mips.sh`, `test-arm64.sh`, `test-riscv.sh`,
 `test-riscv64.sh`) and `make test` (134/134) after every batch.
@@ -34,6 +39,25 @@ output (`6c -S`) across several of goken's own `tests/c/*` files for
 mnemonic frequency, rather than guessing what's "essential" in the
 abstract -- see "Real bugs/quirks" below for the exact method and
 counts.
+
+This checkpoint widened that same method to its logical conclusion: a
+broad `6c -S` sweep across essentially every buildable file under
+`tests/c/*` (57 of ~60 compiled cleanly), plus a full mnemonic grep
+across *every* real, hand-written amd64 `.s` file anywhere in goken's
+own tree (`lib_core/libc/arch/amd64/`, `lib_core/libc/os/windows/`,
+`lib_core/libc/syscall/os/*/`, `tests/s/*`), not just the previously-
+sampled `tests/c/*` subset -- diffing the resulting mnemonic list
+against what this port already parses. This found every remaining gap
+the earlier, narrower sweep had missed: TEST, CMPXCHG+LOCK (a real CAS
+primitive), a *third* SSE conversion story (CVTSD2SS/CVTSS2SD and the
+32-bit-int forms of the existing conversions), XORPD's self-clear
+idiom, and -- found only by actually trying to compile a real
+hand-written file, not by grepping mnemonics alone -- a genuinely
+different, more fundamental gap: `encode_rm` only supported SP as a
+memory base, but goken's own real `cas()` primitive addresses through
+BX. See "Real bugs/quirks" below for all of these, plus one real
+grammar mistake made (and caught by the very next full-suite run)
+while wiring the raw GP<->XMM MOVQ shape.
 
 This follows the same "free rein between two review checkpoints"
 shape the ARM64 port used (see [[arm64-linker-port]] memory): this is
@@ -358,18 +382,82 @@ See `Ast_asm6.ml`'s own prelude for the full scope statement:
   `0x99` opcode, prefix-selected by width -- the standard sign-extend-
   AX-into-DX:AX prep step before a signed divide, confirmed used
   directly ahead of `IDIVL` in real 6c output).
+- **`Test`** (goken's `ytestl`/`ytestb` tables) -- found directly in
+  goken's own hand-written amd64 assembly (`lib_core/libc/os/windows/
+  winio_amd64.s`'s own "TESTL AX,AX" BOOL-result check). A genuine
+  *third* operand role-order in this file (`Arith`'s is imr-first,
+  `Cmp`'s is gen-first-but-flipped-from-Arith, `Test`'s own "TESTQ
+  Rs,gen" puts the register first into ModRM.reg) -- confirmed against
+  real 6a/6l. Only the register-vs-register/memory form is wired (real
+  TEST has no imm8 row at all, unlike CMP/Arith, and no fixture needs
+  it).
+- **`CmpXchg`** (goken's `yrl_ml`/`yrb_mb` tables) and **`Lock`** --
+  real x86's own atomic compare-and-exchange, found directly in
+  goken's own hand-written amd64 assembly (`tests/c/float/
+  linux_amd64.s`'s own `cas()` primitive: `LOCK` / `CMPXCHGL
+  CX,0(BX)`). `Lock` is goken's own genuinely bare, standalone pseudo-
+  instruction (opcode `0xf0` alone, on its own source line before the
+  instruction it modifies) rather than a prefix baked into the next
+  instruction's own encoding -- this port doesn't validate what follows
+  it either, matching goken's own laxness. `JZ` (a real, hand-
+  maintained alternate spelling for `JEQ` in goken's own lexer) is also
+  wired as a plain alias.
+- **`encode_rm` now supports any *ordinary* register as a plain memory
+  base**, not just SP -- found while testing `CmpXchg` against the real
+  `cas()` primitive above, which addresses through BX (`0(BX)`), a
+  case this port had never needed until testing an actual hand-written
+  file. BP/R13 (mod=00/rm=101 means RIP-relative in real amd64, not
+  "no displacement") and R12 (the same mandatory-SIB quirk as SP/rm=100)
+  still aren't wired -- both still raise `Todo`, unchanged from before.
+- **`CvtIntToF`/`CvtFToInt` now also cover the 32-bit-int forms**
+  (CVTSL2SD/CVTSL2SS/CVTTSD2SL/CVTTSS2SL) alongside the existing
+  64-bit ones -- an `int_width` (`Q_`/`L_` only) parameter now
+  threads through both constructors, selecting REX.W independently of
+  the float precision (confirmed against real 6a/6l: "CVTSQ2SD AX,X3"
+  -> `f2 48 0f 2a d8` vs "CVTSL2SD AX,X0" -> `f2 0f 2a c0`, no REX at
+  all).
+- **`CvtFPrec`** (CVTSD2SS/CVTSS2SD, goken's `yxm` table) -- real x86's
+  own single opcode (`0x5a`) handles *both* precision-conversion
+  directions, disambiguated purely by legacy prefix (source precision
+  picks `Pf2`/`Pf3`, the one place in this file `A.floatp_precision`
+  names the *source*'s precision rather than the operation's own
+  nominal one).
+- **`XorClearF`** (XORPD/XORPS's own self-XOR-to-zero idiom, goken's
+  `yxm` table) -- mirrors the existing GP-register `Zclr` special case
+  rather than a general 2-register packed-XOR this port has no other
+  use for; confirmed real, used directly in 6c-compiled float negation
+  (`vlrt.c`'s own "XORPD X0,X0" then "SUBSD ..." for "0.0 - X"). XORPD's
+  own prefix is `Pe` (0x66); XORPS's is `Pm` (no real prefix at all).
+- **`MovQToXmm`/`MovQFromXmm`** -- a *raw* GP<->XMM bit-copy (real
+  x86's own "MOVQ xmm,r/m64"/"MOVQ r/m64,xmm", opcode `66 REX.W 0F
+  6E`/`7E`), genuinely different from `CvtIntToF`/`CvtFToInt` (which
+  *convert* a value, not just copy its bits) -- found directly in
+  goken's own hand-written amd64 assembly (see `PsllQXmm` below). Only
+  wired for `MOVQ` -- real 6a rejects the same shape for MOVL/MOVW/MOVB
+  (their own `ymovl`/`ymovw`/`ymovb` tables have no XMM rows at all),
+  confirmed by the grammar's own explicit width guard.
+- **`PsllQXmm`** (PSLLQ's own shift-by-immediate form, goken's `yps`
+  table) -- found directly in goken's own `tests/s/regressions/
+  amd64_psllq.s`, itself a real regression test for a genuine goken
+  bug (`APSLLQ`'s own reg,imm8 row once had the wrong opcode byte,
+  `0x7e` instead of `0x73`) -- copied verbatim as this port's own
+  fixture, including its own header comment.
 
 Deliberately not wired (all raise `Todo` rather than emit wrong
-bytes): any memory
-base register other than SP (BP/R13 need a real ModRM/SIB special case
-for `[rip+disp32]` this port doesn't have -- also, unrelatedly, SP
-itself can't be used as a byte-width *register value* at all, not even
-by goken -- see "Real bugs/quirks" below), indexed addressing
+bytes): BP/R12/R13 as a memory base (BP/R13 need a real ModRM special
+case for `[rip+disp32]` -- mod=00/rm=101 means RIP-relative in real
+amd64, not "no displacement" -- this port doesn't have; R12 needs the
+same mandatory-SIB quirk SP already gets, not wired for R12 -- every
+*other* register works now, see "What's covered" above; unrelatedly,
+SP itself can't be used as a byte-width *register value* at all, not
+even by goken -- see "Real bugs/quirks" below), indexed addressing
 (SIB.index, hence REX.X), x87, indirect CALL/JMP *through memory*
 (only through a register is wired), Jcc/Jmp near-form relaxation,
 legacy AH/BH/CH/DH byte-register forms (this
 port's register model has no token for them -- see `Ast_asm6.ml`'s
-`width` comment).
+`width` comment), IMUL's own 3-operand immediate forms (`Zib_rr`/
+`Zil_rr`), BP as a plain register token (still not wired in this
+arch's own grammar at all, not just as a memory base).
 
 ## Real bugs/quirks found via differential testing against goken directly
 
@@ -607,11 +695,34 @@ port's register model has no token for them -- see `Ast_asm6.ml`'s
   memory-then-reloaded genuinely differ, matching real amd64's own
   ordinary-32-bit-write-zero-extends vs MOV-r/m64-imm32-sign-extends
   semantics).
+- **A real grammar mistake, caught immediately by the next full-suite
+  run, not shipped**: adding the raw GP<->XMM MOVQ shape as two
+  *additional* grammar alternatives (`TMOV gen TC xreg` / `TMOV xreg TC
+  gen`) alongside the existing `TMOV lgen TC gen` broke *every*
+  ordinary "MOVQ Rs,Rd"/"MOVQ $imm,Rd" fixture -- a genuine LALR(1)
+  shift/reduce conflict (ocamlyacc warned, then silently picked one
+  interpretation) from three productions sharing a "TMOV gen TC ..."
+  prefix that only diverges *after* the comma, which 1-token lookahead
+  can't resolve. Fixed by left-factoring into one shared production
+  (`TMOV move_operand TC move_operand`, a local 3-way union type
+  disambiguated in the semantic action instead of by competing grammar
+  rules) -- the general lesson: when a new operand shape needs to
+  share a leading token with an existing production, add it as a new
+  *alternative inside* the existing rule's own operand nonterminal (or
+  left-factor explicitly like this), never as a sibling top-level
+  production with the same prefix.
 
 ## Suggested phase plan (next checkpoints)
 
 Roughly in the order a next real fixture would need them, mirroring
 how ARM32/ARM64's own follow-up phases were sequenced:
+This checkpoint's own broad amd64-wide mnemonic sweep (see the status
+note above) found no *further* real gaps left uncovered -- every
+mnemonic in every buildable `tests/c/*.c` file and every hand-written
+`.s` file anywhere in goken's own tree now parses and encodes. What's
+left is either a real, cross-arch limitation, genuinely harder
+plumbing (branch relaxation, RIP-relative addressing), or scoped out
+on purpose (x87):
 1. `NAME = value` constants -- a real, cross-arch limitation, not
    amd64-specific, see [[hello-libc-integration-test]].
 2. A real fixture for `Jmp` itself (still not covered, per "What's
@@ -620,25 +731,15 @@ how ARM32/ARM64's own follow-up phases were sequenced:
    bugs/quirks" above for why the first two are genuinely harder than
    they looked (goken's own dead-code elision and loop rotation, and
    real multi-pass distance-dependent sizing, respectively).
-3. A raw GP<->XMM `MOVQ` (bit-reinterpretation, goken's own `yxmovq`-
-   shaped `0x66 REX.W 0F 6E`/`0F 7E` -- confirmed real, used directly
-   in `tests/s/regressions/amd64_psllq.s`, though goken's own `6c`
-   itself always avoids it via a round-trip through memory instead,
-   see "Real bugs/quirks" above) and SSE2 packed-integer instructions
-   like `PSLLQ` (a real, if lower-priority, separate instruction
-   family from the scalar-float SSE work already landed).
-4. RIP-relative addressing (needed the moment a fixture targets a
+3. RIP-relative addressing (needed the moment a fixture targets a
    non-Linux `HEADTYPE`, or if this project ever wants position-
    independent amd64 output), indexed addressing (SIB.index/REX.X),
-   and the BP/R13 ModRM special case (note: BP still isn't even wired
-   in this arch's own grammar as a plain register token yet -- only
-   SP/AX/CX/DX/BX/SI/DI/R8-R15 are, see `Parse_asm6.ml`).
+   and the BP/R12/R13 ModRM/SIB special cases (note: BP still isn't
+   even wired in this arch's own grammar as a plain register token yet
+   -- only SP/AX/CX/DX/BX/SI/DI/R8-R15 are, see `Parse_asm6.ml`).
+4. IMUL's own 3-operand immediate forms (goken's `Zib_rr`/`Zil_rr`) --
+   real but rarer than the 2-operand form already wired.
 5. x87 -- single- and double-precision SSE both landed across earlier
    checkpoints; x87 is deferred indefinitely absent a concrete need
    (real amd64 userspace code essentially never uses it; SSE is the
-   real ABI convention). The 32-bit-int forms of the int<->float
-   conversions (CVTSL2SD/CVTSL2SS/CVTTSD2SL/CVTTSS2SL, no REX.W) also
-   aren't wired -- every GP register in this port's own scope is
-   already treated as 64-bit-wide by convention, see `width`'s own
-   `Q_` case -- add them if a fixture ever genuinely needs a 32-bit
-   int<->float round trip.
+   real ABI convention).

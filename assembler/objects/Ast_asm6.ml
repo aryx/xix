@@ -184,6 +184,70 @@ type instr =
    * row order genuinely differs (Yml,Yi8/Yml,Yrl -- gen-first --
    * unlike yaddl's Yi8,Yml/Yrl,Yml -- imr-first). *)
   | Cmp of width * gen * imr
+  (* claude: goken's ytestl/ytestb-shaped TEST (optab.c) -- like CMP,
+   * writes no result, only flags (bitwise AND this time, not
+   * subtraction), but spells its operands in yet a *third* role-order:
+   * "TESTQ Rs,gen" with the *register* written first landing in
+   * ModRM.reg, `gen` second landing in ModRM.rm -- confirmed against
+   * real 6a/6l: "TESTL BX,CX" -> `85 d9` (reg=BX, rm=CX). Same
+   * B_-is-one-less opcode pair as everything else here (`0x85` vs
+   * `0x84`). Only the register-vs-register/memory form is wired
+   * (real amd64's own TEST-with-immediate form has no imm8 row at all
+   * -- confirmed reading `ytestl`, unlike CMP/Arith -- and no fixture
+   * here needs it, so it isn't wired, matching the imm32 gaps
+   * elsewhere in this file). *)
+  | Test of width * register * gen
+  (* claude: goken's yrl_ml/yrb_mb-shaped CMPXCHG (optab.c) -- real
+   * x86's own atomic-CAS-friendly compare-and-exchange: "CMPXCHGQ
+   * Rs,gen" compares the implicit accumulator (AX) against `gen`; if
+   * equal, `gen := Rs` (ZF=1); else `AX := gen` (ZF=0). Same role
+   * order as `Arith`'s own `Reg` case and `Move`'s own store clause
+   * (`Rs` in ModRM.reg, `gen` in ModRM.rm) -- confirmed against real
+   * 6a/6l: "CMPXCHGL CX,0(BX)" -> `0f b1 0b`. Found directly in
+   * goken's own hand-written amd64 assembly (a `cas()` primitive,
+   * always paired with the `Lock` prefix below on the preceding
+   * source line). *)
+  | CmpXchg of width * register * gen
+  (* claude: goken's own real amd64 LOCK prefix (optab.c: `{ALOCK,
+   * ynone, Px, 0xf0}`) -- spelled as its own standalone pseudo-
+   * instruction on the line *before* the one it modifies (real x86's
+   * own LOCK is a legacy prefix byte, not a separate opcode, but
+   * goken's own assembler/linker never actually ties the two
+   * together -- it just emits the bare `0xf0` byte as this "instruction"'s
+   * own complete encoding and relies on x86 hardware reading it as a
+   * prefix for whatever follows, exactly like this port's own
+   * `Codegen6.gen` byte-concatenation already does for free). Not
+   * validated against what follows, matching goken's own laxness. *)
+  | Lock
+  (* claude: goken's own `ymovq` table has extra rows beyond the plain-
+   * integer ones every other width's own move table has: a *raw*
+   * GP<->XMM bit-copy (real x86's own MOVQ xmm,r/m64 / MOVQ r/m64,xmm,
+   * opcode `66 REX.W 0F 6E`/`0F 7E` -- genuinely different from
+   * `CvtIntToF`/`CvtFToInt`, which *convert* a value, not just move
+   * its raw bits). Found directly in goken's own hand-written amd64
+   * assembly (`tests/s/regressions/amd64_psllq.s`'s own `MOVQ AX,X0`/
+   * `MOVQ X0,DI`) -- confirmed real 6a rejects the same shape for
+   * MOVL/MOVW/MOVB (their own `ymovl`/`ymovw`/`ymovb` tables have no
+   * XMM rows at all), so this is `MOVQ`-only, two dedicated
+   * constructors rather than folding into the existing `Move`/`MovF`
+   * (whose own operand types don't mix a GP `gen` with an `xregister`
+   * on the same side the way this needs). Confirmed against real
+   * 6a/6l: "MOVQ AX,X0" -> `66 48 0f 6e c0`, "MOVQ X0,DI" ->
+   * `66 48 0f 7e c7` (the `0x66` prefix always comes before REX.W,
+   * same ordering rule as every other prefixed instruction here). *)
+  | MovQToXmm of gen * xregister
+  | MovQFromXmm of xregister * gen
+  (* claude: goken's yps-shaped PSLLQ (optab.c) -- real x86's SSE2
+   * packed-integer shift, only the shift-by-immediate form is wired
+   * (found directly in `tests/s/regressions/amd64_psllq.s`, a real
+   * regression test for a genuine goken bug: `APSLLQ`'s own reg,imm8
+   * row once had the wrong opcode byte, `0x7e` -- which is MOVD/MOVQ,
+   * not a shift -- instead of `0x73`). No REX at all needed (goken's
+   * own `Py` prefix contributes nothing itself; the real `0x66` comes
+   * from an *embedded* prefix byte inside the row's own op array, the
+   * same mechanism `CvtIntToF`'s `Pf2`/`Pf3` embedding uses) --
+   * confirmed: "PSLLQ $4,X0" -> `66 0f 73 f0 04`. *)
+  | PsllQXmm of xregister * int
   (* claude: goken's yshl/yshb-shaped shift (optab.c) -- SHL(=SAL)/SHR/
    * SAR, destination a register-or-memory (`gen`), amount either a
    * literal immediate or CX (real x86's only two shift-amount forms;
@@ -335,25 +399,43 @@ type instr =
    * same "don't model IEEE unordered comparisons precisely" scope
    * choice ARM64's own `FCmp` comment makes). *)
   | CmpF of A.floatp_precision * xgen * xregister
-  (* claude: goken's yxcvlf/yxcvqf-shaped CVTSQ2SD/CVTSQ2SS (optab.c) --
-   * 64-bit integer (register or memory, goken's own `Yml`) to
-   * single- or double-precision float, confirmed against real 6a/6l
-   * both need REX.W regardless of precision (goken's `Pw` prefix,
-   * alongside `Pf2`/`Pf3`) -- "CVTSQ2SD AX,X3" -> `f2 48 0f 2a d8`,
-   * "CVTSQ2SS AX,X3" -> `f3 48 0f 2a d8`. The 32-bit-int forms
-   * (`CVTSL2SD`/`CVTSL2SS`, no REX.W) aren't wired -- not needed by
-   * this checkpoint's own fixtures, and every GP register in this
-   * port's own scope is already treated as 64-bit-wide by convention
-   * (see `width`'s own `Q_` case). *)
-  | CvtIntToF of A.floatp_precision * gen * xregister
-  (* claude: goken's yxcvfq-shaped CVTTSD2SQ/CVTTSS2SQ (optab.c) -- the
-   * reverse conversion, *truncating* (not rounding -- real x86 also
-   * has separate, non-truncating CVTSD2SQ/CVTSS2SQ this port doesn't
-   * wire, matching ARM64's own choice to skip the round-to-nearest
-   * FCVTNS variant and only carry FCVTZS). Also REX.W-forced
-   * regardless of precision, confirmed: "CVTTSD2SQ X3,BX" ->
-   * `f2 48 0f 2c db`, "CVTTSS2SQ X3,BX" -> `f3 48 0f 2c db`. *)
-  | CvtFToInt of A.floatp_precision * xgen * register
+  (* claude: goken's yxcvlf/yxcvqf-shaped CVTS{L,Q}2S{D,S} (optab.c) --
+   * a 32- or 64-bit integer (register or memory, goken's own `Yml`) to
+   * single- or double-precision float. Only the int width (`Q_`/`L_`
+   * -- REX.W is forced for `Q_`, never set for `L_`, confirmed
+   * against real 6a/6l: "CVTSQ2SD AX,X3" -> `f2 48 0f 2a d8` vs
+   * "CVTSL2SD AX,X0" -> `f2 0f 2a c0`, no REX at all) changes the
+   * encoding; float precision only ever picks the `Pf2`/`Pf3` prefix,
+   * same as everywhere else in this section. *)
+  | CvtIntToF of width (* Q_ or L_ only *) * A.floatp_precision * gen * xregister
+  (* claude: goken's yxcvfq/yxcvfl-shaped CVTTS{D,S}2S{Q,L} (optab.c) --
+   * the reverse conversion, *truncating* (not rounding -- real x86
+   * also has separate, non-truncating CVTSD2SI/CVTSS2SI this port
+   * doesn't wire, matching ARM64's own choice to skip the round-to-
+   * nearest FCVTNS variant and only carry FCVTZS). Same `Q_`/`L_`-
+   * only REX.W split as `CvtIntToF`, confirmed: "CVTTSD2SQ X3,BX" ->
+   * `f2 48 0f 2c db` vs "CVTTSD2SL X0,BX" -> `f2 0f 2c d8`. *)
+  | CvtFToInt of width (* Q_ or L_ only *) * A.floatp_precision * xgen * register
+  (* claude: goken's yxm-shaped CVTSD2SS/CVTSS2SD (optab.c) -- real
+   * x86's own opcode `0x5a` handles *both* directions, disambiguated
+   * purely by legacy prefix (`Pf2`=double source, `Pf3`=single
+   * source) -- confirmed against real 6a/6l: "CVTSD2SS X0,X2" ->
+   * `f2 0f 5a d0`, "CVTSS2SD X1,X3" -> `f3 0f 5a d9`. The precision
+   * carried here is the *source*'s (unlike every other `A.floatp_
+   * precision` use in this file, which names the operation's own
+   * nominal precision) -- `sse_prefix` doesn't care either way, it's
+   * purely a prefix-selector, but this is worth flagging since it's
+   * the one place the convention flips. *)
+  | CvtFPrec of A.floatp_precision (* source precision *) * xgen * xregister
+  (* claude: goken's yxm-shaped XORPD/XORPS (optab.c) -- only the
+   * self-XOR-to-zero idiom is wired (confirmed real, used directly in
+   * 6c-compiled float negation: "XORPD X0,X0" then "SUBSD X1,X0" for
+   * "0.0 - X1"), mirroring the existing GP-register `Zclr` special
+   * case rather than a general 2-register packed-XOR this port has no
+   * other use for. XORPD's own prefix is `Pe` (0x66); XORPS's is `Pm`
+   * (no real prefix byte at all, just the `0x0f` escape) -- confirmed:
+   * "XORPD X4,X4" -> `66 0f 57 e4`, "XORPS X5,X5" -> `0f 57 ed`. *)
+  | XorClearF of A.floatp_precision * xregister
 
   (* System *)
   | Syscall
@@ -456,9 +538,10 @@ let branch_opd_of_instr (instr : instr) : A.branch_operand option =
   | Call opd -> Some opd
   | Jmp opd -> Some opd
   | Jcc (_, opd) -> Some opd
-  | Arith _ | Cmp _ | Shift _ | Extend _ | Unary _ | MulDiv _ | Imul2 _
+  | Arith _ | Cmp _ | Test _ | CmpXchg _ | Lock | Shift _ | Extend _ | Unary _ | MulDiv _ | Imul2 _
   | Cwd | Cdq | Cqo | Move _ | Lea _ | Ret | Syscall -> None
-  | MovF _ | ArithF _ | CmpF _ | CvtIntToF _ | CvtFToInt _ -> None
+  | MovF _ | ArithF _ | CmpF _ | CvtIntToF _ | CvtFToInt _ | CvtFPrec _ | XorClearF _ -> None
+  | MovQToXmm _ | MovQFromXmm _ | PsllQXmm _ -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   let gen_operand x =
@@ -484,6 +567,12 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | Call b | Jmp b | Jcc (_, b) -> A.visit_globals_branch_operand f b
   | Arith (_, _, _, gen1) -> gen_operand gen1
   | Cmp (_, gen1, _) -> gen_operand gen1
+  | Test (_, _, gen1) -> gen_operand gen1
+  | CmpXchg (_, _, gen1) -> gen_operand gen1
+  | Lock -> ()
+  | MovQToXmm (g1, _) -> gen_operand g1
+  | MovQFromXmm (_, g1) -> gen_operand g1
+  | PsllQXmm (_, _) -> ()
   | Shift (_, _, _, gen1) -> gen_operand gen1
   | Extend (_, gen1, _) -> gen_operand gen1
   | Unary (_, _, gen1) -> gen_operand gen1
@@ -493,6 +582,8 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | MovF (_, x1, x2) -> xgen_operand x1; xgen_operand x2
   | ArithF (_, _, x1, _) -> xgen_operand x1
   | CmpF (_, x1, _) -> xgen_operand x1
-  | CvtIntToF (_, g1, _) -> gen_operand g1
-  | CvtFToInt (_, x1, _) -> xgen_operand x1
+  | CvtIntToF (_, _, g1, _) -> gen_operand g1
+  | CvtFToInt (_, _, x1, _) -> xgen_operand x1
+  | CvtFPrec (_, x1, _) -> xgen_operand x1
+  | XorClearF (_, _) -> ()
   | Ret | Syscall -> ()

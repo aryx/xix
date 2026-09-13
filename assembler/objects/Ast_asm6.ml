@@ -72,17 +72,16 @@ open Ast_asm
  * lexer rule (no special grammar case needed, unlike the named low
  * registers -- see Parser_asm6.mly).
  *
- * Scope so far (see plan_amd64_port.md): 64-, 32-, and 16-bit-width
- * (Q/L/W-suffixed) integer arithmetic (ADD/SUB/XOR/CMP, immediate-or-
+ * Scope so far (see plan_amd64_port.md): 64-, 32-, 16-, and 8-bit-width
+ * (Q/L/W/B-suffixed) integer arithmetic (ADD/SUB/XOR/CMP, immediate-or-
  * register source, register-or-memory destination), move (register/
- * memory/immediate, all combinations MOVQ/MOVL/MOVW actually need --
- * note MOVL/MOVW's own immediate-to-*register* form is a genuinely
- * different encoding shape from MOVQ's, see Codegen6.ml), LEAQ
- * (address-of-global, 64-bit only), CALL/JMP (direct to a label, or
- * indirect through a register), short-form (rel8) Jcc, RET, SYSCALL.
- * No byte-suffixed (B) forms, no floating point/SSE, no literal pool
- * (none of
- * these instructions need one -- LEAQ's absolute address and any 64-bit
+ * memory/immediate, all combinations MOVQ/MOVL/MOVW/MOVB actually need
+ * -- note MOVL/MOVW/MOVB's own immediate-to-*register* form is a
+ * genuinely different encoding shape from MOVQ's, see Codegen6.ml),
+ * LEAQ (address-of-global, 64-bit only), CALL/JMP (direct to a label,
+ * or indirect through a register), short-form (rel8) Jcc, RET,
+ * SYSCALL. No floating point/SSE, no literal pool (none of these
+ * instructions need one -- LEAQ's absolute address and any 64-bit
  * immediate that doesn't fit sign-extended-32-bit are both encoded
  * inline in the instruction stream on this arch, unlike ARM64/ARM32/
  * MIPS/RISC-V's separate pool mechanism).
@@ -203,16 +202,22 @@ type instr =
   (* claude: operand width, shared by Arith/Cmp/Move -- Q_ (64-bit,
    * REX.W set), L_ (32-bit, no REX.W -- the *default* operand size in
    * long mode, confirmed against real 6a: "ADDL BX,AX" needs no
-   * prefix byte at all when no R8-R15 register is involved), and W_
+   * prefix byte at all when no R8-R15 register is involved), W_
    * (16-bit, goken's own "Pe" -- a mandatory 0x66 operand-size-
    * override prefix *before* any REX byte, no REX.W; same opcodes as
    * L_ throughout, confirmed against real 6a) -- see Codegen6.ml's
-   * `rex_opt`/`prefix66`. B_ (byte) isn't wired yet -- real byte-sized
-   * ops need their own separate opcode numbers (not reusable from
-   * L_/Q_/W_'s shared ones) plus legacy AH/BH/CH/DH-vs-SPL/BPL/SIL/DIL
-   * register-encoding quirks, genuinely more involved than W_ turned
-   * out to be -- see prelude. *)
-  and width = Q_ | L_ | W_
+   * `rex_opt`/`prefix66` -- and B_ (8-bit, goken's own "Pb" prefix,
+   * *not* an actual prefix byte but a signal to reinterpret whichever
+   * general register the grammar names as its own low byte -- see
+   * Codegen6.ml's `bytereg`-equivalent comment). B_ has genuinely
+   * different opcode numbers from L_/Q_/W_'s shared ones (confirmed
+   * against goken's own optab.c: e.g. ADDB's reg-reg opcode is 0x00,
+   * not L_'s 0x01), and a real REX-forcing quirk for SP/BP/SI/DI (see
+   * Codegen6.ml) -- legacy AH/BH/CH/DH forms (reachable in real amd64
+   * only when *no* REX byte at all is present) aren't wired, since
+   * this port's register model has no distinct token for them and
+   * nothing needs them. *)
+  and width = Q_ | L_ | W_ | B_
 
   (* claude: goken's real amd64 condition codes -- EQ/NE plus signed
    * (JLT/JGE/JGT/JLE) and unsigned (JCS/JCC/JHI/JLS) variants of

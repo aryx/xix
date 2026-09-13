@@ -132,11 +132,52 @@ let rex_b_of_resolved_gen = function
   | RReg (A.R n) | RMem (A.R n, _) -> if n >= 8 then 1 else 0
   | RAbs _ -> 0
 
-let rex_opt ~(width : width) ~(reg_field : int) ~(rm : resolved_gen) : int list =
-  let w = match width with Q_ -> 8 | L_ | W_ -> 0 in
+(* claude: goken's own regrex[D_SPB..D_DIB] = 0x40 quirk (obj.c) --
+ * real amd64 ModRM/opcode-embedded register field values 4-7, when
+ * accessed at *byte* width with *no* REX byte present at all, name the
+ * legacy high-byte registers AH/CH/DH/BH instead of the low bytes of
+ * SP/BP/SI/DI; a REX byte (even an otherwise-empty 0x40) switches the
+ * same field values 4-7 over to meaning SPL/BPL/SIL/DIL. This port's
+ * register model has no separate AH/BH/CH/DH token at all (see
+ * Ast_asm6.ml's `width` comment) -- whenever the grammar names SP/BP/
+ * SI/DI (indices 4-7) in a B_-width instruction, it always means the
+ * *low* byte, so a REX byte must be forced even when otherwise empty,
+ * exactly matching goken's own bytereg()+regrex forcing. R8-R15
+ * (indices 8-15) already force a REX byte for their own extension-bit
+ * reasons regardless of width, so only 4-7 needs a special case here.
+ *
+ * claude: crucially, this quirk is about a *register holding a value*
+ * (ModRM.reg, or ModRM.rm when mod=11 -- register-direct), never about
+ * a register used as a *memory addressing base* (mod!=11, e.g. "-8(SP)"
+ * -- there is no "high byte of the address in SP" ambiguity at all, so
+ * `rm`'s own contribution below only ever checks the `RReg` case, not
+ * `RMem`), and never about a fixed *opcode-extension digit* sharing
+ * the same 0-7 numeric range as a register field would (e.g. SUB's
+ * ext=5, XOR's ext=6, CMP's ext=7 -- all coincidentally in 4-7, but
+ * meaning "the literal immediate-group sub-opcode", not "register
+ * SP/BP/SI/DI") -- confirmed the hard way: an earlier version of this
+ * check applied `regrex_forces_rex` to every `reg_field` unconditionally,
+ * which broke "SUBB $1,BX"/"CMPB BX,$5" (real 6a/6l: "80 eb 01"/
+ * "80 fb 05", no REX at all) and "MOVB AX,-8(SP)" (real 6a/6l:
+ * "88 44 24 f8", no REX -- SP here is a memory base, not a value
+ * register) by spuriously forcing a REX byte. `reg_is_register` lets
+ * the two immediate-group call sites (Arith/Cmp's own B_ immediate
+ * clauses, where `reg_field` is always a fixed ext digit) opt out. *)
+let regrex_forces_rex (n : int) : bool = n >= 4 && n <= 7
+
+let rex_opt ~(reg_is_register : bool) ~(width : width) ~(reg_field : int)
+    ~(rm : resolved_gen) : int list =
+  let w = match width with Q_ -> 8 | L_ | W_ | B_ -> 0 in
   let r = if reg_field >= 8 then 4 (* Rxr *) else 0 in
   let b = rex_b_of_resolved_gen rm in
-  if w <> 0 || r <> 0 || b <> 0
+  let forced =
+    width = B_ &&
+    ((reg_is_register && regrex_forces_rex reg_field)
+     || (match rm with
+         | RReg (A.R n) -> regrex_forces_rex n
+         | RMem _ | RAbs _ -> false))
+  in
+  if w <> 0 || r <> 0 || b <> 0 || forced
   then [ 0x40 lor w lor r lor b ]
   else []
 
@@ -144,9 +185,11 @@ let rex_opt ~(width : width) ~(reg_field : int) ~(rm : resolved_gen) : int list 
  * 16-bit (W_) instruction -- confirmed against real 6a it comes
  * *before* any REX byte ("MOVW AX,R9" -> "66 41 89 c1"), matching real
  * x86's own prefix-ordering rule (legacy prefixes precede REX, which
- * must immediately precede the opcode). Q_/L_ need no such prefix. *)
+ * must immediately precede the opcode). Q_/L_/B_ need no such prefix
+ * (B_'s own "Pb" isn't a real prefix byte at all -- see
+ * `regrex_forces_rex` above and Ast_asm6.ml's `width` comment). *)
 let prefix66 (width : width) : int list =
-  match width with W_ -> [0x66] | Q_ | L_ -> []
+  match width with W_ -> [0x66] | Q_ | L_ | B_ -> []
 
 (* claude: `init_data` is `None` here (as opposed to `resolve_gen_full`
  * below) -- callers that only ever pass a `gen` built from this arch's
@@ -227,7 +270,38 @@ let encode_rm (reg_field : int) (rm : resolved_gen) : int list =
       [ modrm ~md:0 ~reg:reg_field ~rm:4; sib ~scale:0 ~index:4 ~base:5 ] @ le32 addr
 
 let arith_ext = function ADD -> 0 | SUB -> 5 | XOR -> 6
-let arith_rr_opcode = function ADD -> 0x01 | SUB -> 0x29 | XOR -> 0x31
+(* claude: the reg-reg ("Zr_m") opcode -- confirmed against goken's own
+ * optab.c that B_'s own opcode is always exactly one less than L_/Q_/
+ * W_'s shared one (ADD 0x00 vs 0x01, SUB 0x28 vs 0x29, XOR 0x30 vs
+ * 0x31), matching real x86's own "even opcode = 8-bit form" encoding
+ * convention -- but kept as an explicit table, not opcode-1 arithmetic,
+ * so a future opcode (e.g. AND/OR, not wired yet) can't silently rely
+ * on a pattern that happens to hold only for these three. *)
+let arith_rr_opcode (width : width) (op : arith_opcode) : int =
+  match width, op with
+  | B_, ADD -> 0x00 | B_, SUB -> 0x28 | B_, XOR -> 0x30
+  | (Q_ | L_ | W_), ADD -> 0x01 | (Q_ | L_ | W_), SUB -> 0x29 | (Q_ | L_ | W_), XOR -> 0x31
+
+(* claude: the immediate-group opcode (ModRM-extension-dispatched, used
+ * by both Arith's and Cmp's own immediate forms) -- 0x80 for a true
+ * 8-bit destination (the immediate byte is the *whole* value, not a
+ * sign-extended-into-a-wider-register special case), 0x83 for Q_/L_/W_
+ * (goken's own Yi8 sign-extends into the wider destination -- see
+ * Arith's own imm32-not-wired comment for the *general*-immediate 0x81
+ * form this doesn't cover). *)
+let imm_group_opcode (width : width) : int = match width with B_ -> 0x80 | Q_ | L_ | W_ -> 0x83
+
+(* claude: Cmp's own "gen,reg" (Zm_r) direction opcode -- same
+ * B_-is-one-less pattern as `arith_rr_opcode` (CMP r/m8,r8 = 0x38 vs
+ * r/m32,r32 = 0x39), confirmed against optab.c's ycmpb/ycmpl. *)
+let cmp_rm_opcode (width : width) : int = match width with B_ -> 0x38 | Q_ | L_ | W_ -> 0x39
+
+(* claude: Move's own store (Zr_m) / load (Zm_r) opcodes -- same
+ * B_-is-one-less pattern yet again (MOV r/m8,r8 = 0x88 vs r/m32,r32 =
+ * 0x89; MOV r8,r/m8 = 0x8a vs r32,r/m32 = 0x8b), confirmed against
+ * optab.c's ymovb/ymovl. *)
+let mov_store_opcode (width : width) : int = match width with B_ -> 0x88 | Q_ | L_ | W_ -> 0x89
+let mov_load_opcode (width : width) : int = match width with B_ -> 0x8a | Q_ | L_ | W_ -> 0x8b
 
 (* claude: the *short* (rel8) Jcc opcode for each condition -- goken's
  * optab.c AJEQ/AJNE/.../AJLS entries each list {short_op, near_op}
@@ -290,17 +364,48 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
     (* Arithmetic *)
     (* --------------------------------------------------------------------- *)
 
+    (* claude: goken's own yxorb table has its "Yi32,Yal,Zib_,1" row
+     * (opcode alone + imm8, no ModRM at all -- real x86's dedicated
+     * "op AL,imm8" encoding) listed *before* the general
+     * "Yi32,Ymb,Zibo_m,2" ModRM row, so a destination of exactly AX
+     * (goken's Yal, i.e. register index 0 -- *not* R8, whose low 3
+     * bits also happen to be 0 but which has no such AL-only encoding
+     * at all) always takes this shorter form, confirmed against real
+     * 6a/6l: "ADDB $3,AX"/"SUBB $1,AX"/"XORB $0xff,AX" -> "04 03"/
+     * "2c 01"/"34 ff" (2 bytes each, no REX, no ModRM) -- unlike
+     * "ADDB $3,BX" -> "80 c3 03" (general ModRM form). This is the
+     * *opposite* row order from ycmpl/yxorl's own Yax-vs-Yml special
+     * case (see the Cmp clauses below and this file's own B_ comments)
+     * -- there, the general ModRM row comes *first* and so always wins
+     * for any immediate that fits imm8, meaning Q_/L_/W_ never need
+     * this special case at all; B_ is the only width where it's
+     * actually reachable. Opcode pattern: (ext<<3)|0x04, matching
+     * every other arch-independent "reg,imm8-group" opcode-embedding
+     * convention already seen elsewhere in this file. *)
+    | Arith (B_, op, Imm v, GReg r) when reg_num r = 0 && v >= -128 && v <= 255 ->
+        let bytes = [(arith_ext op lsl 3) lor 0x04; v land 0xff] in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    | Arith (B_, op, Imm v, dest) when v >= -128 && v <= 255 ->
+        (* claude: B_'s own 0x80 immediate-group form has no "does it
+         * fit imm8" question at all -- the immediate byte *is* the
+         * whole destination width, so (unlike Q_/L_/W_'s Yi8-vs-Yi32
+         * split below) there's no larger form to fall back to; the
+         * full unsigned byte range (not just -128..127) is accepted. *)
+        let rm = resolve_gen env node dest in
+        let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:(arith_ext op) ~rm
+                    @ [imm_group_opcode B_] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
+        { size = List.length bytes; binary = (fun () -> bytes) }
     | Arith (width, op, Imm v, dest) when v >= -128 && v < 128 ->
         let rm = resolve_gen env node dest in
-        let bytes = prefix66 width @ rex_opt ~width ~reg_field:(arith_ext op) ~rm
-                    @ [0x83] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(arith_ext op) ~rm
+                    @ [imm_group_opcode width] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Arith (_, _op, Imm _, _dest) ->
         raise Todo (* imm32 form (opcode 0x81) not wired, see prelude *)
     | Arith (width, op, Reg r, dest) ->
         let rm = resolve_gen env node dest in
-        let bytes = prefix66 width @ rex_opt ~width ~reg_field:(reg_num r) ~rm
-                    @ [arith_rr_opcode op] @ encode_rm (reg_num r) rm in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+                    @ [arith_rr_opcode width op] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
     (* claude: "CMPQ gen,$imm" -- goken's Zm_ibo case, opcode 0x83 /7,
@@ -309,23 +414,38 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * unlike Arith's own Zibo_m where `gen` -- the *second* operand --
      * plays that role). Only the imm8 form is wired, same scope
      * restriction as Arith's own immediate case. *)
+    (* claude: ycmpb's own "Yal,Yi32,Z_ib,1" row -- goken's byte-width
+     * mirror of Arith's own AL-special-case above (same reg-index-0-
+     * only, opcode-alone-no-ModRM shape, opcode 0x3c). Confirmed
+     * against real 6a/6l: "CMPB AX,$5" -> "3c 05". Placed before the
+     * general B_ clause below for the same reason. *)
+    | Cmp (B_, GReg r, Imm v) when reg_num r = 0 && v >= -128 && v <= 255 ->
+        let bytes = [0x3c; v land 0xff] in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    | Cmp (B_, g, Imm v) when v >= -128 && v <= 255 ->
+        (* claude: same "no imm8-vs-imm32 split, the byte IS the whole
+         * value" reasoning as Arith's own B_ clause above. *)
+        let rm = resolve_gen env node g in
+        let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:7 ~rm
+                    @ [imm_group_opcode B_] @ encode_rm 7 rm @ [v land 0xff] in
+        { size = List.length bytes; binary = (fun () -> bytes) }
     | Cmp (width, g, Imm v) when v >= -128 && v < 128 ->
         let rm = resolve_gen env node g in
-        let bytes = prefix66 width @ rex_opt ~width ~reg_field:7 ~rm
-                    @ [0x83] @ encode_rm 7 rm @ [v land 0xff] in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:7 ~rm
+                    @ [imm_group_opcode width] @ encode_rm 7 rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Cmp (_, _g, Imm _) ->
         raise Todo (* imm32 form (opcode 0x81) not wired, see prelude *)
-    (* claude: "CMPQ gen,Rs" -- goken's Zm_r case, opcode 0x39, `gen`
-     * in ModRM r/m, Rs in ModRM reg (asmand(from=gen,to=Rs), matching
-     * Ast_asm6.ml's Cmp comment). The reverse-direction row (Zr_m,
-     * opcode 0x3b, for when `gen` should land in ModRM reg instead) is
-     * a separate goken y-table row this port doesn't need yet -- not
-     * wired. *)
+    (* claude: "CMPQ gen,Rs" -- goken's Zm_r case, opcode 0x39 (0x38 for
+     * B_, see `cmp_rm_opcode`), `gen` in ModRM r/m, Rs in ModRM reg
+     * (asmand(from=gen,to=Rs), matching Ast_asm6.ml's Cmp comment). The
+     * reverse-direction row (Zr_m, opcode 0x3b/0x3a, for when `gen`
+     * should land in ModRM reg instead) is a separate goken y-table row
+     * this port doesn't need yet -- not wired. *)
     | Cmp (width, g, Reg r) ->
         let rm = resolve_gen env node g in
-        let bytes = prefix66 width @ rex_opt ~width ~reg_field:(reg_num r) ~rm
-                    @ [0x39] @ encode_rm (reg_num r) rm in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+                    @ [cmp_rm_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
     (* --------------------------------------------------------------------- *)
@@ -333,32 +453,39 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
     (* --------------------------------------------------------------------- *)
 
     | Move (width, Either.Left (GReg r), dest) ->
-        (* store: reg -> mem/reg, goken's Zr_m (0x89) -- same opcode,
-         * same shape, for MOVQ/MOVL/MOVW alike. *)
+        (* store: reg -> mem/reg, goken's Zr_m (0x89, or 0x88 for B_ --
+         * see `mov_store_opcode`) -- same shape for MOVQ/MOVL/MOVW/
+         * MOVB alike. *)
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = prefix66 width @ rex_opt ~width ~reg_field:(reg_num r) ~rm
-                    @ [0x89] @ encode_rm (reg_num r) rm in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+                    @ [mov_store_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (width, Either.Left src, GReg r) ->
-        (* load: mem/reg -> reg, goken's Zm_r (0x8b) -- same for all. *)
+        (* load: mem/reg -> reg, goken's Zm_r (0x8b, or 0x8a for B_ --
+         * see `mov_load_opcode`) -- same for all. *)
         let rm = resolve_gen_full env init_data node src in
-        let bytes = prefix66 width @ rex_opt ~width ~reg_field:(reg_num r) ~rm
-                    @ [0x8b] @ encode_rm (reg_num r) rm in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+                    @ [mov_load_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (_, Either.Left (Indirect _ | Entity _), (Indirect _ | Entity _)) ->
         raise (Impossible "real amd64 MOV never has both operands in memory")
-    (* claude: "MOVQ/MOVL $0,Rd" -- goken's Zclr optimization (both
-     * ymovq *and* ymovl have their own "Yi0,Yrl,Zclr" row, ahead of
-     * the general Ys32/Yi32 rows below -- a real bug in this port's
+    (* claude: "MOVQ/MOVL/MOVW $0,Rd" -- goken's Zclr optimization
+     * (ymovq/ymovl/ymovw each have their own "Yi0,Yrl,Zclr" row, ahead
+     * of the general Ys32/Yi32 rows below -- a real bug in this port's
      * earlier assumption that only CMP's table lacked a Yi0 row and
      * MOVL's had one too like MOVQ's; found the hard way when a
      * fixture's own "MOVL $0,AX" didn't match goken's byte output).
      * Zclr reuses XOR's own reg-reg opcode (0x31) with the *same*
      * register in both the ModRM.reg and ModRM.rm fields ("XOR Rd,Rd"
-     * -- self-XOR to zero), confirmed against real 6a for both widths. *)
-    | Move (width, Either.Right (A.Int 0), GReg r) ->
+     * -- self-XOR to zero), confirmed against real 6a for all three
+     * widths. B_ is deliberately excluded -- ymovb's own table (see
+     * Ast_asm6.ml's `width` comment) has *no* Yi0 row at all, so
+     * "MOVB $0,AL" goes through the ordinary Zib_rp immediate path
+     * below like any other byte immediate, confirmed against real 6a
+     * ("MOVB $0,AL" -> "b0 00", not a self-XOR). *)
+    | Move ((Q_ | L_ | W_) as width, Either.Right (A.Int 0), GReg r) ->
         let rm = RReg r in
-        let bytes = prefix66 width @ rex_opt ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
                     @ [0x31] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (Q_, Either.Right (A.Int v), dest) when v >= -0x8000_0000 && v <= 0x7fff_ffff ->
@@ -366,7 +493,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
          * Zilo_m (0xc7 /0) -- see prelude for the imm=0/true-imm64
          * cases not wired. *)
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = rex_opt ~width:Q_ ~reg_field:0 ~rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
+        let bytes = rex_opt ~reg_is_register:false ~width:Q_ ~reg_field:0 ~rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: goken's own Yi64,Yrl,Ziq_rp row -- only reached when the
      * immediate does *not* fit the Ys32 class above (Ziq_rp's own
@@ -382,7 +509,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * by the full 8-byte immediate. Confirmed against real 6a:
      * "MOVQ $0x123456789A,R9" -> "49 b9 9a 78 56 34 12 00 00 00". *)
     | Move (Q_, Either.Right (A.Int v), GReg r) ->
-        let bytes = rex_opt ~width:Q_ ~reg_field:0 ~rm:(RReg r)
+        let bytes = rex_opt ~reg_is_register:false ~width:Q_ ~reg_field:0 ~rm:(RReg r)
                     @ [0xb8 lor (reg_num r land 7)] @ le64 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (Q_, Either.Right _, _) ->
@@ -401,12 +528,12 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * -> "41 b9 09 00 00 00" (REX.B extends the opcode's own embedded
      * register, exactly like ModRM.rm would). *)
     | Move (L_, Either.Right (A.Int v), GReg r) when v >= -0x8000_0000 && v <= 0x7fff_ffff ->
-        let bytes = rex_opt ~width:L_ ~reg_field:0 ~rm:(RReg r)
+        let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm:(RReg r)
                     @ [0xb8 lor (reg_num r land 7)] @ le32 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (L_, Either.Right (A.Int v), dest) when v >= -0x8000_0000 && v <= 0x7fff_ffff ->
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = rex_opt ~width:L_ ~reg_field:0 ~rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
+        let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (L_, Either.Right _, _) ->
         raise Todo (* string/float src, or an immediate that doesn't
@@ -420,17 +547,40 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * representable at all here (goken's own Yi32 class would need
      * truncation this port doesn't do) -- see prelude. *)
     | Move (W_, Either.Right (A.Int v), GReg r) when v >= -0x8000 && v <= 0x7fff ->
-        let bytes = prefix66 W_ @ rex_opt ~width:W_ ~reg_field:0 ~rm:(RReg r)
+        let bytes = prefix66 W_ @ rex_opt ~reg_is_register:false ~width:W_ ~reg_field:0 ~rm:(RReg r)
                     @ [0xb8 lor (reg_num r land 7)] @ le16 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (W_, Either.Right (A.Int v), dest) when v >= -0x8000 && v <= 0x7fff ->
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = prefix66 W_ @ rex_opt ~width:W_ ~reg_field:0 ~rm
+        let bytes = prefix66 W_ @ rex_opt ~reg_is_register:false ~width:W_ ~reg_field:0 ~rm
                     @ [0xc7] @ encode_rm 0 rm @ le16 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (W_, Either.Right _, _) ->
         raise Todo (* string/float src, or an immediate that doesn't
                      * fit 16 bits -- not wired, see prelude *)
+    (* claude: MOVB mirrors MOVL/MOVW's own Zil_rp-for-register (here
+     * goken's own Zib_rp -- same "op+reg, no ModRM" shape, just the
+     * 0xb0+reg family instead of 0xb8+reg) / Zibo_m-for-memory (0xc6
+     * /0, not 0xc7) split, with a single-byte immediate and no prefix
+     * at all (see `prefix66`/`regrex_forces_rex` above -- REX is still
+     * forced when the *register itself* is SP/BP/SI/DI, exactly as
+     * for the ModRM-using cases). The full unsigned byte range is
+     * accepted, same reasoning as Arith's own B_ clause: there's no
+     * larger immediate form to fall back to for an 8-bit destination.
+     * Confirmed against real 6a: "MOVB $200,SI" -> "40 b6 c8" (a bare,
+     * otherwise-empty REX.40 forced to select SIL, not AH-family). *)
+    | Move (B_, Either.Right (A.Int v), GReg r) when v >= -128 && v <= 255 ->
+        let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:0 ~rm:(RReg r)
+                    @ [0xb0 lor (reg_num r land 7)] @ [v land 0xff] in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    | Move (B_, Either.Right (A.Int v), dest) when v >= -128 && v <= 255 ->
+        let rm = resolve_gen_full env init_data node dest in
+        let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:0 ~rm
+                    @ [0xc6] @ encode_rm 0 rm @ [v land 0xff] in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    | Move (B_, Either.Right _, _) ->
+        raise Todo (* string/float src, or an immediate that doesn't
+                     * fit 8 bits -- not wired, see prelude *)
 
     | Lea (glob, off, r) ->
         (* claude: real address resolved lazily in `binary`'s own
@@ -453,11 +603,11 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
          * placeholder-free size computation is still safe. *)
         let rm_placeholder = RAbs 0 in
         let bytes_placeholder =
-          rex_opt ~width:Q_ ~reg_field:(reg_num r) ~rm:rm_placeholder
+          rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(reg_num r) ~rm:rm_placeholder
           @ [0x8d] @ encode_rm (reg_num r) rm_placeholder in
         { size = List.length bytes_placeholder; binary = (fun () ->
             let addr = resolve_global_addr env init_data glob off in
-            rex_opt ~width:Q_ ~reg_field:(reg_num r) ~rm:(RAbs addr)
+            rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(reg_num r) ~rm:(RAbs addr)
             @ [0x8d] @ encode_rm (reg_num r) (RAbs addr)
           )
         }
@@ -482,7 +632,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
          * simply never needed (confirmed: no REX at all for a plain
          * low register). Not an actual 32-bit operation. *)
         let rm = RReg r in
-        let bytes = rex_opt ~width:L_ ~reg_field:0 ~rm @ [0xff] @ encode_rm 2 rm in
+        let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm @ [0xff] @ encode_rm 2 rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Call _ ->
         (* opcode 0xe8 + rel32; goken's ycall's direct form. rel32 is
@@ -536,7 +686,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * "ff e3". *)
     | Jmp { contents = A.IndirectJump r } ->
         let rm = RReg r in
-        let bytes = rex_opt ~width:L_ ~reg_field:0 ~rm @ [0xff] @ encode_rm 4 rm in
+        let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm @ [0xff] @ encode_rm 4 rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Jmp _ ->
         { size = 2; binary = (fun () ->

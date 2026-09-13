@@ -1,6 +1,6 @@
 # Porting the amd64 toolchain (6a/6l) against goken, byte-equal
 
-**Status: seventh checkpoint reached.** `o6a`/`o6l` exist, and eight
+**Status: eighth checkpoint reached.** `o6a`/`o6l` exist, and nine
 fixtures assemble+link to executables **byte-identical** to goken's
 real `6a`/`6l` output, with identical `qemu-x86_64` behavior:
 `hello_linux.s` (goken's own real hello-world, exit 0), `cmp_jcc.s`
@@ -8,10 +8,13 @@ real `6a`/`6l` output, with identical `qemu-x86_64` behavior:
 instruction, exit 12), `movl_arith.s` (32-bit MOVL/ADDL/CMPL,
 including the register- vs memory-destination MOVL-immediate split and
 the Zclr $0 optimization, exit 135), `movw_arith.s` (the same shape at
-16-bit width, exit 135), `indirect_call_jmp.s` (indirect CALL/JMP
-through a register, exit 7), `static_symbol.s` (`foo<>` local symbols,
-exit 0), `imm64.s` (true 64-bit MOVQ immediates, exit 127).
-`./test-amd64.sh` runs all eight.
+16-bit width, exit 135), `movb_arith.s` (the same shape at 8-bit width,
+exercising the AL-implicit-opcode special case and the SI/DI
+REX-forcing quirk -- see "Real bugs/quirks" below, exit 135),
+`indirect_call_jmp.s` (indirect CALL/JMP through a register, exit 7),
+`static_symbol.s` (`foo<>` local symbols, exit 0), `imm64.s` (true
+64-bit MOVQ immediates, exit 127).
+`./test-amd64.sh` runs all nine.
 Zero regressions across all 4 already-complete ports' own full suites
 (`test-arm.sh` 54/54, `test-mips.sh`, `test-arm64.sh`, `test-riscv.sh`,
 `test-riscv64.sh`) and `make test` (134/134) after every batch.
@@ -109,30 +112,62 @@ on intuition from:
 ## What's covered (Codegen6.ml)
 
 See `Ast_asm6.ml`'s own prelude for the full scope statement:
-- `Arith` (ADD/SUB/XOR, **Q, L, and W width**): register destination,
-  immediate source (only when the immediate fits signed 8 bits,
-  goken's `Yi8`/opcode `0x83`) or register source (goken's `Zr_m`, one
-  real opcode per mnemonic: `0x01`/`0x29`/`0x31`). W (16-bit) reuses
-  the exact same opcodes as L (goken's `yaddl`/`yxorl` are shared
-  across both), only adding the mandatory `0x66` "Pe" operand-size
-  prefix -- see `Move`'s own note below for where that prefix sits
-  relative to REX.
-- `Move` (MOVQ/MOVL/MOVW, no B-suffixed forms): register<->register,
-  register<->memory (goken's `Zr_m`/`Zm_r`, opcodes `0x89`/`0x8b`),
-  `$0`-to-register (goken's `Zclr` self-XOR optimization -- **all
-  three** of `ymovq`/`ymovl`/`ymovw` have this row; a real bug in this
-  port's own first attempt assumed only `ymovq` did, see "Real
-  bugs/quirks"), and immediate-to-register-or-memory when the
-  immediate fits the width's own signed range (32 bits for Q/L, 16 for
-  W) -- MOVQ always via `Zilo_m`/`0xc7 /0`, but MOVL/MOVW's own tables
-  put the simpler `Zil_rp`/`0xb8+reg` (no ModRM at all, same family as
-  `Ziq_rp`, just a narrower 2-byte immediate for W) *before* `Zilo_m`,
-  so a register destination takes that path instead and only a memory
-  destination falls through to `Zilo_m` -- a real, non-obvious shape
-  difference from MOVQ. W's own mandatory `0x66` prefix comes *before*
-  any REX byte (confirmed against real 6a: "MOVW AX,R9" ->
-  `66 41 89 c1`), matching real x86's prefix-ordering rule (legacy
-  prefixes precede REX, which must immediately precede the opcode).
+- `Arith` (ADD/SUB/XOR, **Q, L, W, and B width**): register
+  destination, immediate source (only when the immediate fits signed 8
+  bits for Q/L/W -- goken's `Yi8`/opcode `0x83` -- or the full unsigned
+  byte range for B, which has no wider form at all) or register source
+  (goken's `Zr_m`; B has its own, genuinely different opcodes --
+  `0x00`/`0x28`/`0x30` -- always exactly one less than Q/L/W's shared
+  `0x01`/`0x29`/`0x31`, confirmed against `optab.c`, kept as an
+  explicit table rather than "opcode - 1" arithmetic). W (16-bit)
+  reuses the exact same opcodes as L (goken's `yaddl`/`yxorl` are
+  shared across both), only adding the mandatory `0x66` "Pe"
+  operand-size prefix -- see `Move`'s own note below for where that
+  prefix sits relative to REX. B has a further special case: a
+  destination of exactly AX (register index 0, i.e. AL) takes goken's
+  own opcode-alone-no-ModRM "op AL,imm8" row (`0x04`/`0x2c`/`0x34`)
+  *ahead of* the general ModRM form, since `yxorb`'s own table lists it
+  first -- unlike Q/L/W, where the equivalent `Yax` special case sits
+  *after* the general ModRM row and so is only reachable for an
+  immediate too big for imm8 (not wired, out of scope) -- see "Real
+  bugs/quirks" below.
+- `Move` (MOVQ/MOVL/MOVW/MOVB): register<->register, register<->memory
+  (goken's `Zr_m`/`Zm_r`, opcodes `0x89`/`0x8b` for Q/L/W, `0x88`/`0x8a`
+  for B -- same "B is one less" pattern as `Arith`), `$0`-to-register
+  (goken's `Zclr` self-XOR optimization -- **Q/L/W only**: a real bug
+  in this port's own first attempt assumed only `ymovq` had this row;
+  `ymovb` genuinely has *no* such row at all, confirmed against real
+  6a -- "MOVB $0,AL" is an ordinary `Zib_rp` immediate move, `b0 00`,
+  not a self-XOR), and immediate-to-register-or-memory when the
+  immediate fits the width's own range (32 bits signed for Q/L, 16 for
+  W, the full unsigned byte range for B) -- MOVQ always via
+  `Zilo_m`/`0xc7 /0`, but MOVL/MOVW/MOVB's own tables put the simpler
+  `Zil_rp`/`Zib_rp` (`0xb8+reg` for L/W, `0xb0+reg` for B -- no ModRM at
+  all, same family as `Ziq_rp`, just a narrower immediate) *before*
+  `Zilo_m`/`Zibo_m`, so a register destination takes that path instead
+  and only a memory destination falls through to the ModRM form -- a
+  real, non-obvious shape difference from MOVQ. W's own mandatory
+  `0x66` prefix comes *before* any REX byte (confirmed against real
+  6a: "MOVW AX,R9" -> `66 41 89 c1`), matching real x86's
+  prefix-ordering rule (legacy prefixes precede REX, which must
+  immediately precede the opcode); B needs no prefix byte at all (its
+  own "Pb" is not a real prefix, see below).
+- **B-width's real REX-forcing quirk** (`regrex_forces_rex` in
+  `Codegen6.ml`): real amd64 ModRM/opcode-embedded register-field
+  values 4-7, at byte width with *no* REX byte present, name the
+  legacy high-byte registers AH/CH/DH/BH; a REX byte (even an
+  otherwise-empty `0x40`) switches those same field values over to
+  meaning SPL/BPL/SIL/DIL instead. This port's register model has no
+  separate AH/BH/CH/DH token (see `Ast_asm6.ml`'s `width` comment), so
+  whenever the grammar names SP/BP/SI/DI as a byte-width *register
+  value*, a REX byte must be forced -- confirmed against real 6a/6l:
+  "MOVB $6,SI" -> `40 b6 06`. Crucially, this only applies to a
+  register *value* (ModRM.reg, or ModRM.rm at mod=11), never to the
+  *same* register used as a memory addressing base (mod!=11 -- no
+  high-byte ambiguity exists for an address) and never to a fixed
+  opcode-extension digit that happens to also fall in 4-7 (SUB's ext=5,
+  XOR's ext=6, CMP's ext=7) -- see "Real bugs/quirks" below for the
+  real, differential-testing-caught bug from conflating these.
 - `Lea` (LEAQ, address-of-global only, 64-bit only): goken's own
   "built-in LEAQ" `Zaut_r` row, opcode `0x8d`, always the
   absolute-disp32-via-SIB addressing shape (goken's non-PIE amd64
@@ -141,14 +176,21 @@ See `Ast_asm6.ml`'s own prelude for the full scope statement:
 - `Call` (direct only, to a label): opcode `0xe8` + rel32. Always
   exactly 5 bytes regardless of the actual displacement (unlike ARM's
   own branch-range story), so no chicken-and-egg sizing problem here.
-- `Cmp` (CMPQ/CMPL/CMPW, immediate or register): goken's `ycmpl`-shaped
-  compare, same operand-role-order quirk documented in `Ast_asm6.ml`'s
-  own `Cmp` comment (the ModRM r/m operand is the *first* written
-  operand here, unlike `Arith`). Immediate form only wired for
-  signed-8-bit (`Zm_ibo`/`0x83 /7`), register form via `Zm_r`/`0x39`
-  only (not the reverse-direction `Zr_m`/`0x3b` row). No `Yi0`/`Zclr`
-  row exists for CMP in goken's own `ycmpl` (unlike MOVQ/MOVL), so no
-  special-casing needed there.
+- `Cmp` (CMPQ/CMPL/CMPW/CMPB, immediate or register): goken's
+  `ycmpl`/`ycmpb`-shaped compare, same operand-role-order quirk
+  documented in `Ast_asm6.ml`'s own `Cmp` comment (the ModRM r/m
+  operand is the *first* written operand here, unlike `Arith`).
+  Immediate form wired for signed-8-bit (Q/L/W, `Zm_ibo`/`0x83 /7`) or
+  the full unsigned byte range (B, `0x80 /7`, same "no wider form"
+  reasoning as `Arith`); register form via `Zm_r` (`0x39` for Q/L/W,
+  `0x38` for B -- same "B is one less" pattern) only (not the
+  reverse-direction `Zr_m`/`0x3b`/`0x3a` row). No `Yi0`/`Zclr` row
+  exists for CMP in goken's own `ycmpl`/`ycmpb` (unlike MOVQ/MOVL/
+  MOVW), so no special-casing needed there. B has its own AL-special-
+  case mirror of `Arith`'s: `ycmpb`'s own `Yal,Yi32,Z_ib` row comes
+  *before* the general ModRM row (the *opposite* order from
+  `ycmpl`'s), so "CMPB AX,$imm" always takes the opcode-alone `0x3c`
+  form -- confirmed against real 6a/6l: "CMPB AX,$5" -> `3c 05`.
 - `Jcc` (JEQ/JNE/JLT/JGE/JGT/JLE/JCS/JCC/JHI/JLS): goken's `yjcond`,
   **short (rel8) form only** -- see "Real bugs/quirks" below for why
   the near form (and hence real branch-distance relaxation) isn't
@@ -199,10 +241,14 @@ See `Ast_asm6.ml`'s own prelude for the full scope statement:
 Deliberately not wired (all raise `Todo` rather than emit wrong
 bytes): the imm32 arith form (`0x81`), any memory
 base register other than SP (BP/R13 need a real ModRM/SIB special case
-for `[rip+disp32]` this port doesn't have), indexed addressing
-(SIB.index, hence REX.X), byte/16-bit-suffixed (B/W) arithmetic and
-moves, floating point/SSE, indirect CALL/JMP *through memory* (only
-through a register is wired), Jcc/Jmp near-form relaxation.
+for `[rip+disp32]` this port doesn't have -- also, unrelatedly, SP
+itself can't be used as a byte-width *register value* at all, not even
+by goken -- see "Real bugs/quirks" below), indexed addressing
+(SIB.index, hence REX.X), floating point/SSE, indirect CALL/JMP
+*through memory* (only through a register is wired), Jcc/Jmp near-form
+relaxation, legacy AH/BH/CH/DH byte-register forms (this port's
+register model has no token for them -- see `Ast_asm6.ml`'s `width`
+comment).
 
 ## Real bugs/quirks found via differential testing against goken directly
 
@@ -307,6 +353,40 @@ through a register is wired), Jcc/Jmp near-form relaxation.
   same TEXT errors) -- only real global symbols (other TEXT/DATA
   entries) work as LEAQ's target. Shaped `indirect_call_jmp.s` around
   this (both indirect-jump targets are genuine separate TEXT globals).
+- **A real gap in goken itself: SP cannot be used as a byte-width
+  register value at all, not even by real 6a/6l** -- `span.c`'s own
+  `oclass()` has a `case D_BPB: case D_SIB: case D_DIB: ...` block
+  covering BP/SI/DI's byte forms, but the parallel `case D_SPB:` line
+  is *commented out* in this vanilla-imported goken source. Confirmed
+  empirically: "MOVB $5,SP" assembles fine under `6a` (which doesn't
+  itself encode instructions, just parses -- see this whole project's
+  own 6a/6l split) but fails at `6l`'s own `doasm()` with `doasm:
+  notfound from=... to=... MOVB $5,SPB` -- the row search can't
+  classify `D_SPB` at all, so no y-table row ever matches, for *any*
+  immediate value or opcode. BP/SI/DI/R8-R15 all work fine (confirmed
+  side by side in the same test file) -- this is specific to SP. Since
+  there's no goken reference output to match against, this port simply
+  doesn't need to (and doesn't) support it either; `movb_arith.s`
+  exercises SI/DI instead for the REX-forcing story.
+- **A real bug in this port's own first attempt at the REX-forcing
+  quirk above**: applied `regrex_forces_rex` to `reg_field`
+  unconditionally, without checking whether `reg_field` was actually a
+  *register* -- broke two real cases the moment a fixture exercised
+  them: "SUBB $1,BX"/"CMPB BX,$5" (immediate-group opcodes, where
+  `reg_field` is really just a fixed extension digit that happens to
+  numerically land in 4-7 for SUB/XOR/CMP -- real 6a/6l: `80 eb 01`/
+  `80 fb 05`, no REX at all) and "MOVB AX,-8(SP)" (SP used as a *memory
+  addressing base*, `rm = RMem`, not a register value -- real 6a/6l:
+  `88 44 24 f8`, no REX). Fixed by adding an explicit `reg_is_register`
+  parameter to `rex_opt` (the two immediate-group `Arith`/`Cmp` B_
+  clauses pass `false`; every reg-reg/move clause, where `reg_field` is
+  always a genuine register, passes `true`) and narrowing the `rm`-side
+  check to `RReg` only (dropping the `RMem` case it previously shared
+  with `rex_b_of_resolved_gen`, which legitimately does care about
+  R8-R15-as-a-memory-base for an unrelated reason -- REX.B -- and so
+  correctly keeps its own `RMem` case). Caught immediately by
+  `movb_arith.s`'s own byte comparison before this checkpoint's commit,
+  not after.
 
 ## Suggested phase plan (next checkpoints)
 
@@ -321,14 +401,16 @@ how ARM32/ARM64's own follow-up phases were sequenced:
    bugs/quirks" above for why the first two are genuinely harder than
    they looked (goken's own dead-code elision and loop rotation, and
    real multi-pass distance-dependent sizing, respectively).
-3. Byte-suffixed (`B`) arithmetic and moves -- real opcodes/legacy
-   register quirks of its own, genuinely more involved than W turned
-   out to be (see `Ast_asm6.ml`'s own `width` comment) -- and the
-   `0x81`/imm32 arith form (Q/L/W and the true-64-bit-immediate move
-   all landed by this checkpoint).
+3. The `0x81`/imm32 arith form (Q/L/W and the true-64-bit-immediate
+   move all landed two checkpoints ago; B needs no such form at all,
+   see `Ast_asm6.ml`'s own `width` comment; byte-suffixed arithmetic/
+   moves and their AL-special-case/REX-forcing quirks landed this
+   checkpoint).
 4. RIP-relative addressing (needed the moment a fixture targets a
    non-Linux `HEADTYPE`, or if this project ever wants position-
    independent amd64 output), indexed addressing (SIB.index/REX.X),
-   and the BP/R13 ModRM special case.
+   and the BP/R13 ModRM special case (note: BP still isn't even wired
+   in this arch's own grammar as a plain register token yet -- only
+   SP/AX/CX/DX/BX/SI/DI/R8-R15 are, see `Parse_asm6.ml`).
 5. Floating point/SSE -- large, deferred indefinitely absent a
    concrete need.

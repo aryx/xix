@@ -228,6 +228,35 @@ type instr =
    * cases already use above) -- confirmed against real 6a/6l: "NEGQ
    * AX" -> `48 f7 d8`, "INCQ AX" -> `48 ff c0`. *)
   | Unary of width * unary_opcode * gen
+  (* claude: goken's ydivl/ydivb-shaped single-operand multiply/divide
+   * (optab.c) -- MUL/IMUL/DIV/IDIV, real x86's own implicit-AX(:DX)
+   * shape (`AX := AX op gen` for MUL/IMUL, `DX:AX := DX:AX / gen`
+   * remainder-in-DX for DIV/IDIV -- goken's grammar only ever spells
+   * the divisor/multiplicand, never AX/DX). Same `Zm_o` encoding shape
+   * as `Unary`'s own `Zo_m` (opcode + ModRM with a fixed extension
+   * digit, no immediate), just with the operand playing goken's
+   * *`from`* role instead of `to` -- confirmed against real 6a/6l:
+   * "IDIVQ BX" -> `48 f7 fb`. *)
+  | MulDiv of width * muldiv_opcode * gen
+  (* claude: goken's yimul-shaped 2-operand IMUL (optab.c) -- real
+   * x86's own "IMUL r,r/m" form (opcode `0x0f 0xaf`, ModRM.reg=dst,
+   * ModRM.rm=src -- the *load*-shaped role assignment, same as
+   * `Move`'s own load clause), confirmed against real 6a/6l: "IMULL
+   * BX,AX" -> `0f af c3`. The 3-operand immediate forms (goken's own
+   * `Zib_rr`/`Zil_rr` rows, "IMUL $imm,Rd" with an implicit src=dst)
+   * aren't wired -- not needed by this checkpoint's own fixture, and
+   * genuinely rarer in real 6c output than the plain 2-operand form. *)
+  | Imul2 of width * gen * register
+  (* claude: goken's own real amd64 CWD/CDQ/CQO -- sign-extends AX
+   * into DX:AX at 16/32/64-bit width (the standard prep step before
+   * IDIV, confirmed used directly ahead of it in real 6c output).
+   * Nullary, same shape as `Ret`/`Syscall` below -- kept as three
+   * separate constructors rather than threading a `width` through one
+   * (the way `Move`/`Arith`/etc do) since B_ has no equivalent
+   * instruction at all here (real amd64's own CBW plays that role,
+   * not wired -- a different opcode family, not just a different
+   * prefix on this same one). *)
+  | Cwd | Cdq | Cqo
 
   (* Memory *)
   (* claude: goken's ymovq/ymovl-shaped move (optab.c) -- source is
@@ -347,6 +376,7 @@ type instr =
     | MOVLQSX | MOVLQZX
 
   and unary_opcode = NEG | NOT | INC | DEC
+  and muldiv_opcode = MUL_ | IMUL_ | DIV_ | IDIV_
   (* claude: goken's own yxm table is shared verbatim across ADDSD/
    * SUBSD/MULSD/DIVSD *and* their SS-suffixed siblings (only the final
    * opcode byte differs per operation, not per precision -- see
@@ -426,7 +456,8 @@ let branch_opd_of_instr (instr : instr) : A.branch_operand option =
   | Call opd -> Some opd
   | Jmp opd -> Some opd
   | Jcc (_, opd) -> Some opd
-  | Arith _ | Cmp _ | Shift _ | Extend _ | Unary _ | Move _ | Lea _ | Ret | Syscall -> None
+  | Arith _ | Cmp _ | Shift _ | Extend _ | Unary _ | MulDiv _ | Imul2 _
+  | Cwd | Cdq | Cqo | Move _ | Lea _ | Ret | Syscall -> None
   | MovF _ | ArithF _ | CmpF _ | CvtIntToF _ | CvtFToInt _ -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
@@ -456,6 +487,9 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | Shift (_, _, _, gen1) -> gen_operand gen1
   | Extend (_, gen1, _) -> gen_operand gen1
   | Unary (_, _, gen1) -> gen_operand gen1
+  | MulDiv (_, _, gen1) -> gen_operand gen1
+  | Imul2 (_, gen1, _) -> gen_operand gen1
+  | Cwd | Cdq | Cqo -> ()
   | MovF (_, x1, x2) -> xgen_operand x1; xgen_operand x2
   | ArithF (_, _, x1, _) -> xgen_operand x1
   | CmpF (_, x1, _) -> xgen_operand x1

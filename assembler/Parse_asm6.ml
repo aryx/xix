@@ -145,6 +145,26 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
       | "INCW" -> TUNARY (W_, INC)
       | "DECW" -> TUNARY (W_, DEC)
       | "NEGB" -> TUNARY (B_, NEG)
+
+      | "MULQ" -> TMULDIV (Q_, MUL_)
+      | "DIVQ" -> TMULDIV (Q_, DIV_)
+      | "IDIVQ" -> TMULDIV (Q_, IDIV_)
+      | "IMULQ" -> TIMUL Q_
+      | "MULL" -> TMULDIV (L_, MUL_)
+      | "DIVL" -> TMULDIV (L_, DIV_)
+      | "IDIVL" -> TMULDIV (L_, IDIV_)
+      | "IMULL" -> TIMUL L_
+      | "MULW" -> TMULDIV (W_, MUL_)
+      | "DIVW" -> TMULDIV (W_, DIV_)
+      | "IDIVW" -> TMULDIV (W_, IDIV_)
+      | "IMULW" -> TIMUL W_
+      | "MULB" -> TMULDIV (B_, MUL_)
+      | "DIVB" -> TMULDIV (B_, DIV_)
+      | "IDIVB" -> TMULDIV (B_, IDIV_)
+      | "IMULB" -> TMULDIV (B_, IMUL_)
+      | "CWD" -> TCWD
+      | "CDQ" -> TCDQ
+      | "CQO" -> TCQO
       | "NOTB" -> TUNARY (B_, NOT)
       | "INCB" -> TUNARY (B_, INC)
       | "DECB" -> TUNARY (B_, DEC)

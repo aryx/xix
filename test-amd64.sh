@@ -23,6 +23,7 @@ CASES=(
     "tests/linker/amd64_diff/extend.s:_start"
     "tests/linker/amd64_diff/imm_yi32.s:_start"
     "tests/linker/amd64_diff/unary.s:_start"
+    "tests/linker/amd64_diff/muldiv.s:_start"
     "tests/linker/amd64_diff/indirect_call_jmp.s:_start"
     "tests/linker/amd64_diff/static_symbol.s:_start"
     "tests/linker/amd64_diff/imm64.s:_start"

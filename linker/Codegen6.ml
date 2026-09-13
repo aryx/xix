@@ -409,6 +409,12 @@ let unary_opcode (width : width) (op : unary_opcode) : int =
   | B_, (NEG | NOT) -> 0xf6 | B_, (INC | DEC) -> 0xfe
   | (Q_ | L_ | W_), (NEG | NOT) -> 0xf7 | (Q_ | L_ | W_), (INC | DEC) -> 0xff
 
+(* claude: goken's own ydivl/ydivb tables (optab.c) -- same B_-is-one-
+ * less opcode pair as `Unary`'s own NEG/NOT (0xf6 vs 0xf7), confirmed
+ * against real 6a/6l: "IDIVQ BX" -> `48 f7 fb`, "DIVL BX" -> `f7 f3`. *)
+let muldiv_ext = function MUL_ -> 4 | IMUL_ -> 5 | DIV_ -> 6 | IDIV_ -> 7
+let muldiv_opcode (width : width) : int = match width with B_ -> 0xf6 | Q_ | L_ | W_ -> 0xf7
+
 (* claude: an `xgen` (XMM register-or-memory operand) coerced into the
  * *existing* `gen` type before resolution -- goken's own D_X0..D_X0+15
  * REX/ModRM encoding is numerically identical to the GP register
@@ -693,6 +699,31 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(unary_ext op) ~rm
                     @ [unary_opcode width op] @ encode_rm (unary_ext op) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
+
+    (* claude: case Zm_o -- single-operand MUL/IMUL/DIV/IDIV, implicit
+     * AX(:DX) -- structurally the mirror image of Zo_m above (the
+     * operand plays goken's own `from` role, but `encode_rm`/`gen`
+     * resolution doesn't care which AST field it came from). *)
+    | MulDiv (width, op, src) ->
+        let rm = resolve_gen env node src in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(muldiv_ext op) ~rm
+                    @ [muldiv_opcode width] @ encode_rm (muldiv_ext op) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+
+    (* claude: case Zm_r -- IMUL's own 2-operand form, opcode `0x0f
+     * 0xaf` (ModRM.reg=dst, ModRM.rm=src -- the same load-shaped role
+     * assignment `Move`'s own load clause uses). *)
+    | Imul2 (width, src, dst) ->
+        let rm = resolve_gen env node src in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num dst) ~rm
+                    @ [0x0f; 0xaf] @ encode_rm (reg_num dst) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+
+    (* claude: case Zlit -- CWD/CDQ/CQO, a single fixed opcode byte
+     * (0x99) with a width-selecting prefix (Pe/none/Pw). *)
+    | Cwd -> { size = 2; binary = (fun () -> [0x66; 0x99]) }
+    | Cdq -> { size = 1; binary = (fun () -> [0x99]) }
+    | Cqo -> { size = 2; binary = (fun () -> [0x48; 0x99]) }
 
     (* --------------------------------------------------------------------- *)
     (* Memory / Move *)

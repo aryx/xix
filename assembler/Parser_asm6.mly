@@ -38,6 +38,15 @@ module L = Location_cpp
 %token <Ast_asm6.width> TMOV
 %token <Ast_asm6.extend_opcode> TEXTEND
 %token <Ast_asm6.width * Ast_asm6.unary_opcode> TUNARY
+%token <Ast_asm6.width * Ast_asm6.muldiv_opcode> TMULDIV
+/*(* claude: IMUL's mnemonic (e.g. "IMULQ") is shared between the
+   * single-operand (`MulDiv`) and 2-operand (`Imul2`) grammar
+   * productions below -- real 6a distinguishes purely by operand
+   * *count*, not spelling, so this needs its own token (not folded
+   * into TMULDIV, which MUL/DIV/IDIV never share a 2-operand form
+   * with) so the grammar can look ahead past `gen` to decide. *)*/
+%token <Ast_asm6.width> TIMUL
+%token TCWD TCDQ TCQO
 %token TLEA
 %token TCALL
 %token TJMP
@@ -243,6 +252,21 @@ instr:
     * extension-group op: "NEGQ gen" / "INCQ gen" -- see Ast_asm6.ml's
     * Unary comment. *)*/
  | TUNARY gen                    { let (w, op) = $1 in Unary (w, op, $2) }
+
+ /*(* goken's ydivl/ydivb-shaped single-operand MUL/DIV/IDIV -- see
+    * Ast_asm6.ml's MulDiv comment. *)*/
+ | TMULDIV gen                   { let (w, op) = $1 in MulDiv (w, op, $2) }
+ /*(* IMUL's own single-operand (goken's yimul row0, same MulDiv shape
+    * as MUL/DIV/IDIV) vs 2-operand ("IMULQ gen,Rd", goken's yimul
+    * row3, Imul2) forms -- disambiguated by operand count, not
+    * spelling, hence the shared TIMUL token (see its own comment
+    * above). *)*/
+ | TIMUL gen                     { MulDiv ($1, IMUL_, $2) }
+ | TIMUL gen TC reg              { Imul2 ($1, $2, $4) }
+
+ | TCWD                          { Cwd }
+ | TCDQ                          { Cdq }
+ | TCQO                          { Cqo }
 
  /*(* goken's Zaut_r "built-in LEAQ" -- address-of-global only (see
     * Ast_asm6.ml's Lea comment). *)*/

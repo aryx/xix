@@ -116,7 +116,6 @@ module L = Location_cpp
 /*(*2 Operators *)*/
 /*(*-----------------------------------------*)*/
 
-%token TSHL TSHR   TSHMINUS TSHAT
 %token TPLUS TMINUS TTILDE TMUL TMOD
 %token TSLASH
 
@@ -241,10 +240,37 @@ global_and_offset: name
 /*(*************************************************************************)*/
 
 instr:
- | TARITH cond  imsr TC reg TC reg 
-     { (Arith ($1, None, $3, Some $5, $7), $2) }
- | TARITH cond  imsr TC reg  { (Arith ($1,  None, $3, None, $5), $2) }
- | TMVN   cond  imsr TC reg  { (Arith (MVN, None, $3, None, $5), $2) }
+ /*(* claude: condf (not cond) since ".S" (set condition flags, e.g.
+    * fmt/fmtfdflush.c's real 5c -S output "SUB.S R3,R2,R7" ahead of a
+    * predicated "BEQ ...", or utf/rune.c's "AND.S $192,R1") is real,
+    * ordinary ARM data-processing syntax every one of these opcodes
+    * supports -- same missing-condf bug MOVE's own TMOV production
+    * had (see Ast_asm5.move_opt_of_flags's comment), just for
+    * arith_cond/gsetbit instead of move_cond. Only .S is meaningful
+    * here (P/W/U/F don't apply to a plain arithmetic op) -- rejected
+    * with a real error, same convention as MOVM/MOVE's own rejections.
+    * See docs/claude_notes/plan_hello_libc_linking.md. *)*/
+ | TARITH condf  imsr TC reg TC reg
+     { let (c, flags) = $2 in
+       if flags land (lnot Ast_asm5.sflag_sbit) <> 0
+       then error "ARITH only supports .S, not .P/.W/.U/.F"
+       else (Arith ($1, (if flags <> 0 then Some Set_condition else None),
+                    $3, Some $5, $7), c)
+     }
+ | TARITH condf  imsr TC reg
+     { let (c, flags) = $2 in
+       if flags land (lnot Ast_asm5.sflag_sbit) <> 0
+       then error "ARITH only supports .S, not .P/.W/.U/.F"
+       else (Arith ($1, (if flags <> 0 then Some Set_condition else None),
+                    $3, None, $5), c)
+     }
+ | TMVN   condf  imsr TC reg
+     { let (c, flags) = $2 in
+       if flags land (lnot Ast_asm5.sflag_sbit) <> 0
+       then error "MVN only supports .S, not .P/.W/.U/.F"
+       else (Arith (MVN, (if flags <> 0 then Some Set_condition else None),
+                    $3, None, $5), c)
+     }
 
  | TARITHF cond frcon         TC freg  { (ArithF ($1, $3, None, $5), $2) }
  | TARITHF cond frcon TC freg TC freg  { (ArithF ($1, $3, Some $5, $7), $2) }
@@ -379,11 +405,28 @@ oexpr:
  | TC expr     { $2 }
 
 /*(* ARM specific *)*/
+/*(* claude: a shifted-register as a generic operand to *any*
+ * arithmetic instruction (not just the standalone SLL/SRL/SRA
+ * mnemonics), e.g. real 5c -S output for fmt/dofmt.c's
+ * "ADD R5->2,R2" or fmt/fmt.c's "ADD R5<<3,R3,R8". TSHL/TSHR/
+ * TSHMINUS/TSHAT (single combined tokens) never actually got
+ * produced by any lexer -- dead grammar. goken's own real 5a
+ * (assemblers/5a/a.y's own `shift:` rule) doesn't lex these as
+ * single tokens either: it combines two adjacent raw '<'/'>'/'-'
+ * characters (TLT/TGT/TMINUS here) directly at the grammar level
+ * ("regi '<' '<' rcon", "regi '-' '>' rcon", ...) -- so mirroring
+ * that structure, not adding new lexer tokens, is both the fix and
+ * genuine 5a-grammar parity (unlike CASE/BCASE or .CC/.CS elsewhere
+ * in this port). Rotate-right ("@>", goken's `regi LAT '>' rcon`)
+ * is left unimplemented -- no real -S output needing it has been
+ * seen yet, and '@' isn't otherwise a standalone lexer token here
+ * (only valid as an identifier's first character), so it would need
+ * its own small lexer change first; see
+ * docs/claude_notes/plan_hello_libc_linking.md. *)*/
 shift:
- | reg TSHL rcon     { Shift ($1, Sh_logic_left, $3)  }
- | reg TSHR rcon     { Shift ($1, Sh_logic_right, $3)  }
- | reg TSHMINUS rcon { Shift ($1, Sh_arith_right, $3)  }
- | reg TSHAT rcon    { Shift ($1, Sh_rotate_right, $3)  }
+ | reg TLT TLT rcon     { Shift ($1, Sh_logic_left, $4)  }
+ | reg TGT TGT rcon     { Shift ($1, Sh_logic_right, $4)  }
+ | reg TMINUS TGT rcon  { Shift ($1, Sh_arith_right, $4)  }
 
 rcon:
  | reg { Left $1 }
@@ -424,15 +467,42 @@ ximm:
 ioreg:
  | ireg     { Indirect ($1, 0) }
  | con ireg { Indirect ($2, $1) }
+ /*(* claude: a xix-only pipeline accommodation, NOT real 5a grammar
+    * parity -- see Ast_asm5.IndirectShift's own comment. Real 5c -S
+    * output for a scaled-register-offset memory address, e.g.
+    * "MOVB R7<<0(R3),R3"; goken's own real 5a has no source-level
+    * syntax for register-offset addressing at all. *)*/
+ | reg TLT TLT rcon ireg    { IndirectShift ($1, Sh_logic_left, $4, $5) }
+ | reg TGT TGT rcon ireg    { IndirectShift ($1, Sh_logic_right, $4, $5) }
+ | reg TMINUS TGT rcon ireg { IndirectShift ($1, Sh_arith_right, $4, $5) }
 
 ireg: TOPAR reg TCPAR { $2 }
 
 
 
-branch: 
+branch:
  | rel               { $1 }
  | global            { ref (SymbolJump $1) }
  | ireg              { ref (IndirectJump $1) }
+ /*(* claude: a xix-only pipeline accommodation, NOT real 5a grammar
+    * parity -- real 5c -S output prints an indirect call as
+    * "BL 0(R2)" (an explicit zero offset before the parens), but
+    * goken's own real 5a grammar (assemblers/5a/a.y's `branch: ...
+    * nireg`, where `nireg: name | ireg`) only accepts the bare
+    * "(R2)" form for a branch target; confirmed empirically ("BL
+    * 0(R2)" is rejected by goken's real 5a, "BL (R2)" is accepted).
+    * Ordinary memory operands (oreg) DO allow a "0(Rn)" offset
+    * prefix, so this is a real, narrow, branch-specific grammar
+    * restriction Pconv's generic operand-printing doesn't know
+    * about -- same category as CASE/BCASE and .CC/.CS elsewhere in
+    * this port: widening o5a to accept it is deliberate leniency
+    * scoped to this stress-testing pipeline, not something claimed
+    * to match real 5a. See
+    * docs/claude_notes/plan_hello_libc_linking.md. *)*/
+ | con ireg          { if $1 <> 0 then error "offset before an indirect \
+                          branch target is a xix-only accommodation for \
+                          real 5c -S output, and only ever 0 there"
+                        else ref (IndirectJump $2) }
 
 rel:
  | TIDENT offset        { ref (LabelUse ($1, $2)) }

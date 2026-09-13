@@ -58,6 +58,12 @@ let rec vof_mov_operand =
       let v1 = vof_register v1
       and v2 = vof_offset v2
       in Ocaml.VSum (("Indirect", [ v1; v2 ]))
+  | IndirectShift ((v1, v2, v3, v4)) ->
+      let v1 = vof_register v1
+      and v2 = vof_shift_reg_op v2
+      and v3 = Ocaml.vof_either vof_register Ocaml.vof_int v3
+      and v4 = vof_register v4
+      in Ocaml.VSum (("IndirectShift", [ v1; v2; v3; v4 ]))
   | Entity v1 ->
     let v1 = vof_entity v1 in
     Ocaml.VSum (("Entity", [v1]))
@@ -225,6 +231,8 @@ and vof_arith_opcode =
   | SLL -> Ocaml.VSum (("SLL", []))
   | SRL -> Ocaml.VSum (("SRL", []))
   | SRA -> Ocaml.VSum (("SRA", []))
+  | DIVU -> Ocaml.VSum (("DIVU", []))
+  | MODU -> Ocaml.VSum (("MODU", []))
   | BIC -> Ocaml.VSum (("BIC", []))
   | ADC -> Ocaml.VSum (("ADC", []))
   | SBC -> Ocaml.VSum (("SBC", []))

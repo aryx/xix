@@ -325,17 +325,196 @@ category the project's own `tests/linker/README.md` already documents
 verified identical (`qemu-arm` exit code) despite the extra
 unreached instructions.
 
-**Where a full `hello.c` link currently stops**: running the pipeline
-end to end, 90/143 of `hello.c`'s real dependency-closure files now
-assemble cleanly on both sides (up from 81 before the `MOVx.P` fix).
-The link itself still fails (on *both* goken and xix identically --
-not a differential finding) because the still-undone real gaps
-documented below (`NAME = value` in `arch/arm/div.s`; `CASE`/`BCASE`
-jump tables, which block `port/vlrt.c`'s 64-bit-arithmetic helpers,
-`fmt/dofmt.c` itself -- the actual `print()` engine `hello.c` needs --
-and the `strtol`/`strtoul` family) remove enough of the dependency
-closure that real undefined symbols remain. These are exactly the
-gaps the original investigation (below) already flagged as the
-substantial remaining work, now additionally confirmed to be the
-*only* things standing between here and a fully-linked, real,
-libc-backed `hello.c` on ARM.
+**Where a full `hello.c` link currently stops (superseded by the
+2026-09-13 continuation below)**: running the pipeline end to end,
+90/143 of `hello.c`'s real dependency-closure files now assemble
+cleanly on both sides (up from 81 before the `MOVx.P` fix). The link
+itself still fails (on *both* goken and xix identically -- not a
+differential finding) because the still-undone real gaps documented
+below (`NAME = value` in `arch/arm/div.s`; `CASE`/`BCASE` jump tables,
+which block `port/vlrt.c`'s 64-bit-arithmetic helpers, `fmt/dofmt.c`
+itself -- the actual `print()` engine `hello.c` needs -- and the
+`strtol`/`strtoul` family) remove enough of the dependency closure
+that real undefined symbols remain. These are exactly the gaps the
+original investigation (below) already flagged as the substantial
+remaining work, now additionally confirmed to be the *only* things
+standing between here and a fully-linked, real, libc-backed `hello.c`
+on ARM.
+
+## 2026-09-13 continuation: the *real* minimal closure, CASE/BCASE
+implemented, 34/34 files now assemble -- link blocked on a genuine
+linker-layout limitation
+
+**The user's own key clarification that reframed this whole
+continuation**: byte/behavior parity with goken is NOT the bar for
+this pipeline -- it never can be for constructs goken's own real `5a`
+can't parse at all (CASE/BCASE, `.CC`/`.CS`, `BL`'s "0(Rn)", scaled-
+register memory addressing -- none of these have real `5a` grammar,
+confirmed empirically against goken's own real `5a` for every one of
+them). What matters is a **working xix-linked binary**, observed to
+behave correctly under `qemu-arm`. This freed up two things: (1)
+`scripts/diff-c-program.sh`'s build policy no longer requires a unit
+to assemble on *both* sides to join xix's own link (goken's side is
+now an informational-only comparison, built independently); (2)
+several gaps below are deliberately implemented with a *different*,
+simpler encoding than goken's real one (documented at each site),
+since matching goken's specific bytes was never the goal for a
+construct with no real `5a` syntax anyway.
+
+**CASE/BCASE, implemented for real** (`Ast_asm5.CASE`/`BCASE`,
+`Codegen5.ml`): confirmed conclusively (not just "inconclusive" as
+before) that this is NOT missing real-`5a` grammar at all -- reading
+`compilers/5c/swt.c`/`txt.c` and `assemblers/5a/a.y` shows `5c` never
+round-trips switch-statement code through the assembler's text parser;
+it builds the `ACASE`/`ABCASE` `Prog` structures directly. So this
+port's own `CASE.LS Rn` / `BCASE target` syntax is a deliberate
+xix-only extension (documented as such at every site). Real encoding:
+`CASE` -> `LDR{cond} PC,[PC,Rn,LSL#2]` (reuses `gmem`'s existing
+register-offset path plus a shift-amount bit); `BCASE` -> a raw data
+word holding the target's resolved `real_pc` (mirrors the shared
+`WORD`/`SText2` case). Verified via direct comparison against goken's
+`classify()` compiled straight to a real object (no `-S` roundtrip):
+`CASE` disassembles byte-identical, every `BCASE` table entry resolves
+correctly, both sides exit with the same value. New fixture
+`tests/linker/arm_diff/case_switch_check.s`.
+
+**Finding the *real* minimal dependency closure**: rather than
+enumerating all 142 `lib_core/libc` source files (the "kitchen sink"
+approach used until now), wrote a one-off symbol-reference-graph BFS
+(`.5c -S` per file -> grep `TEXT`/`GLOBL` definitions and
+`sym+0(SB)`/`$sym(SB)` references -> transitive closure from
+`hello.c`) to find exactly which files `hello.c`'s own `print()`+
+`exits()` call graph actually needs. Answer: **34 files** (not 142) --
+`fmt/{dofmt,errfmt,fltfmt,fmt,fmtfd,fmtfdflush,fmtlocale,fmtlock,
+nan64,print,strtod,vfprint}.c`, `math/nan.c`,
+`port/{abort,assert,ctype,errno,fabs,frexp,memccpy,memcmp,memmove,
+strchr,strcpy,strerror,strlen,strtod,vlrt}.c`,
+`syscall/os/linux/{svc_arm.s,zsyscall_linux_arm.c}`,
+`utf/{rune,utflen,utfnlen}.c`, plus `hello.c` itself. (Also found and
+fixed along the way: the manual `5c` invocations used throughout this
+whole investigation were missing `-I$LIBC_ROOT`, needed for libc's own
+internal headers like `fmt/fmtdef.h` -- without it several files
+spuriously "failed to compile" for a reason unrelated to any real
+gap.)
+
+**Real assembler gaps closed getting all 34 files to assemble** (each
+with its own doc comment at the definition site; skimming here):
+- **`MOVW.S`** (real 5a syntax, confirmed): the classic ARM "test and
+  move" idiom (`fmt/dofmt.c`'s `MOVW.S R0,R7` ahead of a predicated
+  `MOVW.NE ...`). `Ast_asm5.move_cond` gained a `SetFlags` case
+  alongside the P/W addressing variants. Fixture `movs_case.s`
+  (byte-identical).
+- **`.CC`/`.CS`** (xix-only -- confirmed NOT real 5a syntax, unlike
+  `.LO`/`.HS` which real `5a` also accepts for the same two condition
+  codes): `port/vlrt.c`'s `ADD.CC $1,R6,R6`. Just a lexer alias to the
+  same `LT(U)`/`GE(U)` conditions `.LO`/`.HS` already produce -- no new
+  encoding risk.
+- **Arith's own `.S`** (real 5a syntax, same missing-`condf` bug as
+  `MOVW.S` above, just for `arith_cond`/`gsetbit` instead of
+  `move_cond`): `fmt/fmtfdflush.c`'s `SUB.S R3,R2,R7`, `utf/rune.c`'s
+  `AND.S $192,R1`.
+- **A shifted-register as a generic arithmetic operand** (real 5a
+  syntax -- goken's own real `5a` grammar doesn't lex `<<`/`>>`/`->`
+  as single tokens either, it combines two adjacent raw `<`/`>`/`-`
+  tokens at the grammar level, same fix here): `Ast_asm5.mly`'s
+  `TSHL`/`TSHR`/`TSHMINUS`/`TSHAT` were declared but never actually
+  producible by any lexer -- dead grammar, replaced with `reg TLT TLT
+  rcon` etc. Fixture `shift_operand.s` (byte-identical).
+- **`BL` with an explicit zero offset before an indirect target**
+  (xix-only -- confirmed goken's real `5a` only accepts the bare
+  `(Rn)` form, not `0(Rn)`): widened `branch`'s grammar to accept
+  `con ireg`, rejecting any offset other than 0.
+- **A scaled-register-offset memory address**
+  (`Ast_asm5.IndirectShift`, xix-only -- confirmed no real `5a` source
+  syntax for register-offset memory addressing exists at all):
+  `fmt/dofmt.c`'s `MOVB R7<<0(R3),R3` (byte-array indexing, shift 0)
+  and `fmt/fltfmt.c`'s `MOVW R7<<2(R3),R7` (word-array indexing, shift
+  2, needing the general case, not just 0). Reuses `gmem`'s existing
+  register-offset path plus the shift-amount bits for `Word`/`Byte`;
+  `Byte S`/`HalfWord` stay restricted to shift 0 (real ARM hardware has
+  no shift field for that addressing mode at all). Fixture
+  `shift_operand_mem_check.s`, verified via direct comparison against
+  goken's `copy1()` compiled straight to a real object: `ldrsb`/`strb`
+  disassemble byte-identical.
+- **`MULU`/`DIVU`/`MODU`** (xix-only -- confirmed goken's real `5a`
+  lexer only has `MUL`/`DIV`/`MOD`, never a `U` suffix on any of them;
+  `DIV`/`MOD` themselves ARE real syntax). `MULU` is a trivial alias to
+  `MUL` (goken's own `AMULU` shares `AMUL`'s encoding -- multiply
+  doesn't care about sign for the low 32 bits). `DIV`/`MOD`/`DIVU`/
+  `MODU` were previously **completely unimplemented** (`error node
+  "TODO: DIV/MOD"`, unconditionally) -- now implemented via real
+  ARMv7 `SDIV`/`UDIV`(+`MLS` for the remainder) hardware instructions,
+  confirmed to work under `qemu-arm`. This is a deliberate, documented
+  *deviation* from goken's real behavior (which expands to a
+  software-helper call into `arch/arm/div.s`) -- replicating that
+  exactly would additionally need `div.s`'s own `NAME = value` +
+  `R(name)` constant-register-alias syntax (a separate, larger,
+  not-yet-attempted feature, see the original "Real, still-open parity
+  gaps" section below). Fixture `divmod_check.s` (functional-only,
+  xix's own result checked, not goken's).
+- **`MOVD`/`MOVF`'s plain "move" form** (real 5a syntax, confirmed):
+  a float-constant load from goken's 8-entry `chipfloat` table or a
+  register-to-register copy (`fmt/fltfmt.c`'s `MOVD.NE $1.0,F0`,
+  `fmt/strtod.c`'s `MOVD $0.0,F1`) -- shares `asmout()`'s case 54 with
+  `ArithF`'s dyadic ops, not the int<->float conversion cases; `MOVEF`
+  previously only handled the memory-operand (load/store) forms.
+  Fixture `movf_const.s` (byte-identical).
+- **`CMP` with an immediate that `immrot` can't encode**: a literal-
+  pool-plus-`REGTMP` fallback, same pattern already used by `MOVE`/
+  `Arith`'s own `immrot`-fails cases -- `CMP`'s `Imm` case previously
+  had none at all (`error node "TODO"`, unconditionally). Confirmed
+  against goken's real `5a`/`5l`: it hits the exact same fallback for
+  the same values (e.g. `CMP $65536,R0` -- a value this port's own
+  `immrot()` doesn't encode, by design matching goken's real 64-bit-
+  ulong non-wrapping quirk, see `immrot`'s own comment).
+
+**Result: all 34 real files needed for `hello.c`'s actual call graph
+now assemble cleanly with `o5a`** (previously 0 of them could, before
+this whole investigation began). Two deliberately-scoped exceptions,
+neither on `hello.c`'s actual execution path (pure integer `%d`
+formatting never touches these):
+- `port/vlrt.c`'s `_f2v`/`_v2f` (float<->vlong conversion) use
+  `MOVFD`/`MOVDF` (a genuinely different FPA/VFP precision-conversion
+  instruction, not the plain-move `MOVD`/`MOVF` above) -- not yet
+  implemented, so these two functions were surgically trimmed from the
+  local copy of `vlrt.c`'s `-S` text used for this closure (everything
+  else in the file, including the genuinely-needed `_addv`/`_subv`/
+  etc., is untouched real `-S` output).
+- A handful of float constants outside goken's 8-entry `chipfloat`
+  table (e.g. `fmt/fltfmt.c`'s `0.301029995664` = log10(2), used for
+  decimal-digit-count math in float formatting; several in
+  `fmt/strtod.c` and the retained-but-unreached `port/vlrt.c` double-
+  conversion helpers) need a real float literal pool (goken's own real
+  encoding: `LDR/ADD/LDFD` from a DATA-segment pool entry) -- not yet
+  implemented (`MOVEF`'s `chipfloat`-only immediate handling errors on
+  anything else). Since none of these call sites are reachable from
+  `hello.c`'s actual `%d`-only formatting, each was replaced with a
+  placeholder chipfloat value (`0.5`) in the local closure copy purely
+  to unblock assembly -- the numeric result is irrelevant since the
+  code computing it never runs for this test.
+
+**Where the link now stops -- a genuine, different, pre-existing
+linker-layout limitation, not a missing instruction/gap**: all 34
+objects assemble, but `o5l` fails with `value 29328 overflow outside
+its space (12 - 0)` -- an `LDR Rt,[PC,#v]` (literal-pool load) whose
+computed offset exceeds the instruction's 12-bit immediate field.
+`Layout5.ml`'s own pre-existing comment already documents exactly why:
+literal pools are only ever flushed at the very end of the whole
+program (`checkpool()`/`flushpool()`/`addpool()` in goken's real
+`5l/layout.c` flush much more often -- at unconditional branches, or
+once a pool grows past ~4KB) -- "fine for our current test corpus,
+but a real limitation to lift later." A 34-file, real-libc-backed
+program is exactly the scale where "later" arrives: any pool reference
+early in a program this size has the *entire rest of the program*
+between it and the single end-of-program pool flush, trivially
+exceeding the 4KB/12-bit reach. This is a genuinely different class of
+gap from everything else in this document (a core layout-algorithm
+limitation, not a missing grammar rule or encoding) -- implementing
+real mid-stream flushing needs careful handling of insertion shifting
+every later `real_pc` (likely an iterative/fixed-point layout pass,
+mirroring goken's own real `checkpool()` more closely), not attempted
+this session.
+
+**Status**: paused here. Next session's natural starting point is
+`Layout5.ml`'s literal-pool flushing -- everything else needed for a
+real, running, libc-backed ARM `hello.c` is now in place.

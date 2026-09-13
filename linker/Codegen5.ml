@@ -121,6 +121,9 @@ let base_and_offset_of_indirect node symbols2 autosize x =
       )
   | Imsr _ | Ximm _ | FImsr _ | FCRImsr _ | PSRImsr _ | RegList _ ->
       raise (Impossible "should be called only for indirects")
+  | IndirectShift _ ->
+      raise (Impossible "IndirectShift is handled directly by its own \
+                          callers, never through this base+int-offset helper")
 (*e: function [[Codegen5.base_and_offset_of_indirect]] *)
 
 (*****************************************************************************)
@@ -242,7 +245,8 @@ let gop_arith op =
   | BIC -> (0xe, 21)
   | MVN -> (0xf, 21)
 
-  | MUL | DIV | MOD -> raise (Impossible "should match those cases separately")
+  | MUL | DIV | MOD | DIVU | MODU ->
+      raise (Impossible "should match those cases separately")
   | SLL | SRL | SRA -> raise (Impossible "should match those cases separately")
 (*e: function [[Codegen5.gop_arith]] *)
   
@@ -288,6 +292,20 @@ let gop_arithf (op : arithf_opcode) (prec : A.floatp_precision) : Bits.t =
     | ADD_ -> 0x0 | MUL_ -> 0x1 | SUB_ -> 0x2 | DIV_ -> 0x4
   in
   [(0xe, 24); (opcode, 20); (1, 8)] @
+  (match prec with A.F -> [] | A.D -> [(1, 7)])
+
+(* claude: goken's oprrr() AMOVF/AMOVD case (real codegen.c's own
+ * comment: "MOVF"/"MOVD" share this base with the AMOVDF/AMOVFD
+ * precision-conversion mnemonics -- see gop_fixfloat's own comment
+ * for why THAT pairing exists; this is the *other* one, a plain
+ * same-precision "move" (a float-constant load from goken's 8-entry
+ * chipfloat table, or a register-to-register copy), sharing
+ * asmout()'s case 54 with ArithF's dyadic ops above, not case 55/76's
+ * int<->float conversion). The `1<<15` bit (case 54's own "monadic"
+ * marker, forcing its `r`/`reg`-field to 0) is what's added here on
+ * top of gop_arithf's own shape. *)
+let gop_movf (prec : A.floatp_precision) : Bits.t =
+  [(0xe, 24); (1, 15); (1, 8)] @
   (match prec with A.F -> [] | A.D -> [(1, 7)])
 
 (* claude: goken's oprrr() ACMPF/ACMPD case -- same bits regardless
@@ -884,6 +902,25 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             @ [(rt, 16); (rf, 8);  (r, 0) ]]
         )}
 
+    (* claude: case 13-equivalent for CMP -- immrot(i) failed (e.g.
+     * "CMP $65536,R0": a single-bit value that this port's own
+     * immrot() quirk, faithfully matching goken's real 64-bit-ulong
+     * non-wrapping computation, doesn't encode -- see immrot's own
+     * comment). Confirmed against goken's real 5a/5l: it hits the
+     * exact same case, going through a literal-pool load into
+     * REGTMP then a register-form CMP, same pattern already used by
+     * MOVE/Arith's own immrot-fails fallback. Found stress-testing
+     * against real lib_core/libc -- see
+     * docs/claude_notes/plan_hello_libc_linking.md. *)
+    | Cmp (op, Imm i, (R r)) when Option.is_none (immrot i) ->
+        let (R rtmp) = rTMP in
+        { size = 8; x = Some (PoolOperand (Ast_asm.Int i));
+          binary = (fun () ->
+            [ gload_from_pool node cond rTMP;
+              [gcond cond] @ gop_cmp op @ [(r, 16); (0, 12); (rtmp, 0)]
+            ]
+        )}
+
     (* case 1:		/* op R,[R],R */ *)
     (* case 2:		/* movbu $I,[R],R */ *)
     (* case 3:		/* add R<<[IR],[R],R */ *)
@@ -891,7 +928,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * used?
      *)
     | Cmp (op, from, (R r)) ->
-        let from_part = 
+        let from_part =
           match from with
           (* case 1:		/* op R,[R],R */ *)
           | Reg (R rf) -> [(rf, 0)]
@@ -899,7 +936,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           | Imm i ->
               (match immrot i with
               | Some (rot, v) -> [rot_bit; (rot, 8); (v, 0)]
-              | None -> error node "TODO"
+              | None -> raise (Impossible "pattern covered before")
               )
           (* case 3:		/* add R<<[IR],[R],R */ *)
           | Shift (a, b, c) -> gshift a b c
@@ -1019,7 +1056,47 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           ]
         )}
 
-    | Arith ((DIV|MOD), _, _, _, _) -> error node "TODO: DIV/MOD"
+    (* claude: DIV/MOD/DIVU/MODU -- real ARM has no hardware divide,
+     * so goken's real linker (linkers/5l/noop.c's ADIV/AMOD/ADIVU/
+     * AMODU case) expands these into a call sequence to a software
+     * helper in arch/arm/div.s (_div/_divu/_mod/_modu). This port
+     * deliberately does NOT replicate that: div.s needs "NAME =
+     * value" + "R(name)" constant-register-alias syntax this
+     * assembler doesn't support (a separate, larger, not-yet-
+     * attempted feature -- see Parser_asm.ml's own header comment
+     * and docs/claude_notes/plan_hello_libc_linking.md), and this
+     * pipeline's actual goal is a correctly-*behaving* binary under
+     * qemu, not byte/behavior parity with goken's specific expansion.
+     * qemu-arm (and any real ARMv7-A-with-divide core) supports the
+     * real SDIV/UDIV instructions directly, confirmed empirically --
+     * used here instead. Real ARM division has no immediate form
+     * (registers only), matching the shared Arith dispatch's `from`
+     * shape restricted to `Reg` below. *)
+    | Arith (((DIV|DIVU|MOD|MODU) as op), _, Reg (R rf), middle, (R rt)) ->
+        let rn = match middle with Some (R x) -> x | None -> rt in
+        let unsigned = (op =*= DIVU || op =*= MODU) in
+        (* SDIV/UDIV Rd, Rn, Rm: cond 0111 000u Rd 1111 Rm 0001 Rn *)
+        let gdiv rd rn rm = [gcond cond; (0x71 lor (if unsigned then 2 else 0), 20);
+                             (rd, 16); (0xf, 12); (rm, 8); (0x1, 4); (rn, 0)] in
+        (match op with
+        | DIV | DIVU ->
+            { size = 4; x = None; binary = (fun () -> [ gdiv rt rn rf ]) }
+        | MOD | MODU ->
+            let (R rtmp) = rTMP in
+            (* rTMP = Rn / Rm ; Rd = Rn - rTMP*Rm (MLS Rd,Rn',Rm',Ra:
+             * Rd = Ra - Rn'*Rm' -- here Rn'=rTMP (the quotient),
+             * Rm'=rf (the divisor), Ra=rn (the original numerator)).
+             * MLS Rd,Rn,Rm,Ra: cond 0000 0110 Rd Ra Rm 1001 Rn *)
+            { size = 8; x = None; binary = (fun () ->
+              [ gdiv rtmp rn rf;
+                [gcond cond; (0x06, 20); (rt, 16); (rn, 12); (rf, 8); (0x9, 4); (rtmp, 0)]
+              ]
+            )}
+        | _ -> raise (Impossible "matched in outer pattern")
+        )
+    | Arith ((DIV|DIVU|MOD|MODU), _, (Imm _ | Shift _), _, _) ->
+        error node "DIV/MOD/DIVU/MODU only support a register divisor \
+                     (real ARM division has no immediate form)"
 
     (* --------------------------------------------------------------------- *)
     (* Control flow *)
@@ -1290,6 +1367,21 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                 )}
             | Byte _ | HalfWord _ -> error node "MOV from PSR must be Word")
         | RegList _ -> raise (Impossible "RegList is MOVM-only")
+        (* claude: "MOVB R7<<0(R3),R3" (shift 0, e.g. byte-array
+         * indexing) and "MOVW R7<<2(R3),R7" (shift 2, e.g. scaled
+         * word-array indexing, fmt/fltfmt.c) -- see IndirectShift's
+         * own comment. Only LSL is verified (every real -S occurrence
+         * found so far); gmem's existing Either.Right (register-
+         * offset) path already has the right P/U/L/size bits, this
+         * just ORs in the LSL shift-amount field (bits[11:7]) on top
+         * -- any other shift type fails loudly rather than emit
+         * unverified bytes. *)
+        | IndirectShift (index, Sh_logic_left, Either.Right amount, rbase)
+            when amount >= 0 && amount <= 31 ->
+            { size = 4; x = None; binary = (fun () ->
+              [ gmem cond LDR size opt (Right index) rbase rt @ [(amount, 7)] ]
+            )}
+        | IndirectShift _ -> raise Todo
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize from in
@@ -1330,6 +1422,16 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | MOVE ((Byte S | HalfWord _) as size, _opt, from, Imsr (Reg (R rt))) ->
         (match from with
         | Imsr _ | Ximm _ -> error node "illegal combination?"
+        (* claude: "MOVB R5<<0(R7),R4" (signed-byte load, real 5c -S
+         * output for e.g. fmt/dofmt.c's array indexing) -- see
+         * IndirectShift's own comment; same LSL-by-0-only
+         * verification, reusing ghalfword's own existing
+         * Either.Right register-offset path unmodified. *)
+        | IndirectShift (index, Sh_logic_left, Either.Right 0, rbase) ->
+            { size = 4; x = None; binary = (fun () ->
+              [ ghalfword LDR size cond (Right index) rbase (R rt) ]
+            )}
+        | IndirectShift _ -> raise Todo
         | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
         | FCRImsr _ -> raise (Impossible "FCRImsr is Word-MOVE-only")
         | PSRImsr _ -> raise (Impossible "PSRImsr is Word-MOVE-only")
@@ -1393,6 +1495,15 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                 )}
             | Byte _ | HalfWord _ -> error node "MOV to PSR must be Word")
         | RegList _ -> raise (Impossible "RegList is MOVM-only")
+        (* claude: "MOVB R2,R5<<0(R3)" -- see IndirectShift's own
+         * comment; same LSL-only verification as the load case
+         * above. *)
+        | IndirectShift (index, Sh_logic_left, Either.Right amount, rbase)
+            when amount >= 0 && amount <= 31 ->
+            { size = 4; x = None; binary = (fun () ->
+              [ gmem cond STR size opt (Right index) rbase rf @ [(amount, 7)] ]
+            )}
+        | IndirectShift _ -> raise Todo
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize dest in
@@ -1443,6 +1554,9 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         (match dest with
         | Imsr _ | Ximm _ ->
             error node "illegal to store in an (extended) immediate"
+        (* claude: not yet verified for halfword store -- no real -S
+         * occurrence seen yet, unlike the Word/Byte case above. *)
+        | IndirectShift _ -> raise Todo
         | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
         | FCRImsr _ -> raise (Impossible "FCRImsr is Word-MOVE-only")
         | PSRImsr _ -> raise (Impossible "PSRImsr is Word-MOVE-only")
@@ -1547,6 +1661,30 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                  else gfsr prec 0 rTMP (R rt)) @ [(1, 20)]
               ]
           )}
+
+    (* case 54: /* floating point arith */ -- a plain same-precision
+     * "move" (float-constant load or register-to-register copy), NOT
+     * the int<->float/precision-conversion cases (MOVWF/MOVFW/MOVFD/
+     * MOVDF) elsewhere -- see gop_movf's own comment. E.g. real 5c -S
+     * output for fmt/fltfmt.c's "MOVD.NE $1.0,F0" or fmt/strtod.c's
+     * "MOVD $0.0,F1". VFP has no float-immediate support at all
+     * (goken's own real diag(), and this port's AST has no monadic
+     * VFP move op either -- see ArithF's own comment), so this is
+     * FPA-only; raises Todo under !Flags.vfp rather than silently
+     * emit wrong bytes. *)
+    | MOVEF (prec, src, FImsr (FR rt)) when not !Flags.vfp ->
+        let rf_bits = match src with
+          | FImsr (FR rf) -> [(rf, 0)]
+          | Ximm (Float fval) ->
+              (match chipfloat fval with
+              | Some idx -> [(idx, 0); (1, 3)]
+              | None ->
+                  error node (spf "float immediate %f not one of chipfloat's 8 constants" fval))
+          | _ -> error node "illegal MOVEF operand combination"
+        in
+        { size = 4; x = None; binary = (fun () ->
+          [ [gcond cond] @ gop_movf prec @ [(rt, 12)] @ rf_bits ]
+        )}
 
     | MOVEF (_, _, _) ->
         error node "illegal MOVEF operand combination"

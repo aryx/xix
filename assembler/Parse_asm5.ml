@@ -74,6 +74,21 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
       | "MUL" -> TARITH MUL | "DIV" -> TARITH DIV | "MOD" -> TARITH MOD
       | "SLL" -> TARITH SLL | "SRL" -> TARITH SRL | "SRA" -> TARITH SRA
 
+      (* claude: xix-only -- not real 5a mnemonics at all (goken's own
+       * real 5a lexer only has "MUL"/"DIV"/"MOD", never a "U" unsigned
+       * variant of any of them); "MULU" is byte-identical to "MUL"
+       * either way (goken's own AMULU shares AMUL's encoding range,
+       * span.c's "oprange[AMULU] = oprange[r]" for AMUL -- unsigned
+       * vs signed multiply only differs in the *upper* 32 bits of a
+       * 64-bit result, never produced by a plain 32-bit MUL). DIVU/
+       * MODU are NOT byte-identical to DIV/MOD -- see Ast_asm5's own
+       * DIVU/MODU comment for why this port deliberately encodes them
+       * differently (real hardware SDIV/UDIV) rather than matching
+       * goken's real software-call expansion. See
+       * docs/claude_notes/plan_hello_libc_linking.md. *)
+      | "MULU" -> TARITH MUL
+      | "DIVU" -> TARITH DIVU | "MODU" -> TARITH MODU
+
       | "BIC" -> TARITH BIC
       | "ADC" -> TARITH ADC | "SBC" -> TARITH SBC
       | "RSB" -> TARITH RSB | "RSC" -> TARITH RSC

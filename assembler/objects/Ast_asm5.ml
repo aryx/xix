@@ -24,8 +24,27 @@ open Ast_asm
  * !!! If you modify this file please increment Object_file.version !!!
  * 
  * TODO:
- *  - 5c-only opcodes? CASE, BCASE, MULU/DIVU/MODU (or better in Ast_asm.ml too?)
  *  - handle the instructions used in the kernel
+ * (claude: CASE/BCASE and MULU/DIVU/MODU, this comment's other old
+ * TODO item, are now implemented -- see CASE/BCASE below and
+ * arith_opcode's DIVU/MODU. Confirmed against goken's real 5a lexer
+ * table: DIV/MOD themselves ARE real 5a mnemonics (real ARM has no
+ * hardware divide, so goken's own linker expands them into a
+ * software-helper call sequence -- see linkers/5l/noop.c's ADIV/
+ * AMOD/ADIVU/AMODU case), but MULU/DIVU/MODU (the *unsigned*
+ * variants) are NOT -- 5c-internal-only opcode values that happen to
+ * print under those names, same category as CASE/BCASE and .CC/.CS
+ * elsewhere in this port. This port's own DIVU/MODU additionally
+ * deviate from goken's real *encoding* too, not just parseability:
+ * real hardware SDIV/UDIV (Codegen5.ml's own comment) instead of
+ * goken's software-call-to-arch/arm/div.s expansion, since goken's
+ * expansion needs div.s's own "NAME = value" + "R(name)" constant-
+ * register-alias syntax, a separate, larger, not-yet-attempted
+ * feature -- a deliberate, documented substitution for this
+ * stress-testing pipeline (functional correctness under qemu, not
+ * goken byte/behavior parity, is what matters here), not a claim
+ * that o5l now replicates goken's real division sequence. See
+ * docs/claude_notes/plan_hello_libc_linking.md.)
  * (claude: MULA/MULL, MOVM (and its .IA/.DB/etc special bits), PSR,
  * and MCR/MRC are now implemented -- see MULL, MOVM/movm_addr_mode,
  * PSRImsr/psrreg, and Parser_asm5.mly's MCR/MRC pseudo_instr
@@ -190,6 +209,27 @@ type mov_operand =
   | Ximm of A.ximm
 
   | Indirect of reg * A.offset
+  (* claude: a scaled-register-offset memory address, e.g. real 5c -S
+   * output for fmt/dofmt.c's "MOVB R7<<0(R3),R3" (base R3, index R7,
+   * shift amount 0). NOT real 5a syntax either (confirmed: goken's
+   * own real 5a rejects it -- there is no source-level way to write
+   * a register-offset memory address in real 5a at all; Codegen5.ml's
+   * gmem already has an Either.Right register-offset encoding path,
+   * but it was purely a linker-internal fallback for an
+   * immediate-offset-too-large case, e.g. case 30/31's REGTMP
+   * addressing, never reachable from parsed text before this). A
+   * xix-only pipeline accommodation, same category as CASE/BCASE,
+   * .CC/.CS, and BL's "0(Rn)" elsewhere in this port -- see
+   * docs/claude_notes/plan_hello_libc_linking.md. Only LSL is
+   * verified (every real -S occurrence found so far uses it -- shift
+   * amount 0 for byte-array indexing, e.g. dofmt.c, or a real scale
+   * like 2 for word-array indexing, e.g. fltfmt.c); Codegen5.ml
+   * raises Todo for any other shift type, and for Byte S/HalfWord
+   * (ghalfword's register-offset addressing mode has no shift field
+   * on real ARM hardware at all, unlike plain LDR/STR's gmem) rather
+   * than emit unverified bytes. *)
+  | IndirectShift of reg (* index *) * shift_reg_op *
+      (reg, int) Either_.t (* shift amount *) * reg (* base *)
   (* another form of Indirect *)
   | Entity of A.entity
   (* claude: the register side of a float load/store (case 50/51/52/
@@ -332,6 +372,11 @@ type instr =
     | AND | ORR | EOR
     (* arithmetic *)
     | ADD | SUB   | MUL   | DIV | MOD (* DIV and MOD are virtual *)
+    (* claude: unsigned division/modulo -- see this file's own header
+     * TODO comment (now resolved) for why these, unlike DIV/MOD, are
+     * a xix-only extension with a deliberately different (real
+     * hardware SDIV/UDIV, Codegen5.ml's own comment) encoding. *)
+    | DIVU | MODU
     (* bit shifting; immediate operand can only be between 0 and 31 *)
     | SLL | SRL | SRA (* virtual, sugar for bitshift register *)
     (* less useful *)
@@ -485,7 +530,8 @@ let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
     | Entity (A.Global (x, _)) -> f x
     | Entity (A.Param _ | A.Local _) -> ()
     | Ximm x -> A.visit_globals_ximm f x
-    | Imsr _ | Indirect _ | FImsr _ | FCRImsr _ | PSRImsr _ | RegList _ -> ()
+    | Imsr _ | Indirect _ | IndirectShift _ | FImsr _ | FCRImsr _
+    | PSRImsr _ | RegList _ -> ()
   in
   match fst i with
   | MOVE (_, _, m1, m2) -> mov_operand m1; mov_operand m2

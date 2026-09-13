@@ -14,6 +14,7 @@ CASES=(
     "tests/linker/amd64_diff/cmp_jcc.s:_start"
     "tests/linker/amd64_diff/r8_r15.s:_start"
     "tests/linker/amd64_diff/movl_arith.s:_start"
+    "tests/linker/amd64_diff/movw_arith.s:_start"
     "tests/linker/amd64_diff/indirect_call_jmp.s:_start"
     "tests/linker/amd64_diff/static_symbol.s:_start"
     "tests/linker/amd64_diff/imm64.s:_start"

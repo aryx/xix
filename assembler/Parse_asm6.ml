@@ -73,9 +73,9 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
   | T.TIDENT s ->
       (match s with
       (* claude: goken's case shape "ADDQ/SUBQ/XORQ $imm|Rs,Rd" -- see
-       * Ast_asm6.ml's Arith comment. Only Q (64-bit) and L (32-bit)
-       * are wired -- see this file's/Ast_asm6.ml's own "Scope so far"
-       * note for the missing B/W. *)
+       * Ast_asm6.ml's Arith comment. Q (64-bit), L (32-bit), and W
+       * (16-bit) are wired -- see this file's/Ast_asm6.ml's own
+       * "Scope so far" note for the missing B. *)
       | "ADDQ" -> TARITH (Q_, ADD)
       | "SUBQ" -> TARITH (Q_, SUB)
       | "XORQ" -> TARITH (Q_, XOR)
@@ -84,9 +84,14 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
       | "SUBL" -> TARITH (L_, SUB)
       | "XORL" -> TARITH (L_, XOR)
       | "CMPL" -> TCMP L_
+      | "ADDW" -> TARITH (W_, ADD)
+      | "SUBW" -> TARITH (W_, SUB)
+      | "XORW" -> TARITH (W_, XOR)
+      | "CMPW" -> TCMP W_
 
       | "MOVQ" -> TMOV Q_
       | "MOVL" -> TMOV L_
+      | "MOVW" -> TMOV W_
       | "LEAQ" -> TLEA
       | "CALL" -> TCALL
       (* claude: goken's real amd64 condition codes (optab.c's

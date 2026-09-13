@@ -86,6 +86,9 @@ let reg_num (A.R i) = i
 let modrm ~md ~reg ~rm = ((md land 3) lsl 6) lor ((reg land 7) lsl 3) lor (rm land 7)
 let sib ~scale ~index ~base = ((scale land 3) lsl 6) lor ((index land 7) lsl 3) lor (base land 7)
 
+let le16 (v : int) : int list =
+  [ v land 0xff; (v asr 8) land 0xff ]
+
 let le32 (v : int) : int list =
   [ v land 0xff; (v asr 8) land 0xff; (v asr 16) land 0xff; (v asr 24) land 0xff ]
 
@@ -130,12 +133,20 @@ let rex_b_of_resolved_gen = function
   | RAbs _ -> 0
 
 let rex_opt ~(width : width) ~(reg_field : int) ~(rm : resolved_gen) : int list =
-  let w = match width with Q_ -> 8 | L_ -> 0 in
+  let w = match width with Q_ -> 8 | L_ | W_ -> 0 in
   let r = if reg_field >= 8 then 4 (* Rxr *) else 0 in
   let b = rex_b_of_resolved_gen rm in
   if w <> 0 || r <> 0 || b <> 0
   then [ 0x40 lor w lor r lor b ]
   else []
+
+(* claude: goken's own "Pe" prefix (0x66, operand-size override) for a
+ * 16-bit (W_) instruction -- confirmed against real 6a it comes
+ * *before* any REX byte ("MOVW AX,R9" -> "66 41 89 c1"), matching real
+ * x86's own prefix-ordering rule (legacy prefixes precede REX, which
+ * must immediately precede the opcode). Q_/L_ need no such prefix. *)
+let prefix66 (width : width) : int list =
+  match width with W_ -> [0x66] | Q_ | L_ -> []
 
 (* claude: `init_data` is `None` here (as opposed to `resolve_gen_full`
  * below) -- callers that only ever pass a `gen` built from this arch's
@@ -281,14 +292,14 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
 
     | Arith (width, op, Imm v, dest) when v >= -128 && v < 128 ->
         let rm = resolve_gen env node dest in
-        let bytes = rex_opt ~width ~reg_field:(arith_ext op) ~rm
+        let bytes = prefix66 width @ rex_opt ~width ~reg_field:(arith_ext op) ~rm
                     @ [0x83] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Arith (_, _op, Imm _, _dest) ->
         raise Todo (* imm32 form (opcode 0x81) not wired, see prelude *)
     | Arith (width, op, Reg r, dest) ->
         let rm = resolve_gen env node dest in
-        let bytes = rex_opt ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~width ~reg_field:(reg_num r) ~rm
                     @ [arith_rr_opcode op] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -300,7 +311,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * restriction as Arith's own immediate case. *)
     | Cmp (width, g, Imm v) when v >= -128 && v < 128 ->
         let rm = resolve_gen env node g in
-        let bytes = rex_opt ~width ~reg_field:7 ~rm
+        let bytes = prefix66 width @ rex_opt ~width ~reg_field:7 ~rm
                     @ [0x83] @ encode_rm 7 rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Cmp (_, _g, Imm _) ->
@@ -313,7 +324,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * wired. *)
     | Cmp (width, g, Reg r) ->
         let rm = resolve_gen env node g in
-        let bytes = rex_opt ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~width ~reg_field:(reg_num r) ~rm
                     @ [0x39] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -323,15 +334,15 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
 
     | Move (width, Either.Left (GReg r), dest) ->
         (* store: reg -> mem/reg, goken's Zr_m (0x89) -- same opcode,
-         * same shape, for both MOVQ and MOVL. *)
+         * same shape, for MOVQ/MOVL/MOVW alike. *)
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = rex_opt ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~width ~reg_field:(reg_num r) ~rm
                     @ [0x89] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (width, Either.Left src, GReg r) ->
-        (* load: mem/reg -> reg, goken's Zm_r (0x8b) -- same for both. *)
+        (* load: mem/reg -> reg, goken's Zm_r (0x8b) -- same for all. *)
         let rm = resolve_gen_full env init_data node src in
-        let bytes = rex_opt ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~width ~reg_field:(reg_num r) ~rm
                     @ [0x8b] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (_, Either.Left (Indirect _ | Entity _), (Indirect _ | Entity _)) ->
@@ -347,7 +358,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * -- self-XOR to zero), confirmed against real 6a for both widths. *)
     | Move (width, Either.Right (A.Int 0), GReg r) ->
         let rm = RReg r in
-        let bytes = rex_opt ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~width ~reg_field:(reg_num r) ~rm
                     @ [0x31] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (Q_, Either.Right (A.Int v), dest) when v >= -0x8000_0000 && v <= 0x7fff_ffff ->
@@ -400,6 +411,26 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
     | Move (L_, Either.Right _, _) ->
         raise Todo (* string/float src, or an immediate that doesn't
                      * fit 32 bits -- not wired, see prelude *)
+    (* claude: MOVW mirrors MOVL's own Zil_rp-for-register/Zilo_m-for-
+     * memory split exactly (goken's ymovw table has the same row
+     * shapes), just with a 2-byte immediate and the mandatory 0x66
+     * prefix instead of REX.W. Confirmed against real 6a: "MOVW
+     * $100,AX" -> "66 b8 64 00" (4 bytes: prefix+opcode+imm16, no
+     * ModRM). Immediates outside the 16-bit signed range aren't
+     * representable at all here (goken's own Yi32 class would need
+     * truncation this port doesn't do) -- see prelude. *)
+    | Move (W_, Either.Right (A.Int v), GReg r) when v >= -0x8000 && v <= 0x7fff ->
+        let bytes = prefix66 W_ @ rex_opt ~width:W_ ~reg_field:0 ~rm:(RReg r)
+                    @ [0xb8 lor (reg_num r land 7)] @ le16 v in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    | Move (W_, Either.Right (A.Int v), dest) when v >= -0x8000 && v <= 0x7fff ->
+        let rm = resolve_gen_full env init_data node dest in
+        let bytes = prefix66 W_ @ rex_opt ~width:W_ ~reg_field:0 ~rm
+                    @ [0xc7] @ encode_rm 0 rm @ le16 v in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    | Move (W_, Either.Right _, _) ->
+        raise Todo (* string/float src, or an immediate that doesn't
+                     * fit 16 bits -- not wired, see prelude *)
 
     | Lea (glob, off, r) ->
         (* claude: real address resolved lazily in `binary`'s own

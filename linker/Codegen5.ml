@@ -459,6 +459,9 @@ let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
   | None ->                  [(1, 24)] (* pre offset *)
   | Some PostOffsetWrite ->  [(0, 24)]
   | Some WriteAddressBase -> [(1, 24); (1, 21)]
+  | Some SetFlags ->
+      raise (Impossible "MOVx.S is the register-to-register form only, \
+                          never a memory-addressing mode")
   ) @
   [(match move_size with 
    | Word -> (0, 22) 
@@ -911,18 +914,28 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * 1, 4 }`), and codegen.c's case 1 body explicitly special-cases
      * AMOVW/AMVN to force r=0 -- same as gop_arith MOV's r=0 default
      * just below. *)
-    | MOVE (Word, None, Imsr from, Imsr (Reg (R rt))) ->
+    (* claude: opt is None or Some SetFlags here (never P/W -- those
+     * only apply to the Indirect/Entity memory-operand MOVE cases
+     * elsewhere, matched separately). SetFlags is ".S", the classic
+     * ARM "test and move" idiom (e.g. dofmt.c's "MOVW.S R0,R7" ahead
+     * of a predicated "MOVW.NE ..."), same S-bit (bit 20) Arith's own
+     * gsetbit sets for its Set_condition -- not reused directly since
+     * that helper's type is arith_cond specifically, not move_cond.
+     * See Ast_asm5.move_cond's own comment and
+     * docs/claude_notes/plan_hello_libc_linking.md. *)
+    | MOVE (Word, ((None | Some SetFlags) as opt), Imsr from, Imsr (Reg (R rt))) ->
         let r = if !Flags.kencc_compatible then rt else 0 in
+        let sbit = (match opt with Some SetFlags -> [(1, 20)] | _ -> []) in
         (match from with
         (* case 1:		/* op R,[R],R */ *)
         | Reg (R rf) ->
             { size = 4; x = None; binary = (fun () ->
-              [[gcond cond; gop_arith MOV; (r, 16); (rt, 12); (rf, 0)]]
+              [[gcond cond; gop_arith MOV; (r, 16); (rt, 12); (rf, 0)] @ sbit]
             )}
         (* case 3:		/* op R<<[IR],[R],R */ *)
         | Shift (a, b, c) ->
             { size = 4; x = None; binary = (fun () ->
-              [[gcond cond; gop_arith MOV; (r, 16); (rt, 12)] @ gshift a b c]
+              [[gcond cond; gop_arith MOV; (r, 16); (rt, 12)] @ gshift a b c @ sbit]
             )}
         | Imm i ->
             (match immrot i with
@@ -930,7 +943,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             | Some (rot, v) ->
                 { size = 4; x = None; binary = (fun () ->
                   [[gcond cond; gop_arith MOV; (r, 16); (rt, 12);
-                    rot_bit; (rot, 8); (v, 0)]]
+                    rot_bit; (rot, 8); (v, 0)] @ sbit]
                 )}
             | None ->
             (* case 12:	/* movw $lcon, reg */ -- claude: NOT two
@@ -953,9 +966,19 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             | Some (rot, v) ->
                 { size = 4; x = None; binary = (fun () ->
                   [[gcond cond; gop_arith MVN; (r, 16); (rt, 12);
-                    rot_bit; (rot, 8); (v, 0)]]
+                    rot_bit; (rot, 8); (v, 0)] @ sbit]
                 )}
             | None ->
+                (* claude: bit 20 means something else entirely for
+                 * LDR (the L-bit, load-vs-store, gmem's own (1,20)/
+                 * (0,20)) -- sbit's "@ sbit" trick from the MOV/MVN
+                 * cases above doesn't apply here, and no real -S
+                 * output combining .S with a literal-pool-needing
+                 * constant has been seen, so fail loudly rather than
+                 * silently emit wrong bytes if one ever shows up. *)
+                if opt <> None
+                then raise Todo
+                else
                 { size = 4; x = Some (PoolOperand (Ast_asm.Int i));
                   binary = (fun () -> [ gload_from_pool node cond (R rt) ]) }
             )

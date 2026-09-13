@@ -52,6 +52,7 @@ CASES=(
     "tests/linker/arm_diff/static_symbol.s"
     "tests/linker/arm_diff/cret_leaf.s"
     "tests/linker/arm_diff/cret_framed.s"
+    "tests/linker/arm_diff/movs_case.s"
 )
 
 FAIL=0

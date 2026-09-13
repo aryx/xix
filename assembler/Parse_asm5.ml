@@ -116,12 +116,31 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
 
       (* conditions *)
       | ".EQ" -> TCOND EQ | ".NE" -> TCOND NE
-      | ".GT" -> TCOND (GT A.S)   | ".LT" -> TCOND (LT A.S) 
+      | ".GT" -> TCOND (GT A.S)   | ".LT" -> TCOND (LT A.S)
       | ".GE" -> TCOND (GE A.S)   | ".LE" -> TCOND (LE A.S)
       | ".HI" -> TCOND (GT A.U) | ".LO" -> TCOND (LT A.U)
       | ".HS" -> TCOND (GE A.U) | ".LS" -> TCOND (LE A.U)
-      | ".MI" -> TCOND MI | ".PL" -> TCOND PL 
+      | ".MI" -> TCOND MI | ".PL" -> TCOND PL
       | ".VS" -> TCOND VS | ".VC" -> TCOND VC
+      (* claude: ".CC"/".CS" -- ARM's carry-flag names for the exact
+       * same two condition codes as ".LO"/".HS" (unsigned "lower"/
+       * "higher or same" -- carry clear/set IS the unsigned
+       * less-than/greater-or-equal test); real 5c -S output picks
+       * this spelling for a carry arising from an ADD/SUB overflow
+       * check (e.g. lib_core/libc/port/vlrt.c's "ADD.CC $1,R6,R6").
+       * UNLIKE ".LO"/".HS" (real 5a accepts both spellings), ".CC"/
+       * ".CS" are NOT real 5a syntax at all -- confirmed against
+       * goken's own real 5a, which rejects "ADD.CC ..." outright
+       * (assemblers/5a/lex.c's condition table only has ".HS"/".LO",
+       * never ".CC"/".CS") -- this is 5c's own internal condition
+       * naming leaking into -S output, same category as CASE/BCASE:
+       * a xix-only accommodation for this stress-testing pipeline,
+       * not a real-5a-parity fix. See
+       * docs/claude_notes/plan_hello_libc_linking.md. The underlying
+       * encoding (LT(U)/GE(U)) is identical to ".LO"/".HS" and
+       * already exercised by real fixtures using that spelling, so
+       * this alias carries no new encoding risk. *)
+      | ".CC" -> TCOND (LT A.U) | ".CS" -> TCOND (GE A.U)
 
       (*s: [[Parse_asm5.token]] in [[TIDENT]] case, other cases *)
       (* less: special bits *)

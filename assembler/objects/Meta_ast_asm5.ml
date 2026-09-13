@@ -273,6 +273,7 @@ and vof_move_cond =
   function
   | WriteAddressBase -> Ocaml.VSum (("WriteAddressBase", []))
   | PostOffsetWrite -> Ocaml.VSum (("PostOffsetWrite", []))
+  | SetFlags -> Ocaml.VSum (("SetFlags", []))
 
 
 let rec vof_pseudo_instr =

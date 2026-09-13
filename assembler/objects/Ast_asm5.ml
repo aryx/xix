@@ -374,7 +374,17 @@ type instr =
 (*e: type [[Ast_asm5.move_option]] *)
      (* this is used only with a MOV with an indirect with offset operand *)
 (*s: type [[Ast_asm5.move_cond]] *)
-     and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
+     and move_cond =
+       WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
+       (* claude: "MOVW.S R0,R7" -- the classic ARM "test and move"
+        * idiom (set NZCV flags from the moved value, for a following
+        * predicated instruction like "MOVW.NE ..."), real 5c -S
+        * output for e.g. lib_core/libc/fmt/dofmt.c. Mutually exclusive
+        * with WriteAddressBase/PostOffsetWrite in practice (this is
+        * the plain register-to-register MOVE form, not a memory
+        * addressing mode) -- see move_opt_of_flags's own comment and
+        * docs/claude_notes/plan_hello_libc_linking.md. *)
+       | SetFlags (* .S *)
 (*e: type [[Ast_asm5.move_cond]] *)
 
 [@@deriving show]
@@ -398,13 +408,16 @@ type instr =
  * MOVM's PUW (three independent bits), a plain MOVE only ever has
  * ONE addressing mode: post-indexed (.P, "use address, then write
  * back") xor pre-indexed-writeback (.W, "compute address with
- * offset, use it, write it back") -- never both. *)
+ * offset, use it, write it back") xor set-flags (.S, SetFlags's own
+ * comment) -- never more than one of the three. *)
 let move_opt_of_flags (flags : int) : move_option =
-  match flags land sflag_pbit <> 0, flags land sflag_wbit <> 0 with
-  | false, false -> None
-  | true,  false -> Some PostOffsetWrite
-  | false, true  -> Some WriteAddressBase
-  | true,  true  -> None (* caller must reject this combination *)
+  match flags land sflag_pbit <> 0, flags land sflag_wbit <> 0,
+        flags land sflag_sbit <> 0 with
+  | false, false, false -> None
+  | true,  false, false -> Some PostOffsetWrite
+  | false, true,  false -> Some WriteAddressBase
+  | false, false, true  -> Some SetFlags
+  | _ -> None (* caller must reject any other combination *)
 
 (* claude: the raw 4-bit ARM condition-code value, e.g. for MCR/MRC's
  * grammar action (Parser_asm5.mly) which builds its final encoded

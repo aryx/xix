@@ -932,15 +932,33 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                   [[gcond cond; gop_arith MOV; (r, 16); (rt, 12);
                     rot_bit; (rot, 8); (v, 0)]]
                 )}
-            (* claude: case 12: /* movw $lcon, reg */ -- immrot failed
-             * (doesn't fit a rotated-immediate), so fall back to the
-             * same literal-pool mechanism as the address-of-global
-             * slow path above; Ast_asm.Int is already handled
-             * generically by Codegen.default_rules's WORD case when
-             * the pool gets flushed. *)
+            | None ->
+            (* case 12:	/* movw $lcon, reg */ -- claude: NOT two
+             * different cases, both branches below are optab.c's
+             * SAME row `{ AMOVW, C_NCON, C_NONE, C_REG, 12, 4 }` /
+             * `{ AMOVW, C_LCON, C_NONE, C_REG, 12, 4 }`: codegen.c's
+             * case 12 body just calls omvl(), and omvl() itself
+             * branches on `p->cond` (set only when aclass() scheduled
+             * a literal-pool word, i.e. the C_LCON case) -- when
+             * `p->cond` is null it's the C_NCON case instead: MVN
+             * Rd, #~i (computes Rd = i). aclass() (span.c) picks
+             * C_NCON over C_LCON whenever immrot(~instoffset) fits,
+             * i.e. exactly the `immrot (lnot i)` check below. E.g.
+             * MOVW $-42, R0 -> MVN R0, #41, not a literal-pool load.
+             * Confirmed against goken's real 5a/5l
+             * (tests/linker/arm_diff/cret_framed.s, found while
+             * differential-testing an unrelated conditional-RET fix --
+             * see docs/claude_notes/plan_hello_libc_linking.md). *)
+            (match immrot (lnot i) with
+            | Some (rot, v) ->
+                { size = 4; x = None; binary = (fun () ->
+                  [[gcond cond; gop_arith MVN; (r, 16); (rt, 12);
+                    rot_bit; (rot, 8); (v, 0)]]
+                )}
             | None ->
                 { size = 4; x = Some (PoolOperand (Ast_asm.Int i));
                   binary = (fun () -> [ gload_from_pool node cond (R rt) ]) }
+            )
             )
         )
 

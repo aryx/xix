@@ -131,32 +131,24 @@ let rewrite (cg : 'a T.code_graph) : 'a T.code_graph =
 
      | T.I (CRET, cond) ->
         n.instr <- T.I
-          ((match autosize_opt, cond with
+          ((match autosize_opt with
            (* B.cond (R14) -- validated byte-identical against goken's
             * real 5a/5l, see tests/linker/arm_diff/cret_leaf.s. *)
-           | None, _ -> B (ref (A.IndirectJump rLINK))
-           | Some _, AL ->
-              (match autosize_opt with
-               | Some autosize ->
-                 (* increment SP and restore rPC in one operation:
-                  *    MOVW.P autosize(SP), PC
-                  *)
+           | None -> B (ref (A.IndirectJump rLINK))
+           (* claude: framed (non-leaf) case, any condition (including
+            * AL for a plain RET) -- increment SP and restore rPC in
+            * one operation: MOVW.P.cond autosize(SP), PC.
+            * Confirmed against goken's real 5l source (linkers/5l/
+            * noop.c's noops(), case ARET): the non-leaf branch always
+            * builds "MOVW.P autosize(R13), R15" and ORs the original
+            * RET's condition into scond via C_PBIT -- so the
+            * conditional case is the exact same instruction as the
+            * unconditional one, just with a real condition instead of
+            * AL, not a shorter/different sequence as an earlier
+            * session's (buggy) scratch fixture seemed to show. *)
+           | Some autosize ->
                  MOVE (A.Word, Some PostOffsetWrite,
                        Indirect (rSP, autosize), Imsr (Reg rPC))
-               | None -> assert false)
-           (* claude: a *conditional* RET in a framed (non-leaf)
-            * procedure -- e.g. fmt/dofmt.c's "if(...) return ...;"
-            * compiled with locals allocated. Tried the same
-            * MOVW.P.cond expansion as the leaf case (single predicated
-            * load-with-writeback), but a differential test against
-            * goken's real 5a/5l (tests/linker/arm_diff/
-            * cret_framed.s, kept as a scratch repro, not committed)
-            * showed goken emits a shorter/different byte sequence --
-            * genuinely not yet reverse-engineered, so fail loudly
-            * instead of silently emitting bytes that don't match
-            * goken, same convention as riscv_port.md's case-18 guard. *)
-           | Some _, _ ->
-              raise Todo
            ), cond);
         autosize_opt
 

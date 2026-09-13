@@ -234,6 +234,11 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
       raise Todo
   | T.I instr ->
     (match instr with
+
+    (* --------------------------------------------------------------------- *)
+    (* Arithmetic *)
+    (* --------------------------------------------------------------------- *)
+
     | Arith (op, Imm v, dest) when v >= -128 && v < 128 ->
         let rm = resolve_gen env node dest in
         let bytes = [rexw; 0x83] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
@@ -244,6 +249,10 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let rm = resolve_gen env node dest in
         let bytes = [rexw; arith_rr_opcode op] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
+
+    (* --------------------------------------------------------------------- *)
+    (* Memory / Move *)
+    (* --------------------------------------------------------------------- *)
 
     | Move (Q_, Either.Left (GReg r), dest) ->
         (* store: reg -> mem/reg, goken's Zr_m (0x89) *)
@@ -274,6 +283,10 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let bytes = [rexw; 0x8d] @ encode_rm (reg_num r) (RAbs addr) in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
+    (* --------------------------------------------------------------------- *)
+    (* Control flow *)
+    (* --------------------------------------------------------------------- *)
+
     | Call _ ->
         (* opcode 0xe8 + rel32; goken's ycall's direct form. rel32 is
          * relative to the address right after this 5-byte
@@ -293,7 +306,15 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
                 [0xe8] @ le32 rel
           )
         }
+    (* claude: RET is control flow too (goken's own case shape puts it
+     * right after CALL) -- kept in this section rather than its own,
+     * matching Codegen7.ml's own RET placement right after B/BL/Bxx. *)
     | Ret -> { size = 1; binary = (fun () -> [0xc3]) }
+
+    (* --------------------------------------------------------------------- *)
+    (* System *)
+    (* --------------------------------------------------------------------- *)
+
     | Syscall -> { size = 2; binary = (fun () -> [0x0f; 0x05]) }
     )
 

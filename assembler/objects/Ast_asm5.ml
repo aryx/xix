@@ -355,6 +355,33 @@ type instr =
 
 [@@deriving show]
 
+(* claude: MOVE's own condf-flags decoder, same idea as
+ * movm_addr_mode_of_flags above (mechanical bit decode only --
+ * like that function, validating which flag combinations are
+ * actually legal is left to the grammar action, so it can call
+ * Parser_asm.error with position info the same way MOVM's own S/F
+ * rejection does). Found stress-testing o5a against goken's real 5c
+ * -S output for lib_core/libc/port/memset.c (and friends: memmove/
+ * memchr/strchr/strncpy/... all use the same "MOVx.P Rt,off(Rbase)"
+ * post-increment copy-loop idiom), which o5a's grammar rejected
+ * outright: Parser_asm5.mly's TMOV production used the plain `cond`
+ * nonterminal (real ARM condition codes only), not `condf`, even
+ * though the lexer already tokenizes ".P"/".W" as TSUF (used by
+ * MOVM) -- see move_cond just above and its "MOVW.P autosize(SP),
+ * PC" user in linker/Rewrite5.ml's CRET expansion, which builds the
+ * same move_option by hand rather than parsing it, so this gap was
+ * invisible to any purely hand-constructed-AST testing. Unlike
+ * MOVM's PUW (three independent bits), a plain MOVE only ever has
+ * ONE addressing mode: post-indexed (.P, "use address, then write
+ * back") xor pre-indexed-writeback (.W, "compute address with
+ * offset, use it, write it back") -- never both. *)
+let move_opt_of_flags (flags : int) : move_option =
+  match flags land sflag_pbit <> 0, flags land sflag_wbit <> 0 with
+  | false, false -> None
+  | true,  false -> Some PostOffsetWrite
+  | false, true  -> Some WriteAddressBase
+  | true,  true  -> None (* caller must reject this combination *)
+
 (* claude: the raw 4-bit ARM condition-code value, e.g. for MCR/MRC's
  * grammar action (Parser_asm5.mly) which builds its final encoded
  * word directly at parse time, bypassing Codegen5.ml entirely --

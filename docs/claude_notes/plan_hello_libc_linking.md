@@ -230,7 +230,112 @@ Checked directly against goken's real `5a` after the pivot away from
 
 ## Status
 
-No task is in progress. This is a paused investigation with one
-committed, validated deliverable (`<>` symbols + leaf `CRET`, all 4
-archs regression-tested clean) and a clear list of what's next,
-above, for whenever this is picked back up.
+No task is in progress. This is a paused investigation.
+
+## 2026-09-13 session: `-S` unblocked at the source, real pipeline built, 4 more real gaps closed
+
+**The `-S` blocker from the "Key finding" above is resolved.** Per the
+user's own idea, patched goken's actual `Pconv` (the function that
+builds the `-S` print line, `~/goken/compilers/5c/list.c`) to stop
+emitting a comma next to an empty/`D_NONE` operand slot in the first
+place, instead of post-processing the text or (the previously-tried
+and reverted approach) making `o5a`'s grammar lenient. Root cause:
+`Pconv`'s format strings (`"%D,%D"` etc.) always print a fixed number
+of comma-separated slots, and `Dconv` prints `D_NONE` as an empty
+string -- the fix is a small post-processing step inside `Pconv`
+itself (strip a leading comma right after the opcode's tab, and a
+trailing one at the end of the line). This only touches the
+human/debug `-S` print path, not any real codegen/object-emission
+code, so it doesn't compromise goken as a byte-for-byte reference.
+Verified: `5c -S` output now reassembles cleanly with goken's own real
+`5a` (confirmed for both the `RET`/`END` and `BL` padding-comma
+shapes). Rebuilding goken's `5c` after patching needed bypassing its
+`mk install` -- a pre-existing, unrelated build fragility around
+`compilers/cc2/pgen.c`/`pswt.c`'s shared-object rule -- via a manual
+`gcc -c` + link recipe instead of fixing that fragility itself.
+
+**Also resolved: the framed-CRET gap was a false lead, not a real
+gap.** Reading goken's real `linkers/5l/noop.c` (`noops()`, case
+`ARET`) shows the framed (non-leaf) expansion is the *exact same*
+`MOVW.P autosize(R13), R15` formula already used for the unconditional
+case, just with the real condition OR'd in via `C_PBIT` instead of
+hardcoded `AL` -- not a shorter/different sequence. The earlier
+"goken emits something shorter" conclusion came from a buggy scratch
+fixture (a hand-written local-variable offset aliased the address the
+linker-inserted prologue had just saved the return address to). Fixed
+in `linker/Rewrite5.ml`; new fixture `tests/linker/arm_diff/
+cret_framed.s`, byte-identical + qemu-arm-matching.
+
+**A reusable stress-test pipeline now exists**:
+`scripts/diff-c-program.sh <arch> <main.c> [entry]`. Given any real
+`.c` file, it: enumerates `lib_core/libc`'s real source list for that
+arch/GOOS via a `mk -n -a ... install` dry-run (o5l has no archive/`-l`
+support, so every libc source is assembled+linked in directly, the
+same way the original plan's item 4 described); compiles every `.c`
+with goken's real `Nc -S` (now clean); assembles every resulting `.s`
+with *both* goken's real `Na` and xix's `oNa` independently (a file
+that fails on either side is dropped from *both* sides' link, so the
+link stays apples-to-apples -- the dropped-file list *is* the
+finding); links whatever's left with both `Nl`/`oNl`; byte-compares
+the two executables and runs both under `qemu-<arch>`. Currently wired
+and verified for ARM (`5`); the letter-keyed table at the top of the
+script is ready for `6`/`7`/`v`/`i`/`j` but each of those archs' own
+`Nc`'s `Pconv` needs the same padding-comma fix first (the script
+aborts with a clear message if it detects this).
+
+**Running it on real `hello.c` surfaced 3 more real, now-fixed `o5a`/
+`o5l` gaps** (on top of framed CRET above), found simply by trying to
+assemble+link goken's actual `lib_core/libc` source tree, not
+hand-written fixtures:
+- **MOVW `$negative-constant`, R falling back to a literal pool
+  instead of `MVN`**: `Codegen5.ml`'s `Imm i` case only tried
+  `immrot(i)` before falling back to the pool; goken's `aclass()`/
+  `omvl()` (case 12) also try `immrot(~i)` for `MVN` first (e.g.
+  `MOVW $-42,R0` -> `MVN R0,#41`). Fixed.
+- **`MOVx.P`/`MOVx.W` (post/pre-indexed writeback addressing, e.g.
+  memset's byte-fill-loop idiom `MOVB.P R6,1(R5)`) was entirely
+  unparseable** -- `Parser_asm5.mly`'s `TMOV` production used the
+  plain `cond` nonterminal (real condition codes only), not `condf`,
+  even though the lexer already tokenized `.P`/`.W` as `TSUF` for
+  `MOVM`. This is exactly the gap a pre-existing comment in the
+  grammar had already flagged as a likely future need. Fixed
+  (`Ast_asm5.move_opt_of_flags` + the `TMOV condf ...` production);
+  new fixture `tests/linker/arm_diff/movb_postindex_check.s` (`_check`
+  suffix: one separate, deeper, *not yet fixed* gap remains in this
+  same fixture -- see below).
+- **`ADD`/`SUB` with a negative immediate**: goken's real
+  `linkers/5l/obj.c`'s `ldobj()` unconditionally flips `ADD $-k,...`
+  to `SUB $k,...` (and vice versa) at object-load time, before any
+  immrot-based classification -- e.g. `ADD $-1,R3,R3` becomes a single
+  `SUB $1,R3,R3`, not a 2-instruction literal-pool load. Fixed in
+  `Rewrite5.ml`.
+
+All 3 verified against real disassembled goken output, not just
+plausible-looking guesses. Full `test-arm.sh` suite (28 fixtures)
+stays green after each.
+
+**One new, deeper, deliberately-not-fixed gap found alongside the
+`MOVx.P` fix**: goken's linker eliminates a dead 3-instruction
+`B 3(PC)/B 2(PC)/B 6(PC)` branch chain (memset's -S text emits this to
+implement a do-while-style "check condition first" loop head) that
+`o5l` doesn't -- a genuinely different class of gap (dead-code/
+branch-target-folding in the linker's `noop` pass), in the same
+category the project's own `tests/linker/README.md` already documents
+`_check` fixtures for. Not attempted this session; functionally
+verified identical (`qemu-arm` exit code) despite the extra
+unreached instructions.
+
+**Where a full `hello.c` link currently stops**: running the pipeline
+end to end, 90/143 of `hello.c`'s real dependency-closure files now
+assemble cleanly on both sides (up from 81 before the `MOVx.P` fix).
+The link itself still fails (on *both* goken and xix identically --
+not a differential finding) because the still-undone real gaps
+documented below (`NAME = value` in `arch/arm/div.s`; `CASE`/`BCASE`
+jump tables, which block `port/vlrt.c`'s 64-bit-arithmetic helpers,
+`fmt/dofmt.c` itself -- the actual `print()` engine `hello.c` needs --
+and the `strtol`/`strtoul` family) remove enough of the dependency
+closure that real undefined symbols remain. These are exactly the
+gaps the original investigation (below) already flagged as the
+substantial remaining work, now additionally confirmed to be the
+*only* things standing between here and a fully-linked, real,
+libc-backed `hello.c` on ARM.

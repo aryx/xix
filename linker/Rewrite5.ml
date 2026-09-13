@@ -152,6 +152,25 @@ let rewrite (cg : 'a T.code_graph) : 'a T.code_graph =
            ), cond);
         autosize_opt
 
+     (* claude: ADD/SUB with a negative immediate is unconditionally
+      * flipped to SUB/ADD with the negated (positive) immediate --
+      * ported from goken's real linkers/5l/obj.c's ldobj(), cases
+      * AADD/ASUB, which do exactly this, unconditionally, at
+      * object-load time, before any immrot-based classification runs
+      * (so e.g. "ADD $-1,R3,R3" becomes "SUB $1,R3,R3" -- a single
+      * case-2 instruction -- rather than going through case 13's
+      * "load into a temp register, then register-register op" path
+      * this port already has via Codegen5.ml's Imm-immrot-fails
+      * fallback). Found stress-testing o5a/o5l against goken's real
+      * 5c -S output for lib_core/libc/port/memset.c's "ADD $-1,R3,R3"
+      * loop decrement -- see
+      * docs/claude_notes/plan_hello_libc_linking.md. *)
+     | T.I (Arith (((ADD | SUB) as op), aopt, Imm i, ropt, rd), cond)
+         when i < 0 ->
+        let op' = (match op with ADD -> SUB | SUB -> ADD | _ -> assert false) in
+        n.instr <- T.I (Arith (op', aopt, Imm (- i), ropt, rd), cond);
+        autosize_opt
+
      | T.I (
             ( RFE | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | MOVE _ | MOVEF _
             | SWAP _ | B _ | BL _ | Cmp _ | CmpF _ | Bxx _

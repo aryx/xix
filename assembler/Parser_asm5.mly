@@ -251,7 +251,21 @@ instr:
  | TMOVWF cond reg  TC freg            { (MOVWF ($1, $3, $5), $2) }
  | TMOVFW cond freg TC reg             { (MOVFW ($1, $3, $5), $2) }
 
- | TMOV   cond  gen  TC gen     { (MOVE ($1, None, $3, $5), $2) }
+ /*(* claude: condf (not cond) since ".P"/".W" post/pre-indexed
+    * writeback addressing (e.g. memset's "MOVB.P R6,1(R5)" byte-fill
+    * loop) is how goken's real 5c actually emits copy loops in
+    * practice -- see Ast_asm5.move_opt_of_flags's own comment. Only
+    * P xor W make sense for a plain MOVE (unlike MOVM's PUW), so
+    * both-set and any of .S/.U/.F are rejected here with a real
+    * error, same convention as MOVM's own S/F rejection just below. *)*/
+ | TMOV   condf  gen  TC gen
+     { let (c, flags) = $2 in
+       if flags land (Ast_asm5.sflag_sbit lor Ast_asm5.sflag_ubit lor Ast_asm5.sflag_fbit) <> 0
+       then error "MOVx.S/.U/.F is not supported"
+       else if flags land Ast_asm5.sflag_pbit <> 0 && flags land Ast_asm5.sflag_wbit <> 0
+       then error "MOVx.P.W (or .PW/.WP) is not a valid MOVE addressing mode"
+       else (MOVE ($1, Ast_asm5.move_opt_of_flags flags, $3, $5), c)
+     }
 
  /*(* case 50/51/52/53: MOVF/MOVD load/store -- same `gen` shape as
     * MOVW/MOVB/MOVH above (memory side via Indirect/Entity), `gen`

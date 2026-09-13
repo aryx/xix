@@ -343,6 +343,38 @@ let shift_by1_opcode (width : width) : int = match width with B_ -> 0xd0 | Q_ | 
 let shift_byimm_opcode (width : width) : int = match width with B_ -> 0xc0 | Q_ | L_ | W_ -> 0xc1
 let shift_bycl_opcode (width : width) : int = match width with B_ -> 0xd2 | Q_ | L_ | W_ -> 0xd3
 
+(* claude: `Extend`'s own per-mnemonic shape -- `need_w` (REX.W, the
+ * "Q"-suffixed forms), `byte_source` (whether the *source* needs the
+ * byte-register REX-forcing quirk `regrex_forces_rex` already
+ * describes -- goken's own Zmb_r case calls `bytereg()` on the source
+ * for the byte-sized forms only, confirmed against real 6a/6l:
+ * "MOVBLZX SI,DX" -> `40 0f b6 d6`, forcing an otherwise-empty REX,
+ * vs "MOVWLZX AX,BX" -> `0f bf d8`, no such forcing for a word
+ * source), and the opcode bytes themselves (always `0x0f`-escaped
+ * except MOVLQSX's own real MOVSXD, `0x63`, no escape at all). *)
+let extend_shape = function
+  | MOVBLSX -> (false, true, [0x0f; 0xbe]) | MOVBLZX -> (false, true, [0x0f; 0xb6])
+  | MOVBQSX -> (true, true, [0x0f; 0xbe]) | MOVBQZX -> (true, true, [0x0f; 0xb6])
+  | MOVWLSX -> (false, false, [0x0f; 0xbf]) | MOVWLZX -> (false, false, [0x0f; 0xb7])
+  | MOVWQSX -> (true, false, [0x0f; 0xbf]) | MOVWQZX -> (true, false, [0x0f; 0xb7])
+  | MOVLQSX -> (true, false, [0x63])
+  | MOVLQZX -> (false, false, [0x8b])
+
+(* claude: a bespoke REX computation for `Extend`, not `rex_opt` --
+ * `rex_opt`'s own byte-register-forcing logic is gated on `width =
+ * B_`, which doesn't apply here (there's no destination-width
+ * variance in the traditional Q_/L_/W_/B_ sense: each `extend_opcode`
+ * already fully determines both the source and destination width by
+ * its own name), so the REX.W and byte-source-forcing concerns are
+ * threaded independently instead. *)
+let extend_rex ~(need_w : bool) ~(byte_source : bool) ~(reg_field : int)
+    ~(rm : resolved_gen) : int list =
+  let w = if need_w then 8 else 0 in
+  let r = if reg_field >= 8 then 4 else 0 in
+  let b = rex_b_of_resolved_gen rm in
+  let forced = byte_source && (match rm with RReg (A.R n) -> regrex_forces_rex n | RMem _ | RAbs _ -> false) in
+  if w <> 0 || r <> 0 || b <> 0 || forced then [ 0x40 lor w lor r lor b ] else []
+
 (* claude: an `xgen` (XMM register-or-memory operand) coerced into the
  * *existing* `gen` type before resolution -- goken's own D_X0..D_X0+15
  * REX/ModRM encoding is numerically identical to the GP register
@@ -608,6 +640,16 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Shift (_, _, ShiftReg _, _) ->
         raise Todo (* only CX is a valid shift-amount register in real amd64, see prelude *)
+
+    (* claude: case Zmb_r / Zm_r -- sign/zero-extending "widening move"
+     * -- see Ast_asm6.ml's `Extend` comment and `extend_shape`'s own
+     * comment for the per-mnemonic opcode/REX story. *)
+    | Extend (op, src, dst) ->
+        let (need_w, byte_source, opcode_bytes) = extend_shape op in
+        let rm = resolve_gen env node src in
+        let bytes = extend_rex ~need_w ~byte_source ~reg_field:(reg_num dst) ~rm
+                    @ opcode_bytes @ encode_rm (reg_num dst) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
 
     (* --------------------------------------------------------------------- *)
     (* Memory / Move *)

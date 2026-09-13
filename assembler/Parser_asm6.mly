@@ -36,6 +36,7 @@ module L = Location_cpp
 %token <Ast_asm6.width> TCMP
 %token <Ast_asm6.width * Ast_asm6.shift_opcode> TSHIFT
 %token <Ast_asm6.width> TMOV
+%token <Ast_asm6.extend_opcode> TEXTEND
 %token TLEA
 %token TCALL
 %token TJMP
@@ -231,6 +232,11 @@ instr:
     * in every combination MOVQ/MOVL actually need -- see Ast_asm6.ml's
     * Move comment. *)*/
  | TMOV lgen TC gen              { Move ($1, $2, $4) }
+
+ /*(* goken's ymb_rl/yml_rl-shaped sign/zero-extending move -- see
+    * Ast_asm6.ml's Extend comment ("MOVLQZX" is deliberately absent
+    * here, mapped onto TMOV L_ instead in Parse_asm6.ml). *)*/
+ | TEXTEND gen TC reg            { Extend ($1, $2, $4) }
 
  /*(* goken's Zaut_r "built-in LEAQ" -- address-of-global only (see
     * Ast_asm6.ml's Lea comment). *)*/

@@ -201,6 +201,22 @@ type instr =
    * `Move`'s Zclr special case already established the precedent
    * for. *)
   | Shift of width * shift_opcode * shift_amount * gen
+  (* claude: goken's ymb_rl/yml_rl-shaped sign/zero-extending "widening
+   * move" (optab.c) -- MOVBLSX/MOVBLZX/MOVBQSX/MOVBQZX/MOVWLSX/MOVWLZX/
+   * MOVWQSX/MOVWQZX/MOVLQSX/MOVLQZX, real x86's own MOVSX/MOVZX/MOVSXD
+   * opcodes (MOVLQZX has no dedicated MOVZX opcode in real x86 -- a
+   * plain 32-bit register *write* already implicitly zero-extends to
+   * 64 bits -- so goken's own optab.c entry, `{AMOVLQZX,yml_rl,Px,
+   * 0x8b}`, just reuses plain MOV's own load opcode. Tempting to alias
+   * this to `Move`'s own existing codegen instead of a dedicated
+   * `Extend` case -- but `yml_rl`'s single row is *always* the load
+   * direction (`Zm_r`, ModRM.reg=dst/ModRM.rm=src), whereas `Move`'s
+   * own reg-reg case picks the *store* direction first (see `Move`'s
+   * own comment) -- confirmed the hard way: "MOVLQZX AX,BX" ->
+   * `8b d8`, not `Move`'s own would-be `89 d8`, a real, if
+   * byte-cosmetic, difference caught only by testing the actual reg-
+   * reg case, not just reg-mem). *)
+  | Extend of extend_opcode * gen * register
 
   (* Memory *)
   (* claude: goken's ymovq/ymovl-shaped move (optab.c) -- source is
@@ -312,6 +328,12 @@ type instr =
    * spellings map to it in Parse_asm6.ml. *)
   and shift_opcode = SHL | SHR | SAR
   and shift_amount = ShiftImm of int | ShiftReg of register
+
+  (* claude: goken's own real amd64 sign/zero-extend mnemonics. *)
+  and extend_opcode =
+    | MOVBLSX | MOVBLZX | MOVBQSX | MOVBQZX
+    | MOVWLSX | MOVWLZX | MOVWQSX | MOVWQZX
+    | MOVLQSX | MOVLQZX
   (* claude: goken's own yxm table is shared verbatim across ADDSD/
    * SUBSD/MULSD/DIVSD *and* their SS-suffixed siblings (only the final
    * opcode byte differs per operation, not per precision -- see
@@ -391,7 +413,7 @@ let branch_opd_of_instr (instr : instr) : A.branch_operand option =
   | Call opd -> Some opd
   | Jmp opd -> Some opd
   | Jcc (_, opd) -> Some opd
-  | Arith _ | Cmp _ | Shift _ | Move _ | Lea _ | Ret | Syscall -> None
+  | Arith _ | Cmp _ | Shift _ | Extend _ | Move _ | Lea _ | Ret | Syscall -> None
   | MovF _ | ArithF _ | CmpF _ | CvtIntToF _ | CvtFToInt _ -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
@@ -419,6 +441,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | Arith (_, _, _, gen1) -> gen_operand gen1
   | Cmp (_, gen1, _) -> gen_operand gen1
   | Shift (_, _, _, gen1) -> gen_operand gen1
+  | Extend (_, gen1, _) -> gen_operand gen1
   | MovF (_, x1, x2) -> xgen_operand x1; xgen_operand x2
   | ArithF (_, _, x1, _) -> xgen_operand x1
   | CmpF (_, x1, _) -> xgen_operand x1

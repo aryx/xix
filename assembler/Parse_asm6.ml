@@ -121,6 +121,16 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
       | "MOVL" -> TMOV L_
       | "MOVW" -> TMOV W_
       | "MOVB" -> TMOV B_
+      | "MOVBLSX" -> TEXTEND MOVBLSX
+      | "MOVBLZX" -> TEXTEND MOVBLZX
+      | "MOVBQSX" -> TEXTEND MOVBQSX
+      | "MOVBQZX" -> TEXTEND MOVBQZX
+      | "MOVWLSX" -> TEXTEND MOVWLSX
+      | "MOVWLZX" -> TEXTEND MOVWLZX
+      | "MOVWQSX" -> TEXTEND MOVWQSX
+      | "MOVWQZX" -> TEXTEND MOVWQZX
+      | "MOVLQSX" -> TEXTEND MOVLQSX
+      | "MOVLQZX" -> TEXTEND MOVLQZX
       | "LEAQ" -> TLEA
       | "CALL" -> TCALL
       (* claude: goken's real amd64 condition codes (optab.c's

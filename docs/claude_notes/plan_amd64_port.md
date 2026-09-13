@@ -1,7 +1,7 @@
 # Porting the amd64 toolchain (6a/6l) against goken, byte-equal
 
-**Status: eleventh checkpoint reached.** `o6a`/`o6l` exist, and
-thirteen fixtures assemble+link to executables **byte-identical** to
+**Status: twelfth checkpoint reached.** `o6a`/`o6l` exist, and
+fourteen fixtures assemble+link to executables **byte-identical** to
 goken's real `6a`/`6l` output, with identical `qemu-x86_64` behavior:
 `hello_linux.s` (goken's own real hello-world, exit 0), `cmp_jcc.s`
 (CMPQ + JEQ/JNE/JLT/JGE, exit 42), `r8_r15.s` (R8-R15 across every
@@ -16,10 +16,11 @@ UCOMISD/CVTSQ2SD/CVTTSD2SQ, exit 12), `float_ss.s` (the same shapes at
 single precision, exit 12), `andorshift.s` (AND/OR, SHL/SHR/SAR across
 all three shift-amount shapes, and the AX-implicit-opcode imm32 form,
 exit 99), `imm32_arith.s` (the general, non-AX imm32 arith/cmp form,
-exit 88), `indirect_call_jmp.s` (indirect CALL/JMP through a register,
-exit 7), `static_symbol.s` (`foo<>` local symbols, exit 0), `imm64.s`
-(true 64-bit MOVQ immediates, exit 127).
-`./test-amd64.sh` runs all thirteen.
+exit 88), `extend.s` (MOVBLSX/MOVBLZX/MOVWLSX/MOVWLZX/MOVLQSX/MOVLQZX,
+exit 236), `indirect_call_jmp.s` (indirect CALL/JMP through a
+register, exit 7), `static_symbol.s` (`foo<>` local symbols, exit 0),
+`imm64.s` (true 64-bit MOVQ immediates, exit 127).
+`./test-amd64.sh` runs all fourteen.
 Zero regressions across all 4 already-complete ports' own full suites
 (`test-arm.sh` 54/54, `test-mips.sh`, `test-arm64.sh`, `test-riscv.sh`,
 `test-riscv64.sh`) and `make test` (134/134) after every batch.
@@ -314,6 +315,25 @@ See `Ast_asm6.ml`'s own prelude for the full scope statement:
   destination falls through to the general ModRM `0x81` form. W_'s own
   immediate is 2 bytes in both rows, not 4 (confirmed "ANDW
   $0x1234,AX" -> `66 25 34 12`).
+- **`Extend`** (MOVBLSX/MOVBLZX/MOVBQSX/MOVBQZX/MOVWLSX/MOVWLZX/
+  MOVWQSX/MOVWQZX/MOVLQSX/MOVLQZX) -- goken's `ymb_rl`/`yml_rl`-shaped
+  sign/zero-extending "widening move", real x86's own `MOVSX`/`MOVZX`/
+  `MOVSXD` opcodes. Byte-sized sources need the same byte-register
+  REX-forcing quirk B_-width arithmetic already established (goken's
+  own `Zmb_r` case calls `bytereg()` on the source, confirmed
+  "MOVBLZX SI,DX" -> `40 0f b6 d6`, an otherwise-empty REX forced to
+  select SIL); word/long sources don't. `MOVLQZX` looked at first like
+  a trivial alias for plain `MOVL` (goken's own table entry really is
+  just the ordinary `0x8b` load opcode, since a 32-bit register write
+  already implicitly zero-extends to 64 bits in real amd64) -- but its
+  own table has *only* the load-direction row, while `Move`'s own
+  reg-reg case picks the *store* direction first (see `Move`'s
+  comment), so aliasing it onto `Move` directly produced the wrong
+  bytes for the reg-reg case specifically (`89 d8` instead of goken's
+  own `8b d8`) -- caught immediately by testing the actual reg-reg
+  shape, not assumed correct from the "it's just MOVL" reasoning
+  alone. Routed through `Extend`'s own dedicated (always-load-
+  direction) codegen instead.
 
 Deliberately not wired (all raise `Todo` rather than emit wrong
 bytes): any memory
@@ -527,23 +547,49 @@ port's register model has no token for them -- see `Ast_asm6.ml`'s
   then `MOVQ u+-8(SP),AX`), already fully supported by this port's
   existing `MovF`/`Move`.
 
+- **A real, separate gap found while testing `Extend` (not fixed this
+  checkpoint, see "Suggested phase plan" below): `Move`'s own Q_/L_/W_
+  immediate-to-register/memory range guards are too narrow.** Goken's
+  own `oclass()` classifies a *positive* hex literal like
+  "$0xFFFFFFF6" (parsed as the literal value 4294967286, not -10) as
+  its own `Yi32` class -- distinct from `Ys32` (sign-extendable
+  32-bit) purely by *how the value was written*, not its final bit
+  pattern -- confirmed reading `span.c`'s `oclass()`: `l = v; if
+  ((vlong)l == v) return Ys32; if ((v>>32)==0) return Yi32;` (`l` is a
+  32-bit local, so this checks "does truncating-then-sign-extending
+  round-trip" for `Ys32`, then falls back to "does it fit as a plain
+  32-bit pattern, zero-extended" for `Yi32`). For a *register*
+  destination this reaches `Ziq_rp`'s own case body (span.c), which
+  has an internal `l = v>>32; if(l==0){ clear REX.W; emit 0xb8+reg;
+  put4(v); }` downgrade -- confirmed against real 6a/6l: "MOVQ
+  $0xFFFFFFF6,AX" -> `b8 f6 ff ff ff`, no REX at all, *not* the
+  REX.W+0xc7 form this port's own existing Ys32-only guard produces
+  for the bit-pattern-identical "$-10". This port's earlier claim (in
+  an older revision of this doc) that Ziq_rp's own internal special
+  cases were "provably unreachable for ymovq" turns out to only hold
+  for the *other* internal branch (`l==-1`, sign-extending); the
+  `l==0` branch is genuinely reachable and this port doesn't handle it
+  -- caught by an `Extend` test fixture that happened to use such a
+  literal, not by design; the fixture was simplified to avoid it
+  rather than fixing this in the same batch.
+
 ## Suggested phase plan (next checkpoints)
 
 Roughly in the order a next real fixture would need them, mirroring
 how ARM32/ARM64's own follow-up phases were sequenced:
-1. Sign/zero-extending "widening move" instructions (MOVBLSX/MOVBLZX/
-   MOVWLSX/MOVWLZX/MOVLQZX/MOVLQSX/MOVBQSX/MOVBQZX/MOVWQSX/MOVWQZX --
-   goken's own `yml_rl`-family tables, real x86's `MOVSX`/`MOVZX`
-   opcodes, `0x0f 0xbe`/`0xbf`/`0xb6`/`0xb7`, plus plain `MOVL` for the
-   L->Q zero-extend case since real amd64 already implicitly zero-
-   extends any 32-bit register write to 64 bits) -- confirmed genuinely
-   high-frequency in real 6c output (`MOVBLZX` alone: 5 occurrences
-   across just 4 sampled files; the whole family is how 6c implements
-   C's integer-promotion rules).
+1. **The `Move` immediate-range gap found this checkpoint** (see "Real
+   bugs/quirks" above) -- widen the Q_/L_/W_ immediate-to-register/
+   memory guards to accept the full `Yi32` range (any value with
+   `(v>>32)==0`, i.e. `-0x8000_0000..0xFFFF_FFFF`, not just the
+   sign-extendable `Ys32` subset `-0x8000_0000..0x7fff_ffff` this port
+   currently checks), with `Ziq_rp`'s own internal no-REX.W downgrade
+   for a register destination in the newly-widened range. Likely the
+   highest-value fix left: any hand-written or 6c-emitted code using a
+   large unsigned hex constant (bitmasks especially) can hit this.
 2. Unary ops NEGL/NOTL (goken's `yscond`-adjacent `F6`/`F7` ModRM-
    extension group, ext=3/2) and INCL/DECL (`FE`/`FF` group, ext=0/1) --
-   confirmed real (7/3/6/9 occurrences respectively across the same
-   sampled files).
+   confirmed real (7/3/6/9 occurrences respectively across the sampled
+   6c-output files this checkpoint's own batch was prioritized from).
 3. Multiply/divide: IMULL (signed multiply), DIVL/IDIVL (unsigned/
    signed divide, real x86's own implicit-AX/DX-pair shape -- `CDQ`/
    `CQO` sign-extend AX into DX:AX first) -- genuinely more involved

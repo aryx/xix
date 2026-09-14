@@ -3,7 +3,9 @@
 # needed. See test.sh's own header comment for how to regenerate the
 # archive after a real lib_core/libc change.
 #
-#   make        -- build hello.out
+#   make        -- build hello.o5l.out (o5l = xix's own linker -- see
+#                  BINARY's own comment below for why this isn't just
+#                  called hello.out)
 #   make run    -- build (if needed), then run it under qemu-arm
 #   make test   -- run test.sh (the pass/fail regression check)
 #   make clean  -- remove build artifacts (never touches closure.tgz)
@@ -17,7 +19,15 @@ XIX_ROOT      := $(shell cd ../../.. && pwd)
 CLOSURE_TGZ   := closure.tgz
 CLOSURE_SUBDIR:= hello_libc_closure_5l
 BUILD_DIR     := .build
-BINARY        := hello.out
+# claude: named hello.o5l.out, not just hello.out -- this whole
+# directory sits right next to goken's own real hello.c
+# (tests/linker/hello_libc_arm/hello.c is a checked-in copy of it,
+# see its own header comment), and build-c-program.py separately
+# builds an *informational* goken-linked binary too (in a throwaway
+# temp dir, never written here) -- a bare "hello.out" here would be
+# genuinely ambiguous about which linker actually produced the one
+# file that persists on disk. This is always xix's o5l's own output.
+BINARY        := hello.o5l.out
 
 .PHONY: all run test clean
 

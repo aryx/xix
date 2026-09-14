@@ -64,7 +64,7 @@ any inner sub-match (e.g. the store vs load sub-arm).
 ## Harness
 
 `scripts/diff-arm.sh`, driven over the baseline corpus by
-`test-arm.sh` at the repo root: a plain bash script, NOT a Testo
+`tests/linker/test-arm.sh`: a plain bash script, NOT a Testo
 module/test. Testo is reserved for this project's actual correctness
 test suite (`make test`), which must run without any external
 toolchain installed; this harness has a hard dependency on a locally

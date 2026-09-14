@@ -936,6 +936,82 @@ let gindirect_huge (node : 'a T.node) (ms : move_size) (rbase : int) (offset : i
         [ gload_from_pool node rtmp; w1 add_rtmp; w1 (access ()) ]
       )}
 
+(* claude: PCSZ (goken's own linkers/7l/l.h), the saved-link-register
+ * slot size every real frame reserves -- same constant Rewrite7.ml's
+ * own prologue/epilogue math uses (see its own `pcsz` binding). *)
+let pcsz = 8
+
+(* claude: real "(FP)"/"(SP)"-relative named local/param offset,
+ * shared by every Entity(Local|Param) case below (address-of, and
+ * the 6 register/immediate/float Move forms) -- e.g. real 7c -S
+ * output for fmt/dofmt.c's own "fmt+8(FP),R11" (fmt is dofmt's 2nd
+ * parameter).
+ *
+ * NOTE the naming: this port's own A.entity constructors are swapped
+ * from their shared doc comment (Ast_asm.ml: "Param of ... (* FP *)
+ * / Local of ... (* SP *)") -- ARM64's grammar (like ARM32's own
+ * Parser_asm5.mly, identical mapping, already verified working)
+ * binds TFP to `Local` and TSP to `Param`, so a real "(FP)"
+ * reference (a genuine caller-frame PARAMETER in Plan9's own
+ * convention) surfaces here as `A.Local`, and a real "(SP)"
+ * reference (a genuine callee-frame LOCAL) surfaces as `A.Param` --
+ * confirmed against the real -S output above ("fmt+8(FP)" parses to
+ * `Entity (Local (Some "fmt", 8))`, and fmt genuinely is a
+ * parameter, not a local variable).
+ *
+ * Formula needs the CALLEE's own TRUE frame size (the real amount SP
+ * moved by at function entry), NOT env.autosize directly:
+ * Rewrite7.ml's own TEXT mutation stores `autosize - pcsz` as the
+ * TEXT node's declared size whenever a real frame exists (frame =
+ * Some, see its "n.instr <- T.TEXT (..., autosize - pcsz)"), which
+ * is what env.autosize reflects at codegen time (Layout7.ml's own
+ * `autosize := size` from that same TEXT node); for a true leaf with
+ * NO frame at all (only possible when the source's own declared size
+ * is exactly 0 -- Rewrite7.ml's "leaf && autosize0 <= pcsz" case),
+ * the TEXT node is left untouched, so env.autosize already IS the
+ * (zero) true autosize, not "true - pcsz". env.autosize = 0
+ * unambiguously identifies that one no-frame case: any function that
+ * DOES get a real frame always has a true autosize that's a positive
+ * multiple of 16 (STACKALIGN), so its own env.autosize = true - pcsz
+ * is always >= 8, never 0.
+ *
+ * A true LOCAL (this port's `Param`) sits *within* this function's
+ * own frame: true_autosize + off (off usually negative, e.g.
+ * "rune-4(SP)", so that adding it back onto true_autosize lands
+ * within this function's own frame). A true PARAMETER (this port's
+ * `Local`) sits *above* this function's entire frame, in the
+ * caller's own stack region: true_autosize + pcsz + off -- the extra
+ * pcsz is the caller's OWN reserved link-register-save slot (every
+ * real frame reserves one, including the caller's, since the callee
+ * being called at all means the caller is never a leaf), same shape
+ * as ARM32's real 5a (see Codegen5.ml's own "+4" comment on its
+ * Local case) just with PCSZ=8 instead of 4.
+ *
+ * PREVIOUSLY WRONG in this port: the formula used to add env.autosize
+ * directly (both cases), never reconstructing true_autosize at all --
+ * silently correct only for the declared-size-0 leaf case (where
+ * env.autosize already equals true_autosize), which is exactly why
+ * it slipped past every regression fixture (none of them exercise a
+ * real (FP)/(SP) reference at all -- see the new fp_offset.s/
+ * sp_offset.s fixtures added alongside this fix) and even past the
+ * full hello_libc closure *linking* successfully: the bug only
+ * surfaces as a NULL-pointer segfault at actual native runtime
+ * (dofmt reading a garbage "fmt" pointer 8 bytes short of where
+ * vfprint actually wrote it). Tracked down by disassembling the real
+ * failure (not re-derived from the ABI alone) and independently
+ * confirmed against real goken with two hand-written probes: a leaf
+ * callee's own "arg+0(FP)" resolves to the caller's SP-at-call + 8
+ * (not +0), and a non-leaf caller's own named local "x-8(SP)"
+ * resolves to that caller's post-prologue SP + true_autosize - 8
+ * (not env.autosize - 8) -- see
+ * docs/claude_notes/plan_hello_libc_linking.md. *)
+let local_param_offset (env : Codegen.env) (ent : A.entity) : int =
+  let true_autosize = if env.autosize = 0 then 0 else env.autosize + pcsz in
+  match ent with
+  | A.Local (_, off) -> true_autosize + pcsz + off
+  | A.Param (_, off) -> true_autosize + off
+  | A.Global _ -> raise (Impossible "Global handled via the SB-relative path above")
+
 (*****************************************************************************)
 (* The rules! *)
 (*****************************************************************************)
@@ -1294,23 +1370,20 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * back to the pool when the immediate doesn't fit. This port
      * takes the simpler, narrower route instead: the exact same
      * addcon-immediate ADD fast path as Address(Global) above,
-     * reusing base_and_offset_of_entity's own formula (see the
-     * Entity(Local|Param) Move case above for the swapped-naming
-     * explanation) -- correct and sufficient for any realistically-
-     * sized frame (isaddcon's own 12-bit-scaled-by-4096 range), with
-     * no literal-pool fallback for an offset too large to fit (not
-     * yet needed by any real closure stress-tested so far; would need
-     * genuinely new pool-operand plumbing to add, unlike Address
-     * (Global)'s already-existing one). Found stress-testing real
-     * lib_core/libc (fmt/rune.c's real "MOV $rune-4(SP),R0"), see
+     * reusing local_param_offset's own formula (see its own comment,
+     * and the Entity(Local|Param) Move case below, for the swapped-
+     * naming explanation) -- correct and sufficient for any
+     * realistically-sized frame (isaddcon's own 12-bit-scaled-by-4096
+     * range), with no literal-pool fallback for an offset too large
+     * to fit (not yet needed by any real closure stress-tested so
+     * far; would need genuinely new pool-operand plumbing to add,
+     * unlike Address(Global)'s already-existing one). Found stress-
+     * testing real lib_core/libc (fmt/rune.c's real "MOV
+     * $rune-4(SP),R0"), see
      * docs/claude_notes/plan_hello_libc_linking.md. *)
     | Move (X_, Right (Address ((Local _ | Param _) as ent)), GReg (R rt)) ->
         let (R rsp_i) = rSP in
-        let final_offset = match ent with
-          | Local (_, off) -> env.autosize + 8 + off
-          | Param (_, off) -> env.autosize + off
-          | Global _ -> raise (Impossible "Global handled via the SB-relative path above")
-        in
+        let final_offset = local_param_offset env ent in
         if final_offset <> 0 && isaddcon final_offset
         then
           { size = 4; x = None; binary = (fun () ->
@@ -1327,47 +1400,12 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * unscaled-9-bit machinery as case 20/21 just below (this port's
      * own new unscaled-9-bit fallback, not yet applied to the plain
      * Indirect cases below -- named locals/params are where an
-     * unaligned offset actually turned up in practice).
-     *
-     * NOTE the naming: this port's own A.entity constructors are
-     * swapped from their shared doc comment (Ast_asm.ml: "Param of
-     * ... (* FP *) / Local of ... (* SP *)") -- ARM64's grammar (like
-     * ARM32's own Parser_asm5.mly, identical mapping, already
-     * verified working) binds TFP to `Local` and TSP to `Param`, so a
-     * real "(FP)" reference (a genuine caller-frame PARAMETER in
-     * Plan9's own convention) surfaces here as `A.Local`, and a real
-     * "(SP)" reference (a genuine callee-frame LOCAL) surfaces as
-     * `A.Param` -- confirmed against the real -S output above
-     * ("fmt+8(FP)" parses to `Entity (Local (Some "fmt", 8))`, and
-     * fmt genuinely is a parameter, not a local variable).
-     *
-     * Formula (env.autosize is Rewrite7.ml's own `autosize - pcsz`,
-     * see its "n.instr <- T.TEXT (..., autosize - pcsz)" mutation) --
-     * both cases add env.autosize, since SP has already moved down by
-     * that much at function entry (a true local's own offset is
-     * negative, e.g. "rune-4(SP)", specifically so that adding it
-     * back onto autosize lands within this function's own frame, same
-     * shape as ARM32's real 5a): a true PARAM (this port's `Local`)
-     * sits *above* this function's entire frame, in the caller's own
-     * stack region, so needs the full real autosize (env.autosize +
-     * pcsz) added on top of its own (positive) offset; a true LOCAL
-     * (this port's `Param`) sits *within* this function's own frame,
-     * so just env.autosize (no extra pcsz) added to its own (usually
-     * negative) offset -- no ARM32-style separate "+4" correction
-     * either way beyond that, since ARM64's own frame-establishment
-     * ("SUB $autosize,SP,SP") has no separate "auto push{lr}" step to
-     * compensate for, unlike ARM32's real 5a. Verified empirically
-     * against a real linked closure (hello_libc's own rt0.s/dofmt.c
-     * chain actually running correctly under native aarch64), not
-     * re-derived from the ABI alone -- see
-     * docs/claude_notes/plan_hello_libc_linking.md. *)
+     * unaligned offset actually turned up in practice). See
+     * local_param_offset's own comment for the swapped-naming
+     * explanation and the offset formula itself. *)
     | Move (ms, Left (GReg (R rf)), Entity ((A.Local _ | A.Param _) as ent)) ->
         let (R rsp_i) = rSP in
-        let offset = match ent with
-          | A.Local (_, off) -> env.autosize + 8 + off
-          | A.Param (_, off) -> env.autosize + off
-          | A.Global _ -> raise (Impossible "Global handled via the SB-relative path above")
-        in
+        let offset = local_param_offset env ent in
         let shift = scale_shift_of_size ms in
         { size = 4; x = None; binary = (fun () ->
           if offset land ((1 lsl shift) - 1) <> 0
@@ -1376,11 +1414,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         )}
     | Move (ms, Left (Entity ((A.Local _ | A.Param _) as ent)), GReg (R rt)) ->
         let (R rsp_i) = rSP in
-        let offset = match ent with
-          | A.Local (_, off) -> env.autosize + 8 + off
-          | A.Param (_, off) -> env.autosize + off
-          | A.Global _ -> raise (Impossible "Global handled via the SB-relative path above")
-        in
+        let offset = local_param_offset env ent in
         let shift = scale_shift_of_size ms in
         { size = 4; x = None; binary = (fun () ->
           if offset land ((1 lsl shift) - 1) <> 0
@@ -1395,11 +1429,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * f+0(FP),F7"). *)
     | Move ((FS_ | FD_ as ms), Left (GFReg (FR rf)), Entity ((A.Local _ | A.Param _) as ent)) ->
         let (R rsp_i) = rSP in
-        let offset = match ent with
-          | A.Local (_, off) -> env.autosize + 8 + off
-          | A.Param (_, off) -> env.autosize + off
-          | A.Global _ -> raise (Impossible "Global handled via the SB-relative path above")
-        in
+        let offset = local_param_offset env ent in
         let shift = scale_shift_of_size ms in
         { size = 4; x = None; binary = (fun () ->
           if offset land ((1 lsl shift) - 1) <> 0
@@ -1408,11 +1438,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         )}
     | Move ((FS_ | FD_ as ms), Left (Entity ((A.Local _ | A.Param _) as ent)), GFReg (FR rt)) ->
         let (R rsp_i) = rSP in
-        let offset = match ent with
-          | A.Local (_, off) -> env.autosize + 8 + off
-          | A.Param (_, off) -> env.autosize + off
-          | A.Global _ -> raise (Impossible "Global handled via the SB-relative path above")
-        in
+        let offset = local_param_offset env ent in
         let shift = scale_shift_of_size ms in
         { size = 4; x = None; binary = (fun () ->
           if offset land ((1 lsl shift) - 1) <> 0
@@ -1461,11 +1487,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * lib_core/libc (fmt/dofmt.c's real "MOVW $0,w-68(SP)"). *)
     | Move (ms, Right (Int i), Entity ((A.Local _ | A.Param _) as ent)) ->
         let (R rsp_i) = rSP in
-        let offset = match ent with
-          | A.Local (_, off) -> env.autosize + 8 + off
-          | A.Param (_, off) -> env.autosize + off
-          | A.Global _ -> raise (Impossible "Global handled via the SB-relative path above")
-        in
+        let offset = local_param_offset env ent in
         let is_w = (match ms with X_ -> false | _ -> true) in
         (match move_immediate_encoding_sized is_w i with
         | None -> error node "TODO: store-immediate value doesn't fit a direct MOVZ/MOVN (needs literal pool, not yet implemented)"

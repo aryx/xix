@@ -27,6 +27,8 @@ CASES=(
     "arm64_diff/indirect_offset.s"
     "arm64_diff/arith_huge_imm.s"
     "arm64_diff/float_pool.s"
+    "arm64_diff/fp_offset.s"
+    "arm64_diff/sp_offset.s"
 )
 
 FAIL=0

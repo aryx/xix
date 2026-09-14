@@ -46,9 +46,20 @@ if [ ! -x "$GOKEN_7A" ] || [ ! -x "$GOKEN_7L" ]; then
     exit 0
 fi
 
+# claude: prefer the repo-root bin_dune/ symlinks (bin_dune/o7a ->
+# _build/default/assembler/Main.exe, one hop) over
+# _build/default/bin_dune/ (dune's own copy of that same symlinked
+# source directory) -- the latter is a real, reproducible staleness
+# trap: dune doesn't reliably re-snapshot it on every incremental
+# build (confirmed directly: after a clean `dune build`,
+# _build/default/bin_dune/o7l's own md5sum can still be the PREVIOUS
+# build's while _build/default/linker/Main.exe and bin_dune/o7l are
+# both already the new one), so a test run right after an edit can
+# silently exercise stale code. Found chasing down what looked like a
+# fix not taking effect while debugging the local_param_offset bug.
 XIX_ROOT=$(cd "$(dirname "$0")/.." && pwd)
-XIX_O7A="$XIX_ROOT/_build/default/bin_dune/o7a"
-XIX_O7L="$XIX_ROOT/_build/default/bin_dune/o7l"
+XIX_O7A="$XIX_ROOT/bin_dune/o7a"
+XIX_O7L="$XIX_ROOT/bin_dune/o7l"
 if [ ! -x "$XIX_O7A" ]; then XIX_O7A=$(command -v o7a || true); fi
 if [ ! -x "$XIX_O7L" ]; then XIX_O7L=$(command -v o7l || true); fi
 if [ ! -x "$XIX_O7A" ] || [ ! -x "$XIX_O7L" ]; then

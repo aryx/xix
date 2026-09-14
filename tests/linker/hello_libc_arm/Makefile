@@ -1,11 +1,11 @@
-# Build/run the hello_libc closure fixture with xix's own o5a/o5l,
-# straight from the frozen closure.tgz -- no goken checkout needed.
-# See ../../../test-hello-libc-arm.sh for the same pipeline run as a
-# pass/fail regression test, and closure.tgz's own header comment (in
-# ../../../test-hello-libc-arm.sh) for how to regenerate the archive.
+# Build/run/test the hello_libc closure fixture with xix's own
+# o5a/o5l, straight from the frozen closure.tgz -- no goken checkout
+# needed. See test.sh's own header comment for how to regenerate the
+# archive after a real lib_core/libc change.
 #
 #   make        -- build hello.out
 #   make run    -- build (if needed), then run it under qemu-arm
+#   make test   -- run test.sh (the pass/fail regression check)
 #   make clean  -- remove build artifacts (never touches closure.tgz)
 #
 # Requires xix's own o5a/o5l already built (dune build, from the repo
@@ -19,7 +19,7 @@ CLOSURE_SUBDIR:= hello_libc_closure_5l
 BUILD_DIR     := .build
 BINARY        := hello.out
 
-.PHONY: all run clean
+.PHONY: all run test clean
 
 all: $(BINARY)
 
@@ -34,6 +34,9 @@ $(BINARY): $(BUILD_DIR)/$(CLOSURE_SUBDIR)
 
 run: $(BINARY)
 	qemu-arm ./$(BINARY)
+
+test:
+	./test.sh
 
 clean:
 	rm -rf $(BUILD_DIR) $(BINARY)

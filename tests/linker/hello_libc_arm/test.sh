@@ -14,9 +14,9 @@
 # IndirectShift/CASE/BCASE have no real 5a grammar), so byte parity
 # isn't the bar -- correct behavior is.
 #
-# No goken checkout needed: tests/linker/hello_libc_arm/closure.tgz is a
-# frozen snapshot of the real `5c -S` output for hello.c's real,
-# minimal lib_core/libc dependency closure (36 files, found by
+# No goken checkout needed: closure.tgz (this directory) is a frozen
+# snapshot of the real `5c -S` output for hello.c's real, minimal
+# lib_core/libc dependency closure (36 files, found by
 # scripts/find-c-closure.py's BFS -- see its own header), checked in
 # as one compressed archive rather than 36 separate machine-generated
 # .s files (keeps the diff to one binary blob, not 7800+ lines of
@@ -31,28 +31,28 @@
 # rather than extracting flat, so a stray "tar xzf" elsewhere doesn't
 # spray 36 files into the current directory:
 #   rm -rf /tmp/hello_libc_closure_5l
-#   python3 scripts/find-c-closure.py 5 tests/linker/hello_libc_arm/hello.c \
+#   python3 ../../../scripts/find-c-closure.py 5 hello.c \
 #       --out-dir /tmp/hello_libc_closure_5l
-#   tar czf tests/linker/hello_libc_arm/closure.tgz -C /tmp hello_libc_closure_5l
+#   tar czf closure.tgz -C /tmp hello_libc_closure_5l
 #
-# Usage: ./test-hello-libc-arm.sh
+# Usage: ./test.sh (from this directory), or `make test` (see Makefile)
 
 set -e
 
 cd "$(dirname "$0")"
+XIX_ROOT=$(cd ../../.. && pwd)
 
-FIXTURE_DIR="tests/linker/hello_libc_arm"
 CLOSURE_SUBDIR="hello_libc_closure_5l"
 EXPECTED="hello from libc.a: 2 + 2 = 4"
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-tar xzf "$FIXTURE_DIR/closure.tgz" -C "$TMP"
+tar xzf closure.tgz -C "$TMP"
 
-echo "### $FIXTURE_DIR/closure.tgz (real lib_core/libc closure, frozen -- no goken needed)"
-OUT=$(python3 scripts/build-c-program.py 5 "$TMP/$CLOSURE_SUBDIR" _main 2>&1) || {
+echo "### tests/linker/hello_libc_arm/closure.tgz (real lib_core/libc closure, frozen -- no goken needed)"
+OUT=$(python3 "$XIX_ROOT/scripts/build-c-program.py" 5 "$TMP/$CLOSURE_SUBDIR" _main 2>&1) || {
     echo "$OUT"
-    echo "test-hello-libc-arm.sh: pipeline itself failed" 1>&2
+    echo "test.sh: pipeline itself failed" 1>&2
     exit 1
 }
 echo "$OUT"
@@ -62,7 +62,7 @@ if echo "$OUT" | grep -qF -e "-- xix -- (exit 0): '$EXPECTED"; then
     echo "PASS: xix-built binary printed the expected output and exited 0"
 else
     echo
-    echo "test-hello-libc-arm.sh: FAIL -- expected xix's binary to print" 1>&2
+    echo "test.sh: FAIL -- expected xix's binary to print" 1>&2
     echo "  '$EXPECTED...' and exit 0; see output above" 1>&2
     exit 1
 fi

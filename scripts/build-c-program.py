@@ -59,9 +59,23 @@ Env:
 import argparse
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
+
+VERBOSE = False
+
+
+def run(cmd: list[str]) -> subprocess.CompletedProcess:
+    """subprocess.run wrapper that echoes the exact command line first
+    when --verbose is on -- lets you actually see each real o<X>a/
+    o<X>l (and, informationally, goken N a/N l) invocation, not just
+    this script's own summary lines."""
+    if VERBOSE:
+        print("+ " + " ".join(shlex.quote(c) for c in cmd), file=sys.stderr)
+    return subprocess.run(cmd, capture_output=True, text=True)
+
 
 ARCH_TABLE = {
     # arch -> (goken tool-letter prefix, xix's o<X> prefix, qemu-user binary)
@@ -154,10 +168,7 @@ def assemble_xix_best_effort(
     stripped: list[str] = []
     for _ in range(max_strips):
         scratch.write_text(text)
-        proc = subprocess.run(
-            [str(asm), "-o", str(o_path), str(scratch)],
-            capture_output=True, text=True,
-        )
+        proc = run([str(asm), "-o", str(o_path), str(scratch)])
         if proc.returncode == 0:
             return True, stripped
         # claude: o5a prints "o5a: [ERROR] path:line msg" -- the path
@@ -176,8 +187,7 @@ def assemble_xix_best_effort(
 
 
 def assemble_goken(asm: Path, s_path: Path, o_path: Path) -> bool:
-    proc = subprocess.run([str(asm), "-o", str(o_path), str(s_path)],
-                           capture_output=True, text=True)
+    proc = run([str(asm), "-o", str(o_path), str(s_path)])
     return proc.returncode == 0
 
 
@@ -192,7 +202,12 @@ def main() -> None:
     ap.add_argument("--goken-root", type=Path,
                      default=Path(os.environ.get("GOKEN_ROOT",
                                                   Path.home() / "goken")))
+    ap.add_argument("-v", "--verbose", action="store_true",
+                     help="echo every real o<X>a/o<X>l (and goken N a/N l, "
+                          "qemu) command line before running it")
     args = ap.parse_args()
+    global VERBOSE
+    VERBOSE = args.verbose
 
     gk_letter, xx_prefix, qemu = ARCH_TABLE[args.arch]
     # claude: goken is *optional* here -- xix's own build+run below
@@ -269,10 +284,7 @@ def main() -> None:
         print("== linking ==")
         xix_out = tmp / "xix.out"
         xix_objs = [str(xix_obj / (u + f".{xx_prefix}")) for u in xix_good]
-        proc = subprocess.run(
-            [str(xix_ld), "-E", args.entry, "-o", str(xix_out), *xix_objs],
-            capture_output=True, text=True,
-        )
+        proc = run([str(xix_ld), "-E", args.entry, "-o", str(xix_out), *xix_objs])
         if proc.returncode != 0:
             print("xix o<X>l FAILED:\n" + proc.stdout + proc.stderr)
             sys.exit(1)
@@ -283,10 +295,8 @@ def main() -> None:
         goken_linked = False
         if same_closure:
             goken_objs = [str(goken_obj / (u + f".{gk_letter}")) for u in goken_good]
-            proc = subprocess.run(
-                [str(goken_ld), "-H7", "-E", args.entry, "-s", "-o", str(goken_out), *goken_objs],
-                capture_output=True, text=True,
-            )
+            proc = run([str(goken_ld), "-H7", "-E", args.entry, "-s",
+                        "-o", str(goken_out), *goken_objs])
             goken_linked = proc.returncode == 0
             if not goken_linked:
                 print("goken N l FAILED (informational only):\n" + proc.stdout + proc.stderr)
@@ -311,11 +321,11 @@ def main() -> None:
         result = {"xix_out": None, "xix_rc": None, "goken_out": None, "goken_rc": None}
         import shutil
         if shutil.which(qemu):
-            proc = subprocess.run([qemu, str(xix_out)], capture_output=True, text=True)
+            proc = run([qemu, str(xix_out)])
             result["xix_out"], result["xix_rc"] = proc.stdout, proc.returncode
             print(f"-- xix -- (exit {proc.returncode}): {proc.stdout!r}")
             if goken_linked:
-                proc = subprocess.run([qemu, str(goken_out)], capture_output=True, text=True)
+                proc = run([qemu, str(goken_out)])
                 result["goken_out"], result["goken_rc"] = proc.stdout, proc.returncode
                 print(f"-- goken -- (exit {proc.returncode}): {proc.stdout!r}")
                 if result["goken_rc"] == result["xix_rc"] and result["goken_out"] == result["xix_out"]:

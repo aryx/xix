@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Assemble+link a real C program's dependency closure with xix's own
-o<X>a/o<X>l, and (informationally) with goken's real N a/N l too.
+o<X>a/o<X>l, and (informationally, when a built goken checkout is
+available -- entirely optional, see step 2) with goken's real N a/N l
+too.
 
 Takes a scripts/find-c-closure.py --out-dir output (a manifest.txt
 plus one real `Nc -S` file per closure unit) and:
@@ -55,6 +57,7 @@ Env:
 """
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -187,18 +190,32 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=None,
                      help="copy the final xix-linked binary here")
     ap.add_argument("--goken-root", type=Path,
-                     default=Path.home() / "goken")
+                     default=Path(os.environ.get("GOKEN_ROOT",
+                                                  Path.home() / "goken")))
     args = ap.parse_args()
 
     gk_letter, xx_prefix, qemu = ARCH_TABLE[args.arch]
+    # claude: goken is *optional* here -- xix's own build+run below
+    # never depends on it, it's purely an informational comparison
+    # baseline when available. This is what lets test-hello-libc.sh
+    # run this pipeline against the frozen tests/c/hello_libc/
+    # closure.tgz with no goken checkout present at all. See
+    # docs/claude_notes/plan_hello_libc_linking.md.
     goken_root = args.goken_root
-    mkconfig = (goken_root / "mkconfig").read_text()
-    boot_objtype = re.search(r"^objtype=(\S+)", mkconfig, re.M).group(1)
-    goken_bin = goken_root / "ROOT" / "arch" / boot_objtype / "bin"
-    goken_as = goken_bin / f"{gk_letter}a"
-    goken_ld = goken_bin / f"{gk_letter}l"
-    if not goken_as.is_file() or not goken_ld.is_file():
-        sys.exit(f"error: {goken_as} / {goken_ld} not found (build goken first)")
+    goken_as = goken_ld = None
+    if goken_root.is_dir() and (goken_root / "mkconfig").is_file():
+        mkconfig = (goken_root / "mkconfig").read_text()
+        m = re.search(r"^objtype=(\S+)", mkconfig, re.M)
+        if m:
+            goken_bin = goken_root / "ROOT" / "arch" / m.group(1) / "bin"
+            cand_as = goken_bin / f"{gk_letter}a"
+            cand_ld = goken_bin / f"{gk_letter}l"
+            if cand_as.is_file() and cand_ld.is_file():
+                goken_as, goken_ld = cand_as, cand_ld
+    if goken_as is None:
+        print(f"note: no built goken found under {goken_root} -- skipping the "
+              f"informational goken-side comparison, building/running xix's "
+              f"own binary only", file=sys.stderr)
 
     xix_root = Path(__file__).resolve().parent.parent
     xix_as = xix_root / "_build" / "default" / "bin_dune" / f"{xx_prefix}a"
@@ -238,15 +255,16 @@ def main() -> None:
         print(f"xix: {len(xix_good)} / {len(manifest)} units assembled"
               + (" (some functions stripped, see above)" if any_stripped else ""))
 
-        print("== assembling every unit with goken's real N a (informational) ==")
         goken_good: list[str] = []
-        for unit in manifest:
-            o_path = goken_obj / (unit + f".{gk_letter}")
-            if assemble_goken(goken_as, args.closure_dir / unit, o_path):
-                goken_good.append(unit)
-            else:
-                print(f"  {unit}: goken can't assemble this either")
-        print(f"goken: {len(goken_good)} / {len(manifest)} units assembled")
+        if goken_as is not None:
+            print("== assembling every unit with goken's real N a (informational) ==")
+            for unit in manifest:
+                o_path = goken_obj / (unit + f".{gk_letter}")
+                if assemble_goken(goken_as, args.closure_dir / unit, o_path):
+                    goken_good.append(unit)
+                else:
+                    print(f"  {unit}: goken can't assemble this either")
+            print(f"goken: {len(goken_good)} / {len(manifest)} units assembled")
 
         print("== linking ==")
         xix_out = tmp / "xix.out"
@@ -261,7 +279,7 @@ def main() -> None:
         xix_out.chmod(0o755)
 
         goken_out = tmp / "goken.out"
-        same_closure = set(goken_good) == set(xix_good)
+        same_closure = goken_as is not None and set(goken_good) == set(xix_good)
         goken_linked = False
         if same_closure:
             goken_objs = [str(goken_obj / (u + f".{gk_letter}")) for u in goken_good]
@@ -272,7 +290,7 @@ def main() -> None:
             goken_linked = proc.returncode == 0
             if not goken_linked:
                 print("goken N l FAILED (informational only):\n" + proc.stdout + proc.stderr)
-        else:
+        elif goken_as is not None:
             only_xix = sorted(set(xix_good) - set(goken_good))
             only_goken = sorted(set(goken_good) - set(xix_good))
             print("== byte comparison skipped: object sets differ ==")

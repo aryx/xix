@@ -58,7 +58,17 @@ let default_rules (env : env) (init_data : Types.addr option)
         (* TODO? should apply endianess ? *)
         | Ast_asm.Int i -> [ [(i land 0xffffffff, 0)] ]
 
-        | Ast_asm.Float _ -> raise Todo
+        (* claude: the low 32 bits of a double literal's own raw
+         * IEEE754 bit pattern (goken's own 8-byte pool entry for a
+         * real "FMOVD $con,Fd" -- see ARM64's Codegen7.ml/Layout7.ml,
+         * which splices an explicit high-word WORD node right after
+         * this one for the other 4 bytes, same shape as the Int case
+         * above). Found stress-testing real lib_core/libc (fmt/
+         * strtod.c's real "FMOVD $4.29496729500000000e+09,F3" and
+         * siblings), see docs/claude_notes/plan_hello_libc_linking.md. *)
+        | Ast_asm.Float f ->
+            let bits = Int64.bits_of_float f in
+            [ [(Int64.to_int (Int64.logand bits 0xFFFFFFFFL), 0)] ]
 
         | Ast_asm.String _s -> 
             (* stricter? what does 5l do with that? confusing I think *)

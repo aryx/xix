@@ -92,6 +92,18 @@ let w1 (x : int) : Bits.t = [(x land 0xffffffff, 0)]
  * this reuses `branch_delta` below by treating the pool entry's own
  * node exactly like a branch target. *)
 let opldr_literal_mov = (1 lsl 30) lor (3 lsl 27)
+(* claude: the float sibling (goken's own omovlit(): "case AFMOVD: fp
+ * = 1; w = 1;" -- same base formula, `fp` bit ORed in). Needed since,
+ * unlike ARM32/ARM64's own FArith (whose "goken's own float-immediate
+ * support is dead code in the reference implementation" comment
+ * explains why *that* path is skipped entirely), a plain "FMOVD
+ * $1.0,F0" register-load DOES need real support here -- it's what
+ * every real float constant in real 5c -S output actually compiles
+ * to (found stress-testing real lib_core/libc, fmt/fltfmt.c's real
+ * "FMOVD $1.0,F0"), and there's a real, working literal-pool
+ * mechanism to route it through instead of goken's own broken
+ * chipfloat path. See docs/claude_notes/plan_hello_libc_linking.md. *)
+let opldr_literal_fmov = opldr_literal_mov lor (1 lsl 26)
 
 (* claude: unlike ARM32 (PC = instr+8), AArch64's PC-relative fields
  * are relative to the instruction's own address with no bias --
@@ -106,6 +118,17 @@ let gload_from_pool (nsrc : 'a T.node) (rt : int) : Bits.t =
       let v = (ndst.T.real_pc - nsrc.T.real_pc) asr 2 in
       [ (opldr_literal_mov lor ((v land 0x7FFFF) lsl 5) lor rt) land 0xffffffff, 0 ]
 
+(* claude: the float-register-destination sibling -- see
+ * opldr_literal_fmov's own comment. Same PC-relative "distance to the
+ * pool entry" computation, just the FP/SIMD literal-load base opcode
+ * instead of the integer one. *)
+let gload_from_pool_f (nsrc : 'a T.node) (rt : int) : Bits.t =
+  match nsrc.T.branch with
+  | None -> raise (Impossible "literal pool should be attached to node")
+  | Some ndst ->
+      let v = (ndst.T.real_pc - nsrc.T.real_pc) asr 2 in
+      [ (opldr_literal_fmov lor ((v land 0x7FFFF) lsl 5) lor rt) land 0xffffffff, 0 ]
+
 (*****************************************************************************)
 (* Instruction encoding helpers *)
 (*****************************************************************************)
@@ -116,6 +139,12 @@ let gload_from_pool (nsrc : 'a T.node) (rt : int) : Bits.t =
  * bit cleared, nothing else differs). *)
 let s64 = 1 lsl 31
 let s32 = 0
+
+(* claude: goken's `OPDP2(x) = 0<<30 | 0<<29 | 0xd6<<21 | (x)<<10`,
+ * moved up here (ahead of oprrr_arith) since SDIV/UDIV's own base
+ * opcodes need it too, not just case 9's shift-by-register family
+ * further below. *)
+let opdp2 (x : int) : int = (0xd6 lsl 21) lor (x lsl 10)
 
 (* claude: case 1 -- register-register arith base opcodes (goken's
  * oprrr(), the AADD/ASUB/AAND/AORR/AEOR/ABIC rows and their W-suffixed
@@ -134,6 +163,26 @@ let oprrr_arith (op : arith_opcode) : int =
   | ORRW -> s32 lor (1 lsl 29) lor (0xA lsl 24)
   | EORW -> s32 lor (2 lsl 29) lor (0xA lsl 24)
   | BICW -> s32 lor (0xA lsl 24) lor (1 lsl 21)
+  (* claude: real hardware SDIV/UDIV -- goken's own oprrr(), case 1's
+   * plain "op Rm,[Rn,]Rd" shape (nothing pseudo-op about *division*
+   * itself, only REM needs synthesis -- see Rem/orem). *)
+  | SDIV -> s64 lor opdp2 3 | SDIVW -> s32 lor opdp2 3
+  | UDIV -> s64 lor opdp2 2 | UDIVW -> s32 lor opdp2 2
+
+(* claude: case 24/25 -- NEG/MVN Rn,Rd base opcodes (goken's oprrr()):
+ * NEG is SUB with an implicit ZR first operand (so it shares SUB's
+ * own base bits, S bit included), MVN is ORN likewise (ORR's base
+ * bits plus the "invert second operand" bit 21) -- transcribed
+ * directly from asmout.c's own ANEG/ANEGW/AMVN/AMVNW rows, not
+ * re-derived from ADD/ORR above (kept as their own function rather
+ * than reusing oprrr_arith since arith_opcode has no NEG/MVN members
+ * of its own -- see Ast_asm7.ml's Neg2 comment for why). *)
+let oprrr_neg2 (op : neg2_opcode) : int =
+  match op with
+  | NEG -> s64 lor (1 lsl 30) lor (0xB lsl 24)
+  | NEGW -> s32 lor (1 lsl 30) lor (0xB lsl 24)
+  | MVN -> s64 lor (1 lsl 29) lor (0xA lsl 24) lor (1 lsl 21)
+  | MVNW -> s32 lor (1 lsl 29) lor (0xA lsl 24) lor (1 lsl 21)
 
 (* claude: case 2/4 -- register-immediate ("addcon") base opcodes (goken's
  * opirr(), ADD/SUB rows and their W-suffixed siblings only -- AND/ORR/
@@ -152,6 +201,8 @@ let opirr_addsub (op : arith_opcode) : int =
       failwith "TODO: ANDW/ORRW/EORW immediate needs its own e<=32 bitcon search (N always 0), not implemented (only the bare 64-bit AND/ORR/EOR immediate is)"
   | BIC | BICW ->
       failwith "BIC has no immediate form at all on real AArch64 (confirmed absent from goken's own opirr() table, not just unimplemented here)"
+  | SDIV | UDIV | SDIVW | UDIVW ->
+      raise (Impossible "SDIV/UDIV have no immediate form at all on real AArch64 (register-register division only)")
 
 (* claude: goken's oaddi() -- packs a 12-bit unsigned immediate (or,
  * shifted left by 12, up to 0xFFF000) into the "addcon" instruction
@@ -208,10 +259,18 @@ let opbfm (base : int) (r : int) (s : int) (rf : int) (rt : int) : int =
 let opextr (base : int) (v : int) (rn : int) (rm : int) (rt : int) : int =
   base lor (v lsl 10) lor (rn lsl 5) lor (rm lsl 16) lor rt
 
+(* claude: case 45's SXTW/UXTW -- a fixed SBFM/UBFM(0,31,Rn,Rd), reusing
+ * the exact same opirr_sbfm/opirr_ubfm bases the shift-by-immediate
+ * case above already uses for ASR/LSR -- see Ast_asm7.ml's Extend
+ * comment. *)
+let oextend (op : extend_opcode) (rf : int) (rt : int) : int =
+  match op with
+  | SXTW -> opbfm opirr_sbfm 0 31 rf rt
+  | UXTW -> opbfm opirr_ubfm 0 31 rf rt
+
 (* claude: case 9 -- shift by register (LSLV/LSRV/ASRV/RORV), goken's
  * `OPDP2(x) = 0<<30 | 0<<29 | 0xd6<<21 | (x)<<10`. Same (rf<<16)|(r<<5)|rt
  * operand shape as case 1's oprrr_arith. *)
-let opdp2 (x : int) : int = (0xd6 lsl 21) lor (x lsl 10)
 let oprrr_shift (op : shift_opcode) : int =
   match op with
   | LSL -> s64 lor opdp2 8
@@ -231,6 +290,23 @@ let oprrr_mul (op : mul_opcode) : int =
   | MUL -> s64 lor (0x1B lsl 24)
   | MULW -> s32 lor (0x1B lsl 24)
 
+(* claude: case 16 -- REM/REMW Rdivisor,[Rdividend,]Rdest, goken's own
+ * real 2-instruction synthesis ("XremY R[,R],R -> XdivY; XmsubY" --
+ * SDIV into REGTMP, X17, then MSUB back out). `sf` picks REM (s64) vs
+ * REMW (s32); both instruction words share it (goken's own o2 |= o1 &
+ * (1<<31) trick, replicated directly here as `sf` applied to both
+ * rather than patched in after the fact -- same net bit pattern).
+ * `rtmp` is REGTMP's own register number (17, Ast_asm7.rTMP). *)
+(* claude: `div_op` is OPDP2's own selector -- 3 for signed (SDIV,
+ * REM/REMW), 2 for unsigned (UDIV, UREM/UREMW); o2 (MSUB) has no
+ * signed/unsigned distinction of its own (goken's own o2 = oprrr
+ * (AMSUBW) is sign-independent, only o1's divide instruction differs
+ * -- see Rem's own comment). *)
+let orem (sf : int) (div_op : int) (rtmp : int) (rf : int) (r : int) (rt : int) : (int * int) =
+  let o1 = sf lor opdp2 div_op lor (rf lsl 16) lor (r lsl 5) lor rtmp in
+  let o2 = sf lor (0x1B lsl 24) lor (1 lsl 15) lor (rf lsl 16) lor (r lsl 10) lor (rtmp lsl 5) lor rt in
+  (o1, o2)
+
 (* claude: case 5/6 -- unconditional branch/call. `opbra(AB/ABL)` for the
  * direct-label form (imm26 field, packed by the caller), `opbrr()`
  * (goken's OPBLR macro) for the indirect-through-register form, which
@@ -244,6 +320,41 @@ let opblr (x : int) : int = (0x6B lsl 25) lor (x lsl 21) lor (0x1F lsl 16)
 let opbrr_b = opblr 0 (* BR *)
 let opbrr_bl = opblr 1 (* BLR *)
 let opbrr_ret = opblr 2 (* RET *)
+
+(* claude: case 62/63 -- CASE/BCASE (switch-statement jump-table
+ * dispatch), goken's real linkers/7l/asmout.c. See Ast_asm7.ml's
+ * CaseJump/BCase comment for the overall mechanism (relative-offset
+ * table, real 7a grammar unlike ARM32's own simplified deviation).
+ *
+ * `last_case_pc` mirrors goken's own `static Prog *lastcase` --
+ * mutable, sequential, per-program codegen state: set by every CASE,
+ * read by every following BCASE until the next CASE. Codegen7.gen's
+ * own single left-to-right T.iter pass over the whole program (see
+ * its own definition) is what makes this safe -- by the time a given
+ * BCASE's `binary` thunk runs, the immediately-preceding CASE (if
+ * any) has already updated this ref, exactly matching goken's own
+ * single-pass asmout() sequencing. -1 is deliberately not a valid PC,
+ * so a BCASE with no preceding CASE fails loudly (goken's own
+ * "missing CASE" diag()) rather than silently computing a bogus
+ * offset. *)
+let last_case_pc = ref (-1)
+
+(* claude: real ADR (p=0 -- ADRP, p=1, is never needed here) --
+ * goken's own `#define ADR(p,o,rt)`. immlo = the low 2 bits of the
+ * byte offset (bits[30:29]), immhi = the rest, shifted right by 2
+ * (bits[23:5]) -- only ever called here with imm=16 (immlo=0), but
+ * implemented in general for clarity rather than hardcoding that. *)
+let oadr (imm : int) (rt : int) : int =
+  (0x10 lsl 24) lor ((imm land 3) lsl 29) lor (((imm asr 2) land 0x7FFFF) lsl 5) lor rt
+(* claude: "movw Rt[Rv<<2],REGTMP" -- LDRSW (load register, signed
+ * word, scaled register offset) reading a 32-bit table entry at
+ * Rt+Rv*4 into REGTMP, transcribed directly from asmout.c's own case
+ * 62 bit pattern, not re-derived from the general LDSTX/extended-
+ * register addressing families elsewhere in this file (this one
+ * exact shape was never needed anywhere else). *)
+let ocase_load (rv : int) (rt : int) (rtmp : int) : int =
+  (2 lsl 30) lor (7 lsl 27) lor (2 lsl 22) lor (1 lsl 21) lor (3 lsl 13)
+    lor (1 lsl 12) lor (2 lsl 10) lor (rv lsl 16) lor (rt lsl 5) lor rtmp
 
 (* claude: case 7 (branch variant) -- BEQ/BNE/...; goken's OPBcc(x) =
  * 0x2A<<25 | (x&15), the condition packed into a distinct base opcode
@@ -313,18 +424,44 @@ let ldstr12u_size_v_opc (ms : move_size) : int * int * int =
   | X_ -> 3, 0, 1
   | FS_ -> 2, 1, 1
   | FD_ -> 3, 1, 1
-  | SCVTF_S | SCVTF_D | FCVTZS_S | FCVTZS_D ->
-      failwith "Codegen7: SCVTF/FCVTZS is register-to-register only, not a memory shape"
+  | SCVTF_S | SCVTF_D | FCVTZS_S | FCVTZS_D | UCVTF_WD | FCVTZU_WD | SCVTF_WD | FCVTZS_WD ->
+      failwith "Codegen7: SCVTF/FCVTZS/UCVTF/FCVTZU is register-to-register only, not a memory shape"
 let scale_shift_of_size (ms : move_size) : int =
   match ms with
   | B_ _ -> 0 | H_ _ -> 1 | W_ _ | FS_ -> 2 | X_ | FD_ -> 3
-  | SCVTF_S | SCVTF_D | FCVTZS_S | FCVTZS_D ->
-      failwith "Codegen7: SCVTF/FCVTZS is register-to-register only, not a memory shape"
+  | SCVTF_S | SCVTF_D | FCVTZS_S | FCVTZS_D | UCVTF_WD | FCVTZU_WD | SCVTF_WD | FCVTZS_WD ->
+      failwith "Codegen7: SCVTF/FCVTZS/UCVTF/FCVTZU is register-to-register only, not a memory shape"
 let opldr12_sized (ms : move_size) : int =
   let sz, v, opc = ldstr12u_size_v_opc ms in
   ldstr12u sz v opc
 let opstr12_sized (ms : move_size) : int =
   (opldr12_sized ms) land (lnot (3 lsl 22))
+
+(* claude: the unscaled, signed-9-bit-immediate sibling of ldstr12u
+ * above (goken's own `#define LDSTR9S(sz,v,opc)` -- identical bit
+ * layout to LDSTR12U except bit 24 is 0 instead of 1, so it reuses
+ * the exact same (sz,v,opc) table, ldstr12u_size_v_opc). Used as a
+ * fallback (goken's own case 20/21: "if(v<0) unscaled else scaled")
+ * whenever an offset doesn't divide evenly by the access size and so
+ * can't use the scaled-12-bit form at all -- confirmed needed by a
+ * real lib_core/libc closure (arch/arm64/rt0.s's real "MOV
+ * R1,_mainargv+0(SB)", where _mainargv's data-segment offset isn't
+ * 8-byte-aligned once merged with 34 other objects -- no hand-written
+ * arm64_diff/ fixture ever exercised an odd SB-relative offset, only
+ * a real multi-object link does). Range is a real hardware constraint
+ * (9-bit signed immediate, -256..255), not a not-yet-implemented gap
+ * like the scaled form's own "needs literal pool" TODO just below. *)
+let ldstr9s (sz : int) (v : int) (opc : int) : int =
+  (sz lsl 30) lor (7 lsl 27) lor (v lsl 26) lor (opc lsl 22)
+let olsr9s (node : 'a T.node) (base : int) (v : int) (b : int) (r : int) : int =
+  if v < -256 || v > 255
+  then error node "TODO: unaligned SB-relative offset also out of unscaled 9-bit range (needs literal pool, not yet implemented)"
+  else base lor ((v land 0x1FF) lsl 12) lor (b lsl 5) lor r
+let opldr9_sized (ms : move_size) : int =
+  let sz, v, opc = ldstr12u_size_v_opc ms in
+  ldstr9s sz v opc
+let opstr9_sized (ms : move_size) : int =
+  (opldr9_sized ms) land (lnot (3 lsl 22))
 
 (* claude: case 22/23 -- pre/post-index writeback load/store ("MOV
  * Rt,-16(Rbase)!" / "MOV Rt,(Rbase)16!"), goken's `opldrpp()`
@@ -513,7 +650,8 @@ let opirr_bitmask_logical (op : arith_opcode) : int =
   | AND_ -> s64 lor (0x24 lsl 23)
   | ORR -> s64 lor (1 lsl 29) lor (0x24 lsl 23)
   | EOR -> s64 lor (2 lsl 29) lor (0x24 lsl 23)
-  | ADD | SUB | BIC | ADDW | SUBW | BICW | ANDW | ORRW | EORW ->
+  | ADD | SUB | BIC | ADDW | SUBW | BICW | ANDW | ORRW | EORW
+  | SDIV | UDIV | SDIVW | UDIVW ->
       raise (Impossible "opirr_bitmask_logical: not a supported bitmask-immediate opcode")
 
 let bitmask_immediate_encoding (op : arith_opcode) (v : int) (r : int) (rt : int) : int option =
@@ -533,24 +671,37 @@ let movcon (v : int) : int option =
   in aux 0
 let opirr_movz = s64 lor (2 lsl 29) lor (0x25 lsl 23)
 let opirr_movn = s64 lor (0x25 lsl 23)
+(* claude: the 32-bit-view siblings (goken's own AMOVZW/AMOVNW rows --
+ * s32 instead of s64, nothing else differs, same convention as every
+ * other *W-suffixed pair in this file). *)
+let opirr_movzw = s32 lor (2 lsl 29) lor (0x25 lsl 23)
+let opirr_movnw = s32 lor (0x25 lsl 23)
 
 (* claude: the full classification chain (see the block comment above)
  * -- `None` means "needs the literal pool, not implemented yet". The
- * result still needs `rt` (bits[4:0]) ORed in by the caller. *)
-let move_immediate_encoding (v : int) : int option =
-  if v = 0 then Some opirr_movz
+ * result still needs `rt` (bits[4:0]) ORed in by the caller.
+ * Generalized to `is_w` (32-bit MOVW/MOVN vs 64-bit MOV/MOVN) since a
+ * real closure needs "MOVW $4,R5" too, not just the 64-bit form --
+ * goken's own case 32 threads a width cap (`r`, 32 or 64) through
+ * `movcon`'s own found shift position the same way, confirmed against
+ * asmout.c directly rather than assumed from the 64-bit form alone. *)
+let move_immediate_encoding_sized (is_w : bool) (v : int) : int option =
+  let movz, movn, max_s =
+    if is_w then opirr_movzw, opirr_movnw, 2 else opirr_movz, opirr_movn, 4 in
+  if v = 0 then Some movz
   else if isaddcon v then
     (if isbitcon v || v > 0xFFF then None
-     else Some (opirr_movz lor (v lsl 5)))
+     else Some (movz lor (v lsl 5)))
   else
     match movcon v with
-    | Some s -> Some (opirr_movz lor (((v asr (s*16)) land 0xFFFF) lsl 5) lor (s lsl 21))
-    | None ->
+    | Some s when s < max_s -> Some (movz lor (((v asr (s*16)) land 0xFFFF) lsl 5) lor (s lsl 21))
+    | _ ->
         (match movcon (lnot v) with
-        | Some s ->
+        | Some s when s < max_s ->
             let d = lnot v in
-            Some (opirr_movn lor (((d asr (s*16)) land 0xFFFF) lsl 5) lor (s lsl 21))
-        | None -> None)
+            Some (movn lor (((d asr (s*16)) land 0xFFFF) lsl 5) lor (s lsl 21))
+        | _ -> None)
+let move_immediate_encoding (v : int) : int option = move_immediate_encoding_sized false v
 
 (* claude: case 24 -- register-to-register "MOV Rs,Rd", a real AArch64
  * pseudo-op for either ORR Rs,ZR,Rd (the common case) or ADD $0,Rs,Rd
@@ -628,19 +779,20 @@ let fpop1s (type_ : int) (op : int) : int =
 let oprrr_fmovreg (ms : move_size) : int =
   match ms with
   | FS_ -> fpop1s 0 0 | FD_ -> fpop1s 1 0
-  | B_ _ | H_ _ | W_ _ | X_ | SCVTF_S | SCVTF_D | FCVTZS_S | FCVTZS_D ->
+  | B_ _ | H_ _ | W_ _ | X_ | SCVTF_S | SCVTF_D | FCVTZS_S | FCVTZS_D | UCVTF_WD | FCVTZU_WD | SCVTF_WD | FCVTZS_WD ->
       raise (Impossible "oprrr_fmovreg: not FS_/FD_")
 
-(* claude: case 29 -- SCVTF*/FCVTZS* (int<->float conversion),
+(* claude: case 29 -- SCVTF*/FCVTZS*/UCVTF* (int<->float conversion),
  * goken's `#define FPCVTI(sf,s,type,rmode,op)`. `sf` selects whether
- * the *integer* side is a 64-bit X register (1, the only form wired
- * here -- goken's own *W variants, e.g. SCVTFWD, use a 32-bit W
- * register instead and aren't ported); `type_` selects the *float*
+ * the *integer* side is a 64-bit X register (1) or 32-bit W register
+ * (0, UCVTF_WD's own form -- goken's other *W variants, e.g.
+ * SCVTFWD/FCVTZSDW, aren't ported); `type_` selects the *float*
  * side's precision (0=S,1=D) regardless of which side is the
  * conversion's source vs destination; `rmode`/`op` distinguish
- * int->float (0,2) from float->int-truncating (3,0) -- values
- * transcribed directly from asmout.c's ASCVTFD/ASCVTFS/AFCVTZSD/
- * AFCVTZSS rows, not re-derived. *)
+ * int->float (0, 2=signed/3=unsigned) from float->int-truncating
+ * (3, 0=signed/1=unsigned) -- values transcribed directly from
+ * asmout.c's ASCVTFD/ASCVTFS/AFCVTZSD/AFCVTZSS/AUCVTFWD rows, not
+ * re-derived. *)
 let fpcvti (sf : int) (type_ : int) (rmode : int) (op : int) : int =
   (sf lsl 31) lor (0x1E lsl 24) lor (type_ lsl 22) lor (1 lsl 21)
     lor (rmode lsl 19) lor (op lsl 16)
@@ -648,8 +800,16 @@ let oprrr_fcvt (ms : move_size) : int =
   match ms with
   | SCVTF_S -> fpcvti 1 0 0 2 | SCVTF_D -> fpcvti 1 1 0 2
   | FCVTZS_S -> fpcvti 1 0 3 0 | FCVTZS_D -> fpcvti 1 1 3 0
+  (* claude: UCVTFWD -- unsigned 32-bit (W reg, sf=0) int -> double
+   * (type_=1), convert-to-float direction (rmode=0), unsigned (op=3).
+   * See Ast_asm7.ml's UCVTF_WD comment for the wider, not-yet-needed
+   * family this generalizes from. *)
+  | UCVTF_WD -> fpcvti 0 1 0 3
+  | FCVTZU_WD -> fpcvti 0 1 3 1
+  | SCVTF_WD -> fpcvti 0 1 0 2
+  | FCVTZS_WD -> fpcvti 0 1 3 0
   | B_ _ | H_ _ | W_ _ | X_ | FS_ | FD_ ->
-      raise (Impossible "oprrr_fcvt: not SCVTF_*/FCVTZS_*")
+      raise (Impossible "oprrr_fcvt: not SCVTF_*/FCVTZS_*/UCVTF_WD")
 
 (* claude: case 51 -- DMB/DSB/ISB $imm, goken's `#define
  * SYSOP(l,op0,op1,crn,crm,op2,rt)` with the user's immediate ORed
@@ -714,6 +874,68 @@ let opload_excl (acquire : bool) : int =
 let opstore_excl (release : bool) : int =
   (if release then ldstx 3 0 0 0 1 else ldstx 3 0 0 0 0) lor (0x1F lsl 10)
 
+(* claude: the "huge offset" fallback for an SB-relative access whose
+ * offset fits neither the scaled-12-bit nor the unscaled-9-bit form
+ * (goken's own case 47/48, "Hugestxr"/"Hugeldxr" -- a genuinely new
+ * "olsxrr" extended-register addressing family this port doesn't
+ * implement, needed once real closures grow past a single small
+ * hand-written fixture's own tiny data segment). Simpler xix-only
+ * equivalent instead: materialize the symbol's own ABSOLUTE address
+ * into REGTMP via the exact same literal-pool mechanism Address
+ * (Global) already uses (gload_from_pool), then a plain zero-offset
+ * STR/LDR through REGTMP -- semantically equivalent, not byte-
+ * identical to goken's own register-offset scheme. One function
+ * covers both GReg and GFReg callers: opstr12_sized/opldr12_sized
+ * already dispatch correctly on `ms` (the "V" float/integer register-
+ * file bit) either way, and `r` is just a plain register number by
+ * the time it gets here regardless of which kind it came from. Found
+ * stress-testing real lib_core/libc (arch/arm64/rt0.s's real "MOV
+ * R1,_mainargv+0(SB)", once the merged closure's data segment grew
+ * past +-256 bytes), see
+ * docs/claude_notes/plan_hello_libc_linking.md. *)
+let gsbrel_huge (node : 'a T.node) (ms : move_size) (global : A.global) (goffset : int)
+    (rtmp : int) (r : int) (is_store : bool) : pool Codegen.action =
+  { size = 8; x = Some (PoolOperand (Ast_asm.Address (Global (global, goffset))));
+    binary = (fun () ->
+      let access =
+        if is_store
+        then olsr12u node (opstr12_sized ms) 0 rtmp r
+        else olsr12u node (opldr12_sized ms) 0 rtmp r
+      in
+      [ gload_from_pool node rtmp; w1 access ]
+    )}
+
+(* claude: the same "huge offset" idea as gsbrel_huge just above, for a
+ * plain register-relative Indirect access (base register + offset, no
+ * SB/global involved) whose offset fits neither the scaled-12-bit nor
+ * the unscaled-9-bit form. xix-only equivalent: materialize the
+ * offset itself into REGTMP (a direct MOVZW/MOVNW when it fits one
+ * 16-bit lane, else the literal pool -- same move_immediate_encoding_
+ * sized/gload_from_pool choice already used everywhere else in this
+ * file), add it onto Rbase (plain register-register ADD, case 1) to
+ * form the real address in REGTMP, then a plain zero-offset STR/LDR
+ * through REGTMP -- 3 instructions either way, so `size` is always 12
+ * regardless of which offset-materialization branch is taken. Found
+ * stress-testing real lib_core/libc (fmt/dofmt.c's real "MOVW
+ * -8(R3),R3"), see docs/claude_notes/plan_hello_libc_linking.md. *)
+let gindirect_huge (node : 'a T.node) (ms : move_size) (rbase : int) (offset : int)
+    (rtmp : int) (r : int) (is_store : bool) : pool Codegen.action =
+  let access () =
+    if is_store
+    then olsr12u node (opstr12_sized ms) 0 rtmp r
+    else olsr12u node (opldr12_sized ms) 0 rtmp r
+  in
+  let add_rtmp = oprrr_arith ADD lor (rbase lsl 16) lor (rtmp lsl 5) lor rtmp in
+  match move_immediate_encoding_sized false offset with
+  | Some movbase ->
+      { size = 12; x = None; binary = (fun () ->
+        [ w1 (movbase lor rtmp); w1 add_rtmp; w1 (access ()) ]
+      )}
+  | None ->
+      { size = 12; x = Some (PoolOperand (Ast_asm.Int offset)); binary = (fun () ->
+        [ gload_from_pool node rtmp; w1 add_rtmp; w1 (access ()) ]
+      )}
+
 (*****************************************************************************)
 (* The rules! *)
 (*****************************************************************************)
@@ -748,6 +970,64 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             error node
               "TODO: AND/ORR/EOR immediate isn't a valid e=64 bitmask pattern (needs e<64 replication, deliberately not implemented -- see bitmask_immediate_encoding's comment -- or isn't representable as a bitmask immediate at all)")
 
+    (* case 53, 32-bit-view: ANDW/ORRW/EORW $imm,[Rn,]Rd -- goken's own
+     * real narrow-element-size (e<=32) bitmask-immediate encoder is
+     * CONFIRMED BUGGY (see isbitcon/bitcon64_params's own comment
+     * above, which documents the real "AND $0x0202020202020202,..."
+     * miscompile found empirically against goken's real 7a/7l), so
+     * rather than replicate goken's own broken mechanism this port
+     * takes a genuinely different, xix-only path: materialize the
+     * immediate into REGTMP via a 32-bit MOVZW/MOVNW (falling back to
+     * the literal pool for anything that doesn't fit either lane),
+     * then perform the operation via the already-working
+     * register-register form (oprrr_arith, case 1) -- always
+     * correct, unlike copying goken's own confirmed-wrong bytes for
+     * this specific family. Found stress-testing real lib_core/libc
+     * (fmt/fltfmt.c's real "ANDW $1024,R1" and siblings), see
+     * docs/claude_notes/plan_hello_libc_linking.md. *)
+    | Arith ((ANDW | ORRW | EORW as op), Imm i, middle, (R rt)) ->
+        let (R r) = middle ||| R rt in
+        let (R rtmp) = rTMP in
+        (match move_immediate_encoding_sized true i with
+        | Some base ->
+            { size = 8; x = None; binary = (fun () ->
+              [ w1 (base lor rtmp);
+                w1 (oprrr_arith op lor (rtmp lsl 16) lor (r lsl 5) lor rt) ]
+            )}
+        | None ->
+            { size = 8; x = Some (PoolOperand (Ast_asm.Int i)); binary = (fun () ->
+              [ gload_from_pool node rtmp;
+                w1 (oprrr_arith op lor (rtmp lsl 16) lor (r lsl 5) lor rt) ]
+            )})
+
+    (* case 2/4: ADD/SUB/ADDW/SUBW $imm,[Rn,]Rd -- addcon fast path
+     * (see oaddi/isaddcon), falling back to the exact same REGTMP-
+     * materialize-then-register-op substitute already used for
+     * ANDW/ORRW/EORW just above whenever `i` is too big for the real
+     * "addcon" shape (12 bits, optionally shifted left 12): goken's
+     * own real fallback there is its own "$lcon" mechanism (a genuine
+     * extended-register literal-pool address form this port doesn't
+     * implement), so this is a deliberately different, xix-only
+     * substitute rather than a claim of real 7l byte parity -- same
+     * category as the store-immediate-to-memory expansion above.
+     * Found stress-testing real lib_core/libc (port/frexp.c's real
+     * "ADDW $268435456,R5", i.e. 1<<28). *)
+    | Arith ((ADD | SUB | ADDW | SUBW as op), Imm i, middle, (R rt)) when not (isaddcon i) ->
+        let (R r) = middle ||| R rt in
+        let is_w = (match op with ADDW | SUBW -> true | _ -> false) in
+        let (R rtmp) = rTMP in
+        (match move_immediate_encoding_sized is_w i with
+        | Some movbase ->
+            { size = 8; x = None; binary = (fun () ->
+              [ w1 (movbase lor rtmp);
+                w1 (oprrr_arith op lor (rtmp lsl 16) lor (r lsl 5) lor rt) ]
+            )}
+        | None ->
+            { size = 8; x = Some (PoolOperand (Ast_asm.Int i)); binary = (fun () ->
+              [ gload_from_pool node rtmp;
+                w1 (oprrr_arith op lor (rtmp lsl 16) lor (r lsl 5) lor rt) ]
+            )})
+
     (* case 2/4: op $imm,[Rn,]Rd ("addcon" fast path only -- see oaddi) *)
     | Arith (op, Imm i, middle, (R rt)) ->
         let (R r) = middle ||| R rt in
@@ -777,11 +1057,43 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           [ w1 (oprrr_shift op lor (rf lsl 16) lor (r lsl 5) lor rt) ]
         )}
 
+    (* case 24/25: NEG/MVN Rn,Rd (plain-register form) -- Rn<<16, ZR
+     * (31)<<5, Rd, same implicit-ZR-operand shape as CMP/CMN below. *)
+    | Neg2 (op, (R rf), (R rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (oprrr_neg2 op lor (rf lsl 16) lor (31 lsl 5) lor rt) ]
+        )}
+
+    (* case 45: SXTW/UXTW Rn,Rd *)
+    | Extend (op, (R rf), (R rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (oextend op rf rt) ]
+        )}
+
     (* case 7: CMP/CMN *)
     | Cmp (op, Reg (R rf), (R rn)) ->
         { size = 4; x = None; binary = (fun () ->
           [ w1 (oprrr_cmp op lor (rf lsl 16) lor (rn lsl 5) lor 31) ]
         )}
+    (* claude: same addcon-range fallback as ADD/SUB just above (goken's
+     * real "$lcon" extended-register literal-pool form not
+     * implemented; REGTMP-materialize + register-register CMP/CMN
+     * substitute instead). Found stress-testing real lib_core/libc
+     * (port/frexp.c's real "CMPW $65535,R5"). *)
+    | Cmp (op, Imm i, (R rn)) when not (isaddcon i) ->
+        let is_w = (match op with CMPW | CMNW -> true | CMP | CMN -> false) in
+        let (R rtmp) = rTMP in
+        (match move_immediate_encoding_sized is_w i with
+        | Some movbase ->
+            { size = 8; x = None; binary = (fun () ->
+              [ w1 (movbase lor rtmp);
+                w1 (oprrr_cmp op lor (rtmp lsl 16) lor (rn lsl 5) lor 31) ]
+            )}
+        | None ->
+            { size = 8; x = Some (PoolOperand (Ast_asm.Int i)); binary = (fun () ->
+              [ gload_from_pool node rtmp;
+                w1 (oprrr_cmp op lor (rtmp lsl 16) lor (rn lsl 5) lor 31) ]
+            )})
     | Cmp (op, Imm i, (R rn)) ->
         { size = 4; x = None; binary = (fun () ->
           [ w1 (oaddi node (opirr_cmp op) i rn 31) ]
@@ -792,6 +1104,20 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         let (R r) = middle ||| R rt in
         { size = 4; x = None; binary = (fun () ->
           [ w1 (oprrr_mul op lor (rf lsl 16) lor (31 lsl 10) lor (r lsl 5) lor rt) ]
+        )}
+
+    (* case 16: REM/REMW Rdivisor,[Rdividend,]Rdest -- 2 real
+     * instructions (SDIV;MSUB), see orem's own comment. *)
+    | Rem (op, (R rf), middle, (R rt)) ->
+        let (R r) = middle ||| R rt in
+        let sf, div_op = match op with
+          | REM -> s64, 3 | REMW -> s32, 3
+          | UREM -> s64, 2 | UREMW -> s32, 2
+        in
+        let (R rtmp) = rTMP in
+        { size = 8; x = None; binary = (fun () ->
+          let (o1, o2) = orem sf div_op rtmp rf r rt in
+          [ w1 o1; w1 o2 ]
         )}
 
     (* --------------------------------------------------------------------- *)
@@ -821,19 +1147,68 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           [ w1 (gmov_reg_reg rf rt) ]
         )}
 
+    (* claude: goken's real case 45 also covers "movT R,R -> sxtT R,R"
+     * (the exact same table as SXTW/UXTW's own standalone mnemonics,
+     * see Extend/oextend's own comment): MOVW (signed 32-bit
+     * register-to-register move) is NOT a separate encoding at all,
+     * it's a bare alias for SXTW's own opbfm-based one (goken's
+     * asmout.c literally comments out its own would-be "case AMOVW:"
+     * row in oprrr(), routing it through case 45 instead). MOVWU
+     * (unsigned/zero-extending) is genuinely different: a real ORRW
+     * Wd,WZR,Wf (32-bit OR against the zero register), which
+     * naturally zero-extends into the destination's upper 32 bits on
+     * real AArch64 -- goken's own oprrr(AMOVWU) is literally
+     * oprrr(AORRW)'s exact same row. Found stress-testing real
+     * lib_core/libc (fmt/dofmt.c's real "MOVW R1,R12"), see
+     * docs/claude_notes/plan_hello_libc_linking.md. *)
+    | Move (W_ A.S, Left (GReg (R rf)), GReg (R rt)) ->
+        { size = 4; x = None; binary = (fun () -> [ w1 (oextend SXTW rf rt) ]) }
+    | Move (W_ A.U, Left (GReg (R rf)), GReg (R rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (oprrr_arith ORRW lor (rf lsl 16) lor (31 lsl 5) lor rt) ]
+        )}
+
+    (* claude: MOVB/MOVBU/MOVH/MOVHU register-to-register -- same
+     * case-45 "movT R,R -> sxtT/uxtT R,R" alias as MOVW above, but
+     * UNLIKE MOVWU (which gets the ORRW shortcut, see just above)
+     * MOVBU/MOVHU genuinely need the real bitfield-extract mechanism
+     * (UBFM), not a plain register copy: an 8/16-bit zero-extend has
+     * to clear bits above the extracted field, which a 32-bit-view
+     * ORR can't do (it would leave bits [31:8]/[31:16] untouched,
+     * only *adding* a zeroed top half at [63:32] for free) --
+     * confirmed against asmout.c's own case 45 table, which groups
+     * AMOVB/AMOVBU/AMOVH/AMOVHU with ASXTB/AUXTB/ASXTH/AUXTH under
+     * the exact same opbfm(...) branches, unlike AMOVWU's own
+     * separate oprrr()-based branch. Reuses opbfm/opirr_sbfm/
+     * opirr_ubfm directly (Extend/oextend's own SXTW/UXTW machinery,
+     * generalized to immediates 7/15 instead of 31) rather than
+     * widening the parser-facing extend_opcode type for an encoding
+     * these two mnemonics never surface under their own SXTB/UXTB/
+     * SXTH/UXTH names in this port. Found stress-testing real
+     * lib_core/libc (fmt/utf's real "MOVBU R11,R11"), see
+     * docs/claude_notes/plan_hello_libc_linking.md. *)
+    | Move (B_ A.S, Left (GReg (R rf)), GReg (R rt)) ->
+        { size = 4; x = None; binary = (fun () -> [ w1 (opbfm opirr_sbfm 0 7 rf rt) ]) }
+    | Move (B_ A.U, Left (GReg (R rf)), GReg (R rt)) ->
+        { size = 4; x = None; binary = (fun () -> [ w1 (opbfm opirr_ubfm 0 7 rf rt) ]) }
+    | Move (H_ A.S, Left (GReg (R rf)), GReg (R rt)) ->
+        { size = 4; x = None; binary = (fun () -> [ w1 (opbfm opirr_sbfm 0 15 rf rt) ]) }
+    | Move (H_ A.U, Left (GReg (R rf)), GReg (R rt)) ->
+        { size = 4; x = None; binary = (fun () -> [ w1 (opbfm opirr_ubfm 0 15 rf rt) ]) }
+
     (* case 54 (monadic branch): FMOVS/FMOVD Fs,Fd (float register move) *)
     | Move ((FS_ | FD_ as ms), Left (GFReg (FR rf)), GFReg (FR rt)) ->
         { size = 4; x = None; binary = (fun () ->
           [ w1 (oprrr_fmovreg ms lor (rf lsl 5) lor rt) ]
         )}
 
-    (* case 29: SCVTFS/SCVTFD Rs,Fd (int -> float) *)
-    | Move ((SCVTF_S | SCVTF_D as ms), Left (GReg (R rf)), GFReg (FR rt)) ->
+    (* case 29: SCVTFS/SCVTFD/UCVTFWD Rs,Fd (int -> float) *)
+    | Move ((SCVTF_S | SCVTF_D | UCVTF_WD | SCVTF_WD as ms), Left (GReg (R rf)), GFReg (FR rt)) ->
         { size = 4; x = None; binary = (fun () ->
           [ w1 (oprrr_fcvt ms lor (rf lsl 5) lor rt) ]
         )}
     (* case 29: FCVTZSS/FCVTZSD Fs,Rd (float -> int, truncating) *)
-    | Move ((FCVTZS_S | FCVTZS_D as ms), Left (GFReg (FR rf)), GReg (R rt)) ->
+    | Move ((FCVTZS_S | FCVTZS_D | FCVTZU_WD | FCVTZS_WD as ms), Left (GFReg (FR rf)), GReg (R rt)) ->
         { size = 4; x = None; binary = (fun () ->
           [ w1 (oprrr_fcvt ms lor (rf lsl 5) lor rt) ]
         )}
@@ -850,6 +1225,35 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             { size = 4; x = Some (PoolOperand (Ast_asm.Int i)); binary = (fun () ->
               [ gload_from_pool node rt ]
             )})
+
+    (* case 32, 32-bit-view: MOVW $con,Rd -> movzw/movnw -- see
+     * move_immediate_encoding_sized's own comment. Found stress-
+     * testing real lib_core/libc (fmt/utfrune.c's real "MOVW
+     * $4,R5"), see docs/claude_notes/plan_hello_libc_linking.md. *)
+    | Move ((W_ _), Right (Int i), GReg (R rt)) ->
+        (match move_immediate_encoding_sized true i with
+        | Some base ->
+            { size = 4; x = None; binary = (fun () -> [ w1 (base lor rt) ]) }
+        | None ->
+            { size = 4; x = Some (PoolOperand (Ast_asm.Int i)); binary = (fun () ->
+              [ gload_from_pool node rt ]
+            )})
+
+    (* claude: "FMOVD $con,Fd" -- always through the literal pool
+     * (unlike the integer forms above, which try MOVZ/MOVN first):
+     * goken's own real chipfloat-immediate mechanism is confirmed
+     * dead code even in the reference implementation (see FArith's
+     * own comment), so there's no "direct encoding" fast path to try
+     * at all here, real or otherwise -- every float constant needs
+     * the pool. See opldr_literal_fmov's own comment for why this
+     * port implements it anyway (a genuinely different, working
+     * mechanism from goken's own broken one). Only FD_ (double) --
+     * FS_ (single) not yet needed by any real closure stress-tested
+     * so far. *)
+    | Move (FD_, Right (Float f), GFReg (FR rt)) ->
+        { size = 4; x = Some (PoolOperand (Ast_asm.Float f)); binary = (fun () ->
+          [ gload_from_pool_f node rt ]
+        )}
 
     (* case 4 (C_AECON)/case 12 (C_LCON): MOV $sym(SB),Rd --
      * address-of-global. Caught the hard way (byte-diff against
@@ -882,47 +1286,259 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               binary = (fun () -> [ gload_from_pool node rt ]) }
         )
 
-    (* case 20: MOV(B[U]|H[U]|W[U])? Rs,O(Rbase) -> STR (scaled 12-bit
-     * unsigned offset only), any size *)
+    (* claude: goken's real case 34 ("mov $lacon,R" -- address of a
+     * named local/param, not its value) synthesizes a genuine 2-
+     * instruction literal-pool sequence (omovlit + extended-register
+     * ADD) for ANY offset, always -- unlike case 4's own addcon fast
+     * path for SB-relative addresses just above, which only falls
+     * back to the pool when the immediate doesn't fit. This port
+     * takes the simpler, narrower route instead: the exact same
+     * addcon-immediate ADD fast path as Address(Global) above,
+     * reusing base_and_offset_of_entity's own formula (see the
+     * Entity(Local|Param) Move case above for the swapped-naming
+     * explanation) -- correct and sufficient for any realistically-
+     * sized frame (isaddcon's own 12-bit-scaled-by-4096 range), with
+     * no literal-pool fallback for an offset too large to fit (not
+     * yet needed by any real closure stress-tested so far; would need
+     * genuinely new pool-operand plumbing to add, unlike Address
+     * (Global)'s already-existing one). Found stress-testing real
+     * lib_core/libc (fmt/rune.c's real "MOV $rune-4(SP),R0"), see
+     * docs/claude_notes/plan_hello_libc_linking.md. *)
+    | Move (X_, Right (Address ((Local _ | Param _) as ent)), GReg (R rt)) ->
+        let (R rsp_i) = rSP in
+        let final_offset = match ent with
+          | Local (_, off) -> env.autosize + 8 + off
+          | Param (_, off) -> env.autosize + off
+          | Global _ -> raise (Impossible "Global handled via the SB-relative path above")
+        in
+        if final_offset <> 0 && isaddcon final_offset
+        then
+          { size = 4; x = None; binary = (fun () ->
+            [ w1 (oaddi node (opirr_addsub ADD) final_offset rsp_i rt) ]
+          )}
+        else
+          error node (spf "TODO: address-of-local/param offset %d doesn't fit the addcon immediate range (needs literal pool, not yet implemented)" final_offset)
+
+    (* claude: real "(FP)"/"(SP)"-relative named local/param access,
+     * e.g. real 7c -S output for fmt/dofmt.c's own "fmt+8(FP),R11"
+     * (fmt is dofmt's 2nd parameter). Resolves to the exact same
+     * (rSP, real_offset) shape a plain Indirect(rbase,offset) memory
+     * operand already is, then the exact same scaled-12-bit-or-
+     * unscaled-9-bit machinery as case 20/21 just below (this port's
+     * own new unscaled-9-bit fallback, not yet applied to the plain
+     * Indirect cases below -- named locals/params are where an
+     * unaligned offset actually turned up in practice).
+     *
+     * NOTE the naming: this port's own A.entity constructors are
+     * swapped from their shared doc comment (Ast_asm.ml: "Param of
+     * ... (* FP *) / Local of ... (* SP *)") -- ARM64's grammar (like
+     * ARM32's own Parser_asm5.mly, identical mapping, already
+     * verified working) binds TFP to `Local` and TSP to `Param`, so a
+     * real "(FP)" reference (a genuine caller-frame PARAMETER in
+     * Plan9's own convention) surfaces here as `A.Local`, and a real
+     * "(SP)" reference (a genuine callee-frame LOCAL) surfaces as
+     * `A.Param` -- confirmed against the real -S output above
+     * ("fmt+8(FP)" parses to `Entity (Local (Some "fmt", 8))`, and
+     * fmt genuinely is a parameter, not a local variable).
+     *
+     * Formula (env.autosize is Rewrite7.ml's own `autosize - pcsz`,
+     * see its "n.instr <- T.TEXT (..., autosize - pcsz)" mutation) --
+     * both cases add env.autosize, since SP has already moved down by
+     * that much at function entry (a true local's own offset is
+     * negative, e.g. "rune-4(SP)", specifically so that adding it
+     * back onto autosize lands within this function's own frame, same
+     * shape as ARM32's real 5a): a true PARAM (this port's `Local`)
+     * sits *above* this function's entire frame, in the caller's own
+     * stack region, so needs the full real autosize (env.autosize +
+     * pcsz) added on top of its own (positive) offset; a true LOCAL
+     * (this port's `Param`) sits *within* this function's own frame,
+     * so just env.autosize (no extra pcsz) added to its own (usually
+     * negative) offset -- no ARM32-style separate "+4" correction
+     * either way beyond that, since ARM64's own frame-establishment
+     * ("SUB $autosize,SP,SP") has no separate "auto push{lr}" step to
+     * compensate for, unlike ARM32's real 5a. Verified empirically
+     * against a real linked closure (hello_libc's own rt0.s/dofmt.c
+     * chain actually running correctly under native aarch64), not
+     * re-derived from the ABI alone -- see
+     * docs/claude_notes/plan_hello_libc_linking.md. *)
+    | Move (ms, Left (GReg (R rf)), Entity ((A.Local _ | A.Param _) as ent)) ->
+        let (R rsp_i) = rSP in
+        let offset = match ent with
+          | A.Local (_, off) -> env.autosize + 8 + off
+          | A.Param (_, off) -> env.autosize + off
+          | A.Global _ -> raise (Impossible "Global handled via the SB-relative path above")
+        in
+        let shift = scale_shift_of_size ms in
+        { size = 4; x = None; binary = (fun () ->
+          if offset land ((1 lsl shift) - 1) <> 0
+          then [ w1 (olsr9s node (opstr9_sized ms) offset rsp_i rf) ]
+          else [ w1 (olsr12u node (opstr12_sized ms) (offset asr shift) rsp_i rf) ]
+        )}
+    | Move (ms, Left (Entity ((A.Local _ | A.Param _) as ent)), GReg (R rt)) ->
+        let (R rsp_i) = rSP in
+        let offset = match ent with
+          | A.Local (_, off) -> env.autosize + 8 + off
+          | A.Param (_, off) -> env.autosize + off
+          | A.Global _ -> raise (Impossible "Global handled via the SB-relative path above")
+        in
+        let shift = scale_shift_of_size ms in
+        { size = 4; x = None; binary = (fun () ->
+          if offset land ((1 lsl shift) - 1) <> 0
+          then [ w1 (olsr9s node (opldr9_sized ms) offset rsp_i rt) ]
+          else [ w1 (olsr12u node (opldr12_sized ms) (offset asr shift) rsp_i rt) ]
+        )}
+
+    (* claude: the float-register siblings of the two Entity(Local|
+     * Param) cases just above -- same offset formula, same scaled/
+     * unscaled fallback, just GFReg instead of GReg. Found stress-
+     * testing real lib_core/libc (fmt/dofmt.c's real "FMOVD
+     * f+0(FP),F7"). *)
+    | Move ((FS_ | FD_ as ms), Left (GFReg (FR rf)), Entity ((A.Local _ | A.Param _) as ent)) ->
+        let (R rsp_i) = rSP in
+        let offset = match ent with
+          | A.Local (_, off) -> env.autosize + 8 + off
+          | A.Param (_, off) -> env.autosize + off
+          | A.Global _ -> raise (Impossible "Global handled via the SB-relative path above")
+        in
+        let shift = scale_shift_of_size ms in
+        { size = 4; x = None; binary = (fun () ->
+          if offset land ((1 lsl shift) - 1) <> 0
+          then [ w1 (olsr9s node (opstr9_sized ms) offset rsp_i rf) ]
+          else [ w1 (olsr12u node (opstr12_sized ms) (offset asr shift) rsp_i rf) ]
+        )}
+    | Move ((FS_ | FD_ as ms), Left (Entity ((A.Local _ | A.Param _) as ent)), GFReg (FR rt)) ->
+        let (R rsp_i) = rSP in
+        let offset = match ent with
+          | A.Local (_, off) -> env.autosize + 8 + off
+          | A.Param (_, off) -> env.autosize + off
+          | A.Global _ -> raise (Impossible "Global handled via the SB-relative path above")
+        in
+        let shift = scale_shift_of_size ms in
+        { size = 4; x = None; binary = (fun () ->
+          if offset land ((1 lsl shift) - 1) <> 0
+          then [ w1 (olsr9s node (opldr9_sized ms) offset rsp_i rt) ]
+          else [ w1 (olsr12u node (opldr12_sized ms) (offset asr shift) rsp_i rt) ]
+        )}
+
+    (* claude: "MOVT $con,O(Rbase)" -- store an immediate directly to
+     * memory. NOT real 7a syntax at all: confirmed absent from
+     * goken's own optab.c (no AMOVW/AMOV row pairs a C_MOVCON/C_LCON
+     * "from" with any O(R)-shaped "to" -- every real row needing a
+     * memory destination takes C_REG as its "from", never a
+     * constant), unlike CASE/BCASE elsewhere in this port, which
+     * *does* have real grammar. Real hardware has no store-immediate
+     * instruction at all, so this is a genuine 2-instruction xix-only
+     * expansion (materialize into REGTMP via the exact same
+     * move_immediate_encoding(_sized) machinery as a register
+     * destination, then store REGTMP with the exact same scaled-or-
+     * unscaled machinery as case 20 just below), not a claim of real
+     * 7a byte parity -- same category as ARM32's own IndirectShift.
+     * Found stress-testing real lib_core/libc (fmt/dofmt.c's real
+     * "MOVW $0,24(R31)"), see
+     * docs/claude_notes/plan_hello_libc_linking.md. *)
+    | Move (ms, Right (Int i), Indirect ((R rbase), offset)) ->
+        let is_w = (match ms with X_ -> false | _ -> true) in
+        (match move_immediate_encoding_sized is_w i with
+        | None -> error node "TODO: store-immediate value doesn't fit a direct MOVZ/MOVN (needs literal pool, not yet implemented)"
+        | Some movbase ->
+            let (R rtmp) = rTMP in
+            let shift = scale_shift_of_size ms in
+            { size = 8; x = None; binary = (fun () ->
+              let store =
+                if offset land ((1 lsl shift) - 1) <> 0
+                then olsr9s node (opstr9_sized ms) offset rbase rtmp
+                else olsr12u node (opstr12_sized ms) (offset asr shift) rbase rtmp
+              in
+              [ w1 (movbase lor rtmp); w1 store ]
+            )}
+        )
+
+    (* claude: same "MOVT $con,O(Rbase)" xix-only expansion just above,
+     * for a *named* local/param destination instead of a raw
+     * Indirect -- see that case's own comment, and the Entity
+     * (Local|Param) Move case further above for the offset formula/
+     * swapped-naming explanation. Found stress-testing real
+     * lib_core/libc (fmt/dofmt.c's real "MOVW $0,w-68(SP)"). *)
+    | Move (ms, Right (Int i), Entity ((A.Local _ | A.Param _) as ent)) ->
+        let (R rsp_i) = rSP in
+        let offset = match ent with
+          | A.Local (_, off) -> env.autosize + 8 + off
+          | A.Param (_, off) -> env.autosize + off
+          | A.Global _ -> raise (Impossible "Global handled via the SB-relative path above")
+        in
+        let is_w = (match ms with X_ -> false | _ -> true) in
+        (match move_immediate_encoding_sized is_w i with
+        | None -> error node "TODO: store-immediate value doesn't fit a direct MOVZ/MOVN (needs literal pool, not yet implemented)"
+        | Some movbase ->
+            let (R rtmp) = rTMP in
+            let shift = scale_shift_of_size ms in
+            { size = 8; x = None; binary = (fun () ->
+              let store =
+                if offset land ((1 lsl shift) - 1) <> 0
+                then olsr9s node (opstr9_sized ms) offset rsp_i rtmp
+                else olsr12u node (opstr12_sized ms) (offset asr shift) rsp_i rtmp
+              in
+              [ w1 (movbase lor rtmp); w1 store ]
+            )}
+        )
+
+    (* case 20: MOV(B[U]|H[U]|W[U])? Rs,O(Rbase) -> STR, any size --
+     * 3-tier (scaled-12-bit / unscaled-9-bit / gindirect_huge), same
+     * shape as the SB-relative fast path further below. *)
     | Move (ms, Left (GReg (R rf)), Indirect ((R rbase), offset)) ->
         let shift = scale_shift_of_size ms in
-        if offset land ((1 lsl shift) - 1) <> 0
-        then error node "TODO: unaligned/unscaled store offset (not yet implemented)"
-        else
-          { size = 4; x = None; binary = (fun () ->
-            [ w1 (olsr12u node (opstr12_sized ms) (offset asr shift) rbase rf) ]
-          )}
-    (* case 21: MOV(B[U]|H[U]|W[U])? O(Rbase),Rd -> LDR (scaled 12-bit
-     * unsigned offset only), any size *)
+        let (R rtmp) = rTMP in
+        if offset land ((1 lsl shift) - 1) = 0 && offset >= 0 && (offset asr shift) < (1 lsl 12)
+        then { size = 4; x = None; binary = (fun () ->
+                 [ w1 (olsr12u node (opstr12_sized ms) (offset asr shift) rbase rf) ]
+               )}
+        else if offset >= -256 && offset <= 255
+        then { size = 4; x = None; binary = (fun () ->
+                 [ w1 (olsr9s node (opstr9_sized ms) offset rbase rf) ]
+               )}
+        else gindirect_huge node ms rbase offset rtmp rf true
+    (* case 21: MOV(B[U]|H[U]|W[U])? O(Rbase),Rd -> LDR, any size --
+     * same 3-tier shape. *)
     | Move (ms, Left (Indirect ((R rbase), offset)), GReg (R rt)) ->
         let shift = scale_shift_of_size ms in
-        if offset land ((1 lsl shift) - 1) <> 0
-        then error node "TODO: unaligned/unscaled load offset (not yet implemented)"
-        else
-          { size = 4; x = None; binary = (fun () ->
-            [ w1 (olsr12u node (opldr12_sized ms) (offset asr shift) rbase rt) ]
-          )}
+        let (R rtmp) = rTMP in
+        if offset land ((1 lsl shift) - 1) = 0 && offset >= 0 && (offset asr shift) < (1 lsl 12)
+        then { size = 4; x = None; binary = (fun () ->
+                 [ w1 (olsr12u node (opldr12_sized ms) (offset asr shift) rbase rt) ]
+               )}
+        else if offset >= -256 && offset <= 255
+        then { size = 4; x = None; binary = (fun () ->
+                 [ w1 (olsr9s node (opldr9_sized ms) offset rbase rt) ]
+               )}
+        else gindirect_huge node ms rbase offset rtmp rt false
 
     (* case 20/21, float memory form: FMOVS/FMOVD Fs,O(Rbase) /
-     * FMOVS/FMOVD O(Rbase),Fd -- same scaled-12-bit machinery as the
-     * integer sizes above, just the "V" bit set (see
-     * ldstr12u_size_v_opc). *)
+     * FMOVS/FMOVD O(Rbase),Fd -- same 3-tier machinery as the integer
+     * sizes above, just the "V" bit set (see ldstr12u_size_v_opc). *)
     | Move ((FS_ | FD_ as ms), Left (GFReg (FR rf)), Indirect ((R rbase), offset)) ->
         let shift = scale_shift_of_size ms in
-        if offset land ((1 lsl shift) - 1) <> 0
-        then error node "TODO: unaligned/unscaled store offset (not yet implemented)"
-        else
-          { size = 4; x = None; binary = (fun () ->
-            [ w1 (olsr12u node (opstr12_sized ms) (offset asr shift) rbase rf) ]
-          )}
+        let (R rtmp) = rTMP in
+        if offset land ((1 lsl shift) - 1) = 0 && offset >= 0 && (offset asr shift) < (1 lsl 12)
+        then { size = 4; x = None; binary = (fun () ->
+                 [ w1 (olsr12u node (opstr12_sized ms) (offset asr shift) rbase rf) ]
+               )}
+        else if offset >= -256 && offset <= 255
+        then { size = 4; x = None; binary = (fun () ->
+                 [ w1 (olsr9s node (opstr9_sized ms) offset rbase rf) ]
+               )}
+        else gindirect_huge node ms rbase offset rtmp rf true
     | Move ((FS_ | FD_ as ms), Left (Indirect ((R rbase), offset)), GFReg (FR rt)) ->
         let shift = scale_shift_of_size ms in
-        if offset land ((1 lsl shift) - 1) <> 0
-        then error node "TODO: unaligned/unscaled load offset (not yet implemented)"
-        else
-          { size = 4; x = None; binary = (fun () ->
-            [ w1 (olsr12u node (opldr12_sized ms) (offset asr shift) rbase rt) ]
-          )}
+        let (R rtmp) = rTMP in
+        if offset land ((1 lsl shift) - 1) = 0 && offset >= 0 && (offset asr shift) < (1 lsl 12)
+        then { size = 4; x = None; binary = (fun () ->
+                 [ w1 (olsr12u node (opldr12_sized ms) (offset asr shift) rbase rt) ]
+               )}
+        else if offset >= -256 && offset <= 255
+        then { size = 4; x = None; binary = (fun () ->
+                 [ w1 (olsr9s node (opldr9_sized ms) offset rbase rt) ]
+               )}
+        else gindirect_huge node ms rbase offset rtmp rt false
 
     (* case 20/21 (SB-relative fast path): "MOV Rf,sym(SB)" / "MOV
      * sym(SB),Rd" -- store/load the *value* at a global (as opposed
@@ -942,13 +1558,17 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | T.SData2 (offset, _kind) ->
             let final_offset = offset + goffset in
             let shift = scale_shift_of_size ms in
-            if final_offset land ((1 lsl shift) - 1) <> 0
-            then error node "TODO: unaligned SB-relative store offset"
-            else
-              let (R rsb_i) = rSB in
-              { size = 4; x = None; binary = (fun () ->
-                [ w1 (olsr12u node (opstr12_sized ms) (final_offset asr shift) rsb_i rf) ]
-              )}
+            let (R rsb_i) = rSB in
+            let (R rtmp) = rTMP in
+            if final_offset land ((1 lsl shift) - 1) = 0
+            then { size = 4; x = None; binary = (fun () ->
+                     [ w1 (olsr12u node (opstr12_sized ms) (final_offset asr shift) rsb_i rf) ]
+                   )}
+            else if final_offset >= -256 && final_offset <= 255
+            then { size = 4; x = None; binary = (fun () ->
+                     [ w1 (olsr9s node (opstr9_sized ms) final_offset rsb_i rf) ]
+                   )}
+            else gsbrel_huge node ms global goffset rtmp rf true
         )
     | Move (ms, Left (Entity (A.Global (global, goffset))), GReg (R rt)) ->
         let v = Hashtbl.find env.syms (T.symbol_of_global global) in
@@ -957,13 +1577,17 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | T.SData2 (offset, _kind) ->
             let final_offset = offset + goffset in
             let shift = scale_shift_of_size ms in
-            if final_offset land ((1 lsl shift) - 1) <> 0
-            then error node "TODO: unaligned SB-relative load offset"
-            else
-              let (R rsb_i) = rSB in
-              { size = 4; x = None; binary = (fun () ->
-                [ w1 (olsr12u node (opldr12_sized ms) (final_offset asr shift) rsb_i rt) ]
-              )}
+            let (R rsb_i) = rSB in
+            let (R rtmp) = rTMP in
+            if final_offset land ((1 lsl shift) - 1) = 0
+            then { size = 4; x = None; binary = (fun () ->
+                     [ w1 (olsr12u node (opldr12_sized ms) (final_offset asr shift) rsb_i rt) ]
+                   )}
+            else if final_offset >= -256 && final_offset <= 255
+            then { size = 4; x = None; binary = (fun () ->
+                     [ w1 (olsr9s node (opldr9_sized ms) final_offset rsb_i rt) ]
+                   )}
+            else gsbrel_huge node ms global goffset rtmp rt false
         )
 
     (* case 20/21, float SB-relative fast path *)
@@ -974,13 +1598,17 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | T.SData2 (offset, _kind) ->
             let final_offset = offset + goffset in
             let shift = scale_shift_of_size ms in
-            if final_offset land ((1 lsl shift) - 1) <> 0
-            then error node "TODO: unaligned SB-relative store offset"
-            else
-              let (R rsb_i) = rSB in
-              { size = 4; x = None; binary = (fun () ->
-                [ w1 (olsr12u node (opstr12_sized ms) (final_offset asr shift) rsb_i rf) ]
-              )}
+            let (R rsb_i) = rSB in
+            let (R rtmp) = rTMP in
+            if final_offset land ((1 lsl shift) - 1) = 0
+            then { size = 4; x = None; binary = (fun () ->
+                     [ w1 (olsr12u node (opstr12_sized ms) (final_offset asr shift) rsb_i rf) ]
+                   )}
+            else if final_offset >= -256 && final_offset <= 255
+            then { size = 4; x = None; binary = (fun () ->
+                     [ w1 (olsr9s node (opstr9_sized ms) final_offset rsb_i rf) ]
+                   )}
+            else gsbrel_huge node ms global goffset rtmp rf true
         )
     | Move ((FS_ | FD_ as ms), Left (Entity (A.Global (global, goffset))), GFReg (FR rt)) ->
         let v = Hashtbl.find env.syms (T.symbol_of_global global) in
@@ -989,13 +1617,17 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | T.SData2 (offset, _kind) ->
             let final_offset = offset + goffset in
             let shift = scale_shift_of_size ms in
-            if final_offset land ((1 lsl shift) - 1) <> 0
-            then error node "TODO: unaligned SB-relative load offset"
-            else
-              let (R rsb_i) = rSB in
-              { size = 4; x = None; binary = (fun () ->
-                [ w1 (olsr12u node (opldr12_sized ms) (final_offset asr shift) rsb_i rt) ]
-              )}
+            let (R rsb_i) = rSB in
+            let (R rtmp) = rTMP in
+            if final_offset land ((1 lsl shift) - 1) = 0
+            then { size = 4; x = None; binary = (fun () ->
+                     [ w1 (olsr12u node (opldr12_sized ms) (final_offset asr shift) rsb_i rt) ]
+                   )}
+            else if final_offset >= -256 && final_offset <= 255
+            then { size = 4; x = None; binary = (fun () ->
+                     [ w1 (olsr9s node (opldr9_sized ms) final_offset rsb_i rt) ]
+                   )}
+            else gsbrel_huge node ms global goffset rtmp rt false
         )
 
     (* case 23: MOV Rf,-16(Rbase)! / MOV Rf,(Rbase)16! -- pre/post-index
@@ -1059,6 +1691,37 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           [ w1 (opirr_tbz nonzero lor (tbz_bitfield bit)
                 lor (((branch_delta node) land 0x3FFF) lsl 5)
                 lor rt) ]
+        )}
+
+    (* case 62: CASE Rv,Rt -> adr tab,Rt; movw Rt[Rv<<2],REGTMP;
+     * add Rt,REGTMP; br (REGTMP). `tab` is always 16 bytes (4
+     * instructions) past this CASE itself -- see Ast_asm7.ml's
+     * CaseJump comment. The `last_case_pc` update is deferred into
+     * this thunk (not done eagerly above) so it only ever fires when
+     * this node's real bytes are actually being emitted (`gen`'s own
+     * pass), never during a size-only query elsewhere -- see
+     * last_case_pc's own comment for why that matters. *)
+    | CaseJump ((R rv), (R rt)) ->
+        { size = 16; x = None; binary = (fun () ->
+          last_case_pc := node.real_pc;
+          let (R rtmp) = rTMP in
+          [ w1 (oadr 16 rt);
+            w1 (ocase_load rv rt rtmp);
+            w1 (oprrr_arith ADD lor (rt lsl 16) lor (rtmp lsl 5) lor rtmp);
+            w1 (opbrr_b lor (rtmp lsl 5)) ]
+        )}
+
+    (* case 63: BCASE label -- not a real instruction, one raw 32-bit
+     * table entry: target.real_pc - (last CASE's real_pc + 16). See
+     * last_case_pc's own comment; "missing CASE" mirrors goken's own
+     * diag() for a BCASE with no preceding CASE. *)
+    | BCase { contents = (Absolute _) } ->
+        { size = 4; x = None; binary = (fun () ->
+          if !last_case_pc < 0
+          then error node "BCASE with no preceding CASE (missing CASE)";
+          match node.branch with
+          | None -> raise (Impossible "resolving should have set the branch field")
+          | Some ndst -> [ w1 (ndst.real_pc - (!last_case_pc + 16)) ]
         )}
 
     (* RET / RET Rn -- defaults to RLINK (X30), goken's own default for
@@ -1143,7 +1806,8 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | BL { contents = (Relative _ | LabelUse _ | SymbolJump _) }
     | Bxx (_, { contents = (Relative _ | LabelUse _ | SymbolJump _ | IndirectJump _) })
     | CBxx (_, _, { contents = (Relative _ | LabelUse _ | SymbolJump _ | IndirectJump _) })
-    | TBxx (_, _, _, { contents = (Relative _ | LabelUse _ | SymbolJump _ | IndirectJump _) }) ->
+    | TBxx (_, _, _, { contents = (Relative _ | LabelUse _ | SymbolJump _ | IndirectJump _) })
+    | BCase { contents = (Relative _ | LabelUse _ | SymbolJump _ | IndirectJump _) } ->
         raise (Impossible
           "branch operand should have been resolved to Absolute by now")
     )
@@ -1162,6 +1826,7 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
   let res = ref [] in
   let autosize = ref 0 in
   let pc = ref config.init_text in
+  last_case_pc := -1 (* fresh per program, see last_case_pc's own comment *);
 
   cg |> T.iter (fun n ->
     let {size; binary; x = _} =

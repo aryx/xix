@@ -157,6 +157,34 @@ type instr =
    * than folded into Arith since the *immediate* form's encoding has
    * nothing in common with Arith's. *)
   | Shift of shift_opcode * imr * reg option * reg
+  (* claude: goken's case 25 (NEG/NEGW, "negX Rs,Rd -> subX Rs<<0,ZR,Rd")
+   * and the plain-register branch of case 24 (MVN/MVNW, "mvn Rs,Rd ->
+   * orr Rs,ZR,Rd" -- the *other* branch of case 24, "mov Rs,Rd -> add
+   * $0,Rs,Rd", is a real MOV alias too but already covered by Move
+   * below via a real ADD $0 encoding path, not this constructor).
+   * Both share the exact same "base_opcode | Rn<<16 | ZR<<5 | Rd"
+   * shape -- goken's own oprrr(p->as) already returns the right base
+   * opcode per mnemonic, the register wiring is identical. NOT
+   * implemented here: MVN/NEG's SP-referencing and shifted-register
+   * operand forms (goken's own case 24/25 has extra branches for
+   * those) -- found stress-testing against real lib_core/libc (fmt/
+   * nan64.c's real "MVN R11,R4"), see
+   * docs/claude_notes/plan_hello_libc_linking.md. *)
+  | Neg2 of neg2_opcode * reg (* Rn *) * reg (* Rd *)
+  (* claude: goken's case 45 ("sxt/uxt[bhw] R,R"), an alias for a fixed
+   * SBFM/UBFM (0, <7|15|31>, Rn, Rd) -- same opbfm() machinery Shift's
+   * LSL/LSR/ASR case above already uses for its immediate-shift forms,
+   * just with the two immediates hardcoded per mnemonic instead of
+   * derived from a user-given shift amount. NOT implemented: the
+   * "movT R,R -> sxtT R,R" MOV-alias spelling goken's own case 45 also
+   * accepts (real MOVB/MOVH/MOVW/MOVBU/MOVHU already cover the same
+   * ground via Move's own real encoding path) and AMOVWU's own
+   * non-opbfm branch (`oprrr(AMOVWU)`, a real zero-extend-via-ORR
+   * encoding, different shape -- not needed here since MOVWU already
+   * covers that case through Move). Found stress-testing against real
+   * lib_core/libc (fmt/dofmt.c's real "SXTW R0,R1"), see
+   * docs/claude_notes/plan_hello_libc_linking.md. *)
+  | Extend of extend_opcode * reg (* Rn *) * reg (* Rd *)
   (* claude: LTYPE7 -- CMP/CMN, no destination register (implicitly ZR);
    * same imr as Arith. *)
   | Cmp of cmp_opcode * imr * reg
@@ -165,6 +193,27 @@ type instr =
    * 4th operand, and the *W-suffixed 32-bit-result variants) are a
    * follow-up -- see ArithMul's "not wired" comment in Codegen7.ml. *)
   | ArithMul of mul_opcode * reg * reg option * reg
+  (* claude: goken's case 16 -- "REM[W] Rdivisor,[Rdividend,]Rdest",
+   * real AArch64 has no hardware remainder instruction so goken
+   * synthesizes it as a 2-instruction pseudo-op ("XremY R[,R],R ->
+   * XdivY; XmsubY" -- SDIV into REGTMP (X17), then MSUB back out:
+   * Rdest = Rdividend - REGTMP*Rdivisor), size 8 not 4 -- same shape
+   * as ARM32's own DIV/MOD hardware-SDIV+MLS port, just here it's
+   * goken's *own* real synthesis being replicated exactly (byte-
+   * verified), not a deliberate hardware-instead-of-software
+   * deviation. `bool` is true for REMW (32-bit), false for REM
+   * (64-bit) -- kept as its own constructor rather than folding into
+   * ArithMul since goken's asmout.c gives it a genuinely different
+   * case number (16, not 15) and instruction count. `rem_opcode`
+   * covers all 4 real width/signedness combinations (goken's own
+   * case 16 optab rows share AREM's row for REMW/UREM/UREMW too --
+   * same instruction *shape*, only the inner SDIV-vs-UDIV and s64-vs-
+   * s32 selection differs, see Codegen7.ml's orem). Found stress-
+   * testing against real lib_core/libc (fmt/fltfmt.c's real "REMW
+   * R4,R10,R5", fmt/dofmt.c's real "UREM ...", see
+   * docs/claude_notes/plan_hello_libc_linking.md). *)
+  | Rem of rem_opcode * reg (* divisor *) *
+      reg option (* dividend, defaults to dest *) * reg (* dest *)
   (* claude: LTYPE3 in a.y -- MOV/MOVB/MOVBU/MOVH/MOVHU/MOVW/MOVWU, all
    * one grammar shape ("gen,gen") dispatched by operand type at codegen
    * time, exactly like Ast_asmi.ml's Move1/RISC-V and unlike ARM32's
@@ -195,6 +244,39 @@ type instr =
    * comment). *)
   | TBxx of bool (* true = branch if nonzero (TBNZ), false = TBZ *) *
       int * reg * A.branch_operand
+  (* claude: switch-statement jump-table dispatch, goken's real case
+   * 62/63 (linkers/7l/asmout.c) -- AND, unlike ARM32's own CASE/BCASE
+   * (Ast_asm5.ml's own comment: "no real 5a/7a grammar to match at
+   * all"), this one genuinely IS real 7a syntax: assemblers/7a/lex.c
+   * lexes "CASE"/"BCASE" to real ACASE/ABCASE tokens, and a.y has a
+   * real `LTYPED reg ',' reg` / `LTYPE5 rel`-shaped production for
+   * them -- confirmed empirically (stress-testing fmt/fmt.c's real
+   * switch-based dispatch, see
+   * docs/claude_notes/plan_hello_libc_linking.md). So this port
+   * pursues real byte-parity here, unlike ARM32's deliberately
+   * simplified (absolute-address-table) deviation.
+   *
+   * "CASE Rv,Rt" expands to 4 real instructions (goken's own comment:
+   * "case Rv,Rt -> adr tab,Rt; movw Rt[Rv<<2],REGTMP; add Rt,REGTMP;
+   * br (REGTMP)"): Rv is the switch index, Rt a scratch register that
+   * ends up holding the jump table's own PC-relative base address
+   * (always exactly 16 bytes -- 4 instructions -- past the CASE
+   * itself, i.e. right where the BCASE table below starts); the table
+   * itself is indexed by Rv, each entry is a signed 32-bit *relative*
+   * offset from that same table-base address (not an absolute
+   * address, unlike ARM32's version) added back onto it to get the
+   * real jump target.
+   *
+   * "BCASE label" is NOT a real instruction at all (same as ARM32):
+   * one raw 32-bit table entry holding `label.real_pc - (the most
+   * recent preceding CASE's real_pc + 16)` -- goken's own asmout.c
+   * computes this via a `static Prog *lastcase` global, updated
+   * whenever a CASE is codegen'd and read by every following BCASE
+   * until the next CASE; Codegen7.ml's own `last_case_pc` mutable ref
+   * mirrors that exact mechanism (real, stateful, sequential
+   * per-program codegen, not a design choice unique to this port). *)
+  | CaseJump of reg (* Rv, switch index *) * reg (* Rt, scratch *)
+  | BCase of A.branch_operand
   (* claude: LTYPEA -- RET[reg], defaults to RLINK (X30) when the
    * register is omitted, matching goken's own default. Unlike
    * ARM32/MIPS/RISC-V (where "RET" is purely a compiler-facing virtual
@@ -311,9 +393,38 @@ type instr =
   and arith_opcode =
     | ADD | SUB | AND_ | ORR | EOR | BIC
     | ADDW | SUBW | ANDW | ORRW | EORW | BICW
+    (* claude: real hardware SDIV/UDIV (goken's own optab case 1, the
+     * exact same plain "op Rm,[Rn,]Rd" shape as ADD/SUB/etc above --
+     * NOT part of the Rem pseudo-op family below, which is for the
+     * *remainder* operation goken has to synthesize since AArch64 has
+     * no hardware remainder; division itself is real hardware here).
+     * Base opcode is OPDP2(3) for signed / OPDP2(2) for unsigned, see
+     * Codegen7.ml's oprrr_arith. Found stress-testing real
+     * lib_core/libc (fmt/fltfmt.c's real "SDIVW ..."). *)
+    | SDIV | UDIV | SDIVW | UDIVW
   and shift_opcode =
     | LSL | LSR | ASR | ROR
     | LSLW | LSRW | ASRW | RORW
+  and neg2_opcode =
+    | NEG | MVN
+    | NEGW | MVNW
+  (* claude: goken's real case 16 -- REM/UREM (64-bit) and REMW/UREMW
+   * (32-bit) all share one optab row (AREM's), only the inner
+   * SDIV-vs-UDIV selection and s64-vs-s32 width differ -- see Rem's
+   * own comment and Codegen7.ml's orem. *)
+  and rem_opcode =
+    | REM | UREM
+    | REMW | UREMW
+  (* claude: only SXTW itself was actually seen stress-testing real
+   * lib_core/libc (fmt/dofmt.c); UXTW is included too since it's the
+   * exact same opbfm mechanism with UBFM instead of SBFM as the base
+   * (zero-cost to add alongside). The narrower byte/halfword extends
+   * (SXTB/SXTH/UXTB/UXTH/+W forms) share this same mechanism too
+   * (just 7/15 instead of 31 as the second immediate) but aren't
+   * added speculatively -- a one-line change per mnemonic in
+   * Codegen7.ml's oextend if a real closure ever needs them. *)
+  and extend_opcode =
+    | SXTW | UXTW
   and cmp_opcode =
     | CMP | CMN
     | CMPW | CMNW
@@ -355,6 +466,31 @@ type instr =
                 * truncating *)
     | FCVTZS_D (* FCVTZSD -- double-precision float -> int (X reg),
                 * truncating *)
+    (* claude: UCVTFWD -- unsigned 32-bit int (W reg) -> double-
+     * precision float. FCVTZUDW -- the reverse direction: double
+     * float -> unsigned 32-bit int (W reg), truncating. Goken's real
+     * FPCVTI(sf,s,type,rmode,op) family has 16 total combinations
+     * (S/D precision x X/W-reg source x signed/unsigned x
+     * convert-to-float/truncate-to-int); only these two are added
+     * here (both needed by a real lib_core/libc closure, fmt/strtod.c)
+     * rather than all 16 speculatively -- see Codegen7.ml's fpcvti
+     * for how trivial adding another combination is (one more
+     * `fpcvti a b c d` call with the right 4 flag bits) if a real
+     * closure ever needs one. *)
+    | UCVTF_WD
+    | FCVTZU_WD
+    (* claude: SCVTFWD -- signed 32-bit int (W reg) -> double-precision
+     * float, the signed counterpart of UCVTF_WD above (same family,
+     * see its own comment). FCVTZSDW -- double float -> signed
+     * 32-bit int (W reg), truncating: the signed counterpart of
+     * FCVTZU_WD. Between these four (UCVTF_WD/SCVTF_WD/FCVTZU_WD/
+     * FCVTZS_WD) this port now covers the full D-precision <-> W-reg
+     * quadrant of goken's 16-combination FPCVTI family; only the
+     * S-precision <-> W-reg quadrant (SCVTFWS/UCVTFWS/FCVTZSSW/
+     * FCVTZUSW) remains unadded, not yet needed by any real closure
+     * stress-tested so far. *)
+    | SCVTF_WD
+    | FCVTZS_WD
 
   and barrier_opcode =
     | DMB_ | DSB_ | ISB_
@@ -399,9 +535,10 @@ let branch_opd_of_instr (instr : instr) : A.branch_operand option =
   | Bxx (_, opd) -> Some opd
   | CBxx (_, _, opd) -> Some opd
   | TBxx (_, _, _, opd) -> Some opd
-  | Arith _ | Shift _ | Cmp _ | ArithMul _ | Move _ | RET _ | SVC _
+  | BCase opd -> Some opd
+  | Arith _ | Shift _ | Cmp _ | ArithMul _ | Rem _ | Move _ | RET _ | SVC _
   | FArith _ | FCmp _ | Barrier _ | CondSel _ | CondSet _
-  | LoadExcl _ | StoreExcl _ -> None
+  | LoadExcl _ | StoreExcl _ | Neg2 _ | Extend _ | CaseJump _ -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   let mov_operand x =
@@ -422,6 +559,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | Bxx (_, b) -> A.visit_globals_branch_operand f b
   | CBxx (_, _, b) -> A.visit_globals_branch_operand f b
   | TBxx (_, _, _, b) -> A.visit_globals_branch_operand f b
-  | Arith _ | Shift _ | Cmp _ | ArithMul _ | RET _ | SVC _
+  | BCase b -> A.visit_globals_branch_operand f b
+  | Arith _ | Shift _ | Cmp _ | ArithMul _ | Rem _ | RET _ | SVC _
   | FArith _ | FCmp _ | Barrier _ | CondSel _ | CondSet _
-  | LoadExcl _ | StoreExcl _ -> ()
+  | LoadExcl _ | StoreExcl _ | Neg2 _ | Extend _ | CaseJump _ -> ()

@@ -332,12 +332,18 @@ type instr =
    * real instruction at all, just a raw data word holding its
    * target's final resolved address (goken's codegen.c case 63:
    * "o1 = p->cond->pc", no encoding, see Codegen5.ml). Unlike every
-   * other instr here, this pair has NO real 5a/7a grammar to match at
+   * other instr here, this pair has NO real 5a grammar to match at
    * all -- 5c never round-trips switch-statement code through the
-   * assembler's text parser, it builds these Prog structures directly
-   * -- so this concrete syntax (and the choice to give BCASE no
-   * condition, since a table entry isn't a predicated instruction) is
-   * a xix-only extension for this pipeline, not real-5a parity. See
+   * assembler's text parser, it builds these Prog structures directly,
+   * and (confirmed directly against assemblers/5a/a.y/lex.c) 5a's own
+   * grammar has no CASE/BCASE production either -- so this concrete
+   * syntax (and the choice to give BCASE no condition, since a table
+   * entry isn't a predicated instruction) is a xix-only extension for
+   * this pipeline on ARM32, not real-5a parity. (ARM64's own 7a is
+   * different: assemblers/7a/lex.c/a.y genuinely DO lex and parse
+   * "CASE"/"BCASE" as real ACASE/ABCASE tokens with real productions
+   * -- see Ast_asm7.ml's CaseJump/BCase, which pursues real byte
+   * parity instead of this file's own simplified deviation.) See
    * Ast_asm.virtual_instr's own comment on why this lives here
    * instead of that shared type, and
    * docs/claude_notes/plan_hello_libc_linking.md for how this was

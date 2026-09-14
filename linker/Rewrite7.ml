@@ -221,10 +221,31 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
         | A.JEq _ -> raise Todo
        )
 
-     | T.I (Arith _ | Shift _ | Cmp _ | ArithMul _ | Move _
+     (* claude: ADD/SUB (and their W-suffixed siblings) with a negative
+      * immediate are unconditionally flipped to SUB/ADD with the
+      * negated (positive) immediate -- ported from goken's real
+      * linkers/7l/obj.c, which does exactly this, unconditionally, at
+      * object-load time for every AADD/AADDW/ASUB/ASUBW (and the S-
+      * suffixed flag-setting siblings, not wired in this port), same
+      * mechanism as ARM32's own Rewrite5.ml fix (see its own comment
+      * for the precedent -- confirmed real for ARM64 too by directly
+      * reading linkers/7l/obj.c, not assumed by analogy). Found
+      * stress-testing real lib_core/libc (fmt/utf's real "ADDW
+      * $-1,R12,R12" loop decrement), see
+      * docs/claude_notes/plan_hello_libc_linking.md. *)
+     | T.I (Arith (((ADD | SUB | ADDW | SUBW) as op), Imm i, ropt, rd))
+         when i < 0 ->
+        let op' = (match op with
+          | ADD -> SUB | SUB -> ADD | ADDW -> SUBW | SUBW -> ADDW
+          | _ -> assert false) in
+        n.instr <- T.I (Arith (op', Imm (- i), ropt, rd));
+        frame
+
+     | T.I (Arith _ | Shift _ | Cmp _ | ArithMul _ | Rem _ | Move _
            | B _ | BL _ | Bxx _ | CBxx _ | TBxx _ | RET _ | SVC _
            | FArith _ | FCmp _ | Barrier _ | CondSel _ | CondSet _
-           | LoadExcl _ | StoreExcl _
+           | LoadExcl _ | StoreExcl _ | Neg2 _ | Extend _ | CaseJump _
+           | BCase _
            ) ->
         frame
   ) None;

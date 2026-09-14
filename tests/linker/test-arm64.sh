@@ -23,6 +23,10 @@ CASES=(
     "arm64_diff/condsel_tbz.s"
     "arm64_diff/atomics.s"
     "arm64_diff/bitmask_logical.s"
+    "arm64_diff/bitmask_w32.s"
+    "arm64_diff/indirect_offset.s"
+    "arm64_diff/arith_huge_imm.s"
+    "arm64_diff/float_pool.s"
 )
 
 FAIL=0

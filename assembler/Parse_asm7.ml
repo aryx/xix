@@ -92,6 +92,12 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm7.token =
       | "ANDW" -> TARITH ANDW | "ORRW" -> TARITH ORRW
       | "EORW" -> TARITH EORW | "BICW" -> TARITH BICW
 
+      (* claude: real hardware SDIV/UDIV -- same plain "op Rm,[Rn,]Rd"
+       * grammar shape as ADD/SUB/etc above, see arith_opcode's own
+       * comment for why this isn't part of the Rem pseudo-op family. *)
+      | "SDIV" -> TARITH SDIV | "UDIV" -> TARITH UDIV
+      | "SDIVW" -> TARITH SDIVW | "UDIVW" -> TARITH UDIVW
+
       (* claude: case 8 (shift by immediate, bitfield-move encoding) /
        * case 9 (shift by register, simple oprrr encoding) -- same
        * mnemonic either way, dispatched by operand shape at codegen
@@ -109,6 +115,8 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm7.token =
        * ArithMul's comment in Ast_asm7.ml for what's deferred. *)
       | "MUL" -> TMULOP MUL
       | "MULW" -> TMULOP MULW
+      | "REM" -> TREM REM | "REMW" -> TREM REMW
+      | "UREM" -> TREM UREM | "UREMW" -> TREM UREMW
 
       (* claude: case 3 -- MOV/MOVB/MOVBU/MOVH/MOVHU/MOVW/MOVWU, one
        * grammar shape ("gen,gen") dispatched by operand type at
@@ -128,6 +136,10 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm7.token =
       | "FMOVS" -> TMOV FS_ | "FMOVD" -> TMOV FD_
       | "SCVTFS" -> TMOV SCVTF_S | "SCVTFD" -> TMOV SCVTF_D
       | "FCVTZSS" -> TMOV FCVTZS_S | "FCVTZSD" -> TMOV FCVTZS_D
+      | "UCVTFWD" -> TMOV UCVTF_WD
+      | "FCVTZUDW" -> TMOV FCVTZU_WD
+      | "SCVTFWD" -> TMOV SCVTF_WD
+      | "FCVTZSDW" -> TMOV FCVTZS_WD
 
       (* claude: case 54 -- dyadic float arith, both precisions. *)
       | "FADDS" -> TFARITH FADDS | "FADDD" -> TFARITH FADDD
@@ -172,6 +184,11 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm7.token =
       (* claude: case 40 -- TBZ/TBNZ (test bit and branch). *)
       | "TBZ" -> TTBx false | "TBNZ" -> TTBx true
 
+      (* claude: case 62/63 -- real 7a mnemonics, see Ast_asm7.ml's
+       * CaseJump/BCase comment. *)
+      | "CASE" -> TCASE
+      | "BCASE" -> TBCASE
+
       (* claude: bare condition-code operand (goken's own LCOND lexer
        * class) -- a different token from TBx's branch mnemonics
        * (Parser_asm7.mly's `cond` rule), used by CSEL/CSET/CINC/CNEG/
@@ -205,6 +222,14 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm7.token =
       (* claude: case 18 -- CSET/CSETM cond,Rd. *)
       | "CSET" -> TCONDSET CSET | "CSETW" -> TCONDSET CSETW
       | "CSETM" -> TCONDSET CSETM | "CSETMW" -> TCONDSET CSETMW
+
+      (* claude: case 24/25 -- NEG/MVN Rn,Rd (plain-register form) and
+       * case 45 -- SXTW/UXTW Rn,Rd. See Ast_asm7.ml's Neg2/Extend
+       * comments for what's deliberately out of scope (SP-referencing/
+       * shifted-operand NEG/MVN forms; the byte/halfword extends). *)
+      | "NEG" -> TNEG2 NEG | "NEGW" -> TNEG2 NEGW
+      | "MVN" -> TNEG2 MVN | "MVNW" -> TNEG2 MVNW
+      | "SXTW" -> TEXTEND SXTW | "UXTW" -> TEXTEND UXTW
 
       (* claude: case 58/59 -- the X-width (64-bit) exclusive-monitor
        * atomic pair, both plain and acquire/release flavors -- see

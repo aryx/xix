@@ -42,11 +42,15 @@ module L = Location_cpp
 %token <Ast_asm7.barrier_opcode> TDMB
 %token <Ast_asm7.cond_sel_opcode> TCONDSEL
 %token <Ast_asm7.cond_set_opcode> TCONDSET
+%token <Ast_asm7.neg2_opcode> TNEG2
+%token <Ast_asm7.extend_opcode> TEXTEND
+%token <Ast_asm7.rem_opcode> TREM
 %token <Ast_asm7.move_size> TMOV
 %token TB TBL
 %token <Ast_asm7.condition> TBx
 %token <bool> TCBx
 %token <bool> TTBx
+%token TCASE TBCASE
 %token <Ast_asm7.condition> TCOND
 %token TRET
 %token TNOP
@@ -220,6 +224,10 @@ instr:
  | TMULOP reg TC reg TC reg     { ArithMul ($1, $2, Some $4, $6) }
  | TMULOP reg        TC reg     { ArithMul ($1, $2, None, $4) }
 
+ /*(* case 16: "REM Rdivisor,Rdividend,Rdest" / "REM Rdivisor,Rdest" *)*/
+ | TREM reg TC reg TC reg       { Rem ($1, $2, Some $4, $6) }
+ | TREM reg        TC reg       { Rem ($1, $2, None, $4) }
+
  /*(* case 3: "MOV(B[U]|H[U]|W[U])? gen,gen" -- covers register move,
     * register<->memory, and register<->immediate, dispatched by operand
     * shape at codegen time. *)*/
@@ -251,11 +259,23 @@ instr:
  /*(* case 56: "FCMPD Fm,Fn" *)*/
  | TFCMP freg TC freg           { FCmp ($1, $2, $4) }
 
+ /*(* case 24/25: "NEG Rn,Rd" / "MVN Rn,Rd" (plain-register form only) *)*/
+ | TNEG2 reg TC reg             { Neg2 ($1, $2, $4) }
+
+ /*(* case 45: "SXTW Rn,Rd" / "UXTW Rn,Rd" *)*/
+ | TEXTEND reg TC reg           { Extend ($1, $2, $4) }
+
  /*(* case 51: "DMB $imm" / "DSB $imm" / "ISB $imm" *)*/
  | TDMB imm                     { Barrier ($1, $2) }
 
  /*(* case 40: "TBZ $bit,Rt,label" / "TBNZ $bit,Rt,label" *)*/
  | TTBx imm TC reg TC rel       { TBxx ($1, $2, $4, $6) }
+
+ /*(* case 62/63: "CASE Rv,Rt" / "BCASE label" -- real 7a grammar
+    * (LTYPED/LTYPE5 in a.y), see Ast_asm7.ml's CaseJump/BCase
+    * comment. *)*/
+ | TCASE reg TC reg             { CaseJump ($2, $4) }
+ | TBCASE rel                   { BCase $2 }
 
  /*(* case 18: "CSEL EQ,Rn,Rm,Rd" / "CINC EQ,Rn,Rd" (2-register alias
     * form -- see CondSel's own AST comment) *)*/
@@ -341,6 +361,19 @@ branch:
  | rel               { $1 }
  | global            { ref (SymbolJump $1) }
  | ireg              { ref (IndirectJump $1) }
+ /*(* claude: a xix-only pipeline accommodation, NOT real 7a grammar
+    * parity -- same issue, same fix, as ARM32's own Parser_asm5.mly
+    * "con ireg" branch rule (see its own comment for the full
+    * reasoning): real 5c/7c -S output prints an indirect call as "BL
+    * 0(R2)" (an explicit zero offset before the parens), but goken's
+    * real 7a grammar (assemblers/7a/a.y's `nireg: '(' sreg ')' |
+    * name`) only accepts the bare "(R2)" form. Found stress-testing
+    * against real lib_core/libc (fmt/dofmt.c's real "BL 0(R2)"), see
+    * docs/claude_notes/plan_hello_libc_linking.md. *)*/
+ | con ireg          { if $1 <> 0 then error "offset before an indirect \
+                          branch target is a xix-only accommodation for \
+                          real 7c -S output, and only ever 0 there"
+                        else ref (IndirectJump $2) }
 
 rel:
  | TIDENT offset        { ref (LabelUse ($1, $2)) }

@@ -81,7 +81,14 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc)
           let high_value = (match imm_or_ximm with
             | Ast_asm.Int i -> (i asr 32) land 0xffffffff
             | Ast_asm.Address _ -> 0
-            | Ast_asm.Float _ | Ast_asm.String _ -> 0
+            (* claude: the high 32 bits of the same raw IEEE754 bit
+             * pattern whose low 32 bits Codegen.ml's own WORD case
+             * just emitted -- must match exactly, or a double literal
+             * round-trips as a different value. *)
+            | Ast_asm.Float f ->
+                let bits = Int64.bits_of_float f in
+                Int64.to_int (Int64.shift_right_logical bits 32) land 0xffffffff
+            | Ast_asm.String _ -> 0
           ) in
           let high_node = Types.{ instr = T.WORD (Ast_asm.Int high_value);
                                    next = None; branch = None; real_pc = -1;

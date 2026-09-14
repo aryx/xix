@@ -37,6 +37,7 @@ module L = Location_cpp
 %token <Ast_asmi.fcvt_ff_opcode> TFCVTFF
 %token <Ast_asmi.fcvt_fi_opcode> TFCVTFI
 %token <Ast_asmi.fcvt_if_opcode> TFCVTIF
+%token <Ast_asmi.cmpf_opcode * Ast_asm.floatp_precision> TCMPF
 %token <Ast_asmi.mul_opcode> TMULOP
 %token TSYSCALL TRFE TBREAK
 %token TJMP TJAL
@@ -203,6 +204,22 @@ instr:
  | TARITH imr TC reg TC reg     { Arith ($1, $2, Some $4, $6) }
  | TARITH imr        TC reg     { Arith ($1, $2, None, $4) }
 
+ /*(* claude: "MOV $8(R2),R9" -- address-of an arbitrary-register
+    * indirect (NOT a memory load: real goken confirmed to compile
+    * this straight to a plain "ADDI R9,R2,8", no memory access at
+    * all -- verified by hand-decoding real ia/il's own output bytes).
+    * Genuinely different from `ximm`'s own `Address of A.entity`
+    * (which only covers the 3 pseudo-registers SB/SP/FP, not an
+    * arbitrary real register), so wired as its own top-level
+    * production straight to `Arith`, bypassing `ximm`/`vlgen`
+    * entirely -- mirrors Parser_asmv.mly's own identical MIPS
+    * production (`TMOVE2 TDOLLAR con TOPAR reg TCPAR TC reg`),
+    * confirmed to be the exact same real construct from the exact
+    * same real source file (fmt/nan64.c's own "MOVW $4(R29),R2" on
+    * MIPS, "MOV $8(R2),R9" here). *)*/
+ | TMOVE2 TDOLLAR con TOPAR reg TCPAR TC reg
+     { Arith (ADD None, Imm $3, Some $5, $8) }
+
  | TMULOP reg TC reg TC reg     { ArithMul ($1, $2, Some $4, $6) }
  | TMULOP reg        TC reg     { ArithMul ($1, $2, None, $4) }
 
@@ -215,6 +232,11 @@ instr:
  | TFCVTFF freg TC freg { FCVTFF ($1, $2, $4) }
  | TFCVTFI freg TC reg  { FCVTFI ($1, $2, $4) }
  | TFCVTIF reg TC freg  { FCVTIF ($1, $2, $4) }
+
+ /*(* "CMPEQD Fa,Fb,Rd" -- floating-point compare, GP-register
+    * destination, see Ast_asmi.ml's CmpF comment for why this isn't
+    * ArithF (whose destination is always a freg). *)*/
+ | TCMPF freg TC freg TC reg { CmpF ($1, $2, $4, $6) }
 
  /*(* TODO? check "one side must be register" but va code buggy I think *)*/
  | TMOVE1 lgen TC gen           { Move1 ($1, $2, $4) }
@@ -307,10 +329,12 @@ rel:
 /*(*TODO: far more cases *)*/
 vgen:
  | gen { Gen $1 }
+ | freg { GFReg $1 }
 
 /*(*TODO: far more cases *)*/
 vlgen:
  | lgen { match $1 with Left x -> Left (Gen x) | Right x -> Right x }
+ | freg { Left (GFReg $1) }
 
 /*(*-----------------------------------------*)*/
 /*(*2 name and offset (arch independent)  *)*/

@@ -205,9 +205,11 @@ let gen_upper_and_low_via (opcode : int) (rd : reg) (v : int) : Bits.t * int =
 
 (* S-type: imm[31:25] rs2[24:20] rs1[19:15] funct3[14:12] imm[11:7]
  * opcode[6:0] -- goken's OP_S(rs1,rs2,imm) (case 6, STORE opcode
- * 0x23), shared by SB/SH/SW/SD (see op_itype's LOAD counterpart). *)
-let op_stype funct3 (R rs1) (R rs2) (imm : int) : Bits.t =
-  [(0x23, 0); (imm land 0x1f, 7); (funct3, 12);
+ * 0x23), shared by SB/SH/SW/SD (see op_itype's LOAD counterpart) and,
+ * via an explicit `opcode` param, FSW/FSD too (STORE-FP opcode 0x27
+ * -- same S-type layout, `rs2` is just a float register there). *)
+let op_stype opcode funct3 (R rs1) (R rs2) (imm : int) : Bits.t =
+  [(opcode, 0); (imm land 0x1f, 7); (funct3, 12);
    (rs1, 15); (rs2, 20); ((imm lsr 5) land 0x7f, 25)]
 
 (* claude: case 6/7 (small offset, goken's `if(v < -BIG || v >= BIG)
@@ -225,21 +227,21 @@ let op_stype funct3 (R rs1) (R rs2) (imm : int) : Bits.t =
  * plain `OP_ADD`, no funct7/funct3 needed beyond the implicit ADD
  * opcode), then stores/loads through REGTMP with the low 12 bits
  * folded into the instruction's own immediate field. *)
-let gen_store (_node : 'a T.node) (funct3 : int) (rbase : reg) (rf : reg) (offset : int) =
+let gen_store ?(opcode = 0x23) (_node : 'a T.node) (funct3 : int) (rbase : reg) (rf : reg) (offset : int) =
   if fits_addi_imm offset
-  then { size = 4; x = None; binary = (fun () -> [ op_stype funct3 rbase rf offset ]) }
+  then { size = 4; x = None; binary = (fun () -> [ op_stype opcode funct3 rbase rf offset ]) }
   else
     { size = 12; x = None; binary = (fun () ->
       let (lui_bits, low12) = gen_upper_and_low_via op_lui rTMP offset in
-      [ lui_bits; op_rtype op_op 0 0 rbase rTMP rTMP; op_stype funct3 rTMP rf low12 ]
+      [ lui_bits; op_rtype op_op 0 0 rbase rTMP rTMP; op_stype opcode funct3 rTMP rf low12 ]
     )}
-let gen_load (_node : 'a T.node) (funct3 : int) (rbase : reg) (rt : reg) (offset : int) =
+let gen_load ?(opcode = 0x03) (_node : 'a T.node) (funct3 : int) (rbase : reg) (rt : reg) (offset : int) =
   if fits_addi_imm offset
-  then { size = 4; x = None; binary = (fun () -> [ op_itype 0x03 funct3 rbase rt offset ]) }
+  then { size = 4; x = None; binary = (fun () -> [ op_itype opcode funct3 rbase rt offset ]) }
   else
     { size = 12; x = None; binary = (fun () ->
       let (lui_bits, low12) = gen_upper_and_low_via op_lui rTMP offset in
-      [ lui_bits; op_rtype op_op 0 0 rbase rTMP rTMP; op_itype 0x03 funct3 rTMP rt low12 ]
+      [ lui_bits; op_rtype op_op 0 0 rbase rTMP rTMP; op_itype opcode funct3 rTMP rt low12 ]
     )}
 
 let op_branch = 0x63 (* BEQ/BNE/BLT/BGE/BLTU/BGEU -- goken's OBRANCH *)
@@ -273,11 +275,16 @@ let op_jtype (R rd) (imm : int) : Bits.t =
 
 (* claude: (funct3) for case 3's branch conditions -- goken's
  * optab.c func3 column. GT/LE (b_condition's own AST constructors)
- * have no direct hardware encoding at all -- goken's assembler
- * doesn't accept "BLE"/"BGT" mnemonics either (real RISC-V has no
- * such instructions; they'd need an operand-swapping pseudo-op
- * rewrite, e.g. "BLE a,b,L" => "BGE b,a,L", which isn't wired in
- * the grammar -- see Parse_asmi.ml). *)
+ * have no direct hardware encoding -- real RISC-V has no such
+ * instructions -- but goken's own assembler DOES accept the
+ * "BLE"/"BGT"/"BLEU"/"BGTU" mnemonics (confirmed: `assemblers/ia/
+ * lex.c` maps all four to real tokens/opcodes); its own *linker*
+ * rewrites them into the reversed-relation LT/GE form at encode time
+ * (`linkers/il/obj.c`, case ABGT/ABGTU/ABLE/ABLEU). This port's own
+ * `Bxx` codegen case (below) already remaps GT->LT/LE->GE before
+ * ever calling this function, so `Bxx`'s own `cond` is always one of
+ * the six cases handled here -- the GT/LE catch-all stays only as a
+ * defensive "should be unreachable" guard. *)
 let opirr_bxx_funct3 (c : b_condition) : int =
   match c with
   | EQ -> 0
@@ -286,7 +293,9 @@ let opirr_bxx_funct3 (c : b_condition) : int =
   | GE A.S -> 5
   | LT A.U -> 6
   | GE A.U -> 7
-  | GT _ | LE _ -> failwith "TODO:opirr_bxx_funct3 GT/LE (no direct RISC-V encoding)"
+  | GT _ | LE _ ->
+      raise (Impossible "Bxx's own codegen case remaps GT/LE to LT/GE \
+                          before this is ever called")
 
 (* claude: RISC-V has no branch-delay slot (unlike MIPS -- see
  * riscv_port.md), so a branch/jump's immediate is just a
@@ -325,18 +334,108 @@ let fits_jal_range (delta : int) : bool =
  * - rt = register to (p->to.reg in il)
  *)
 
+(* claude: goken's own linkers/il/span.c formula for D_AUTO/D_PARAM
+ * (the "x-8(SP)"/"y+4(FP)" pseudo-addressing Rewritei.ml's own
+ * TEXT-rewrite comment flagged as "Future Local/Param-relative
+ * addressing (case 12-16, not yet implemented) must add ptrsize
+ * itself at the point of computing an offset, same as goken's own
+ * span.c `instoffset = autosize + a->offset + ptrsize`" -- this is
+ * that "future" implementation. Two subtleties: (1) this port's own
+ * `Param`/`Local` AST names are swapped relative to goken's own
+ * D_PARAM/D_AUTO naming -- `Param` comes from the "SP" token (=
+ * goken's D_AUTO, no +ptrsize) and `Local` comes from the "FP" token
+ * (= goken's D_PARAM, +ptrsize) -- confirmed against Codegenv.ml's
+ * own MIPS precedent (`Param -> autosize+off`, `Local ->
+ * autosize+4+off`, "4" being MIPS's own ptrsize). (2) env.autosize
+ * (as stored by Rewritei.ml's own TEXT mutation, `n.instr <-
+ * T.TEXT(..., padded_size)`, and read back via Layouti.ml) is
+ * `padded_size`, NOT goken's own "autosize" (the real SP-adjust
+ * amount, `padded_size + ptrsize`) -- reconstructed here the same
+ * way Codegen7.ml's own ARM64 "true_autosize" is, except when
+ * genuinely 0 (case 1, no frame at all). NOT reconstructed correctly
+ * for the one narrow edge case of a non-leaf function with a
+ * *declared* $0 frame accessing its own arguments via (FP) --
+ * Rewritei.ml's own `forced_size_when_declared_zero` bumps the real
+ * SP-adjust to 2*ptrsize for exactly that case, indistinguishable
+ * here from a genuine no-frame leaf (both show env.autosize=0); no
+ * real closure stress-tested so far hits it. *)
+let ptrsize_i (is_64 : bool) = if is_64 then 8 else 4
+let true_autosize (is_64 : bool) (env : Codegen.env) =
+  if env.autosize = 0 then 0 else env.autosize + ptrsize_i is_64
+
+let resolve_entity (is_64 : bool) (env : Codegen.env) (e : A.entity) : gen =
+  match e with
+  | A.Param (_, off) -> Indirect (rSP, true_autosize is_64 env + off)
+  | A.Local (_, off) ->
+      Indirect (rSP, true_autosize is_64 env + off + ptrsize_i is_64)
+  | A.Global _ -> Entity e
+
+let resolve_gen (is_64 : bool) (env : Codegen.env) (g : gen) : gen =
+  match g with
+  | Entity ((A.Param _ | A.Local _) as e) -> resolve_entity is_64 env e
+  | GReg _ | Indirect _ | Entity (A.Global _) -> g
+
+let resolve_vgen (is_64 : bool) (env : Codegen.env) (v : vgen) : vgen =
+  match v with
+  | Gen g -> Gen (resolve_gen is_64 env g)
+  | GFReg _ -> v
+
+(* claude: applied once, uniformly, to every `gen`/`vgen` operand
+ * before the big match below dispatches on instruction shape -- so
+ * every existing (and future) `Indirect`/`Entity(Global)` match arm
+ * automatically also handles the "off(SP)"/"off(FP)" pseudo-frame
+ * spelling, without needing a parallel Param/Local-specific arm per
+ * instruction shape. `Bxx`'s own `gen` is included for uniformity
+ * even though no real closure stress-tested so far uses anything but
+ * a plain register there. *)
+let resolve_entities (is_64 : bool) (env : Codegen.env) (i : instr) : instr =
+  let g = resolve_gen is_64 env and v = resolve_vgen is_64 env in
+  match i with
+  | Move1 (sz, Either.Left g1, g2) -> Move1 (sz, Either.Left (g g1), g g2)
+  | Move1 (sz, Either.Right x, g2) -> Move1 (sz, Either.Right x, g g2)
+  | Move2 (sz, Either.Left v1, v2) -> Move2 (sz, Either.Left (v v1), v v2)
+  | Move2 (sz, Either.Right x, v2) -> Move2 (sz, Either.Right x, v v2)
+  | Bxx (cond, g1, rf, b) -> Bxx (cond, g g1, rf, b)
+  (* claude: "SUB $imm,[R,]D" -- real RISC-V has no immediate-subtract
+   * opcode; goken's own linker (linkers/il/obj.c, case ASUB/ASUBW)
+   * rewrites a constant-operand SUB into ADD with the immediate
+   * negated (`p->from.offset = -p->from.offset; p->as = AADD`) at an
+   * early, generic rewrite stage, before any of the SIZE/encoding-
+   * specific case dispatch -- so real "SUB $imm,Rd" is never actually
+   * seen by asm.c's own case-9-style ADDI/LUI+ADDI logic at all, it's
+   * silently ADD-with-negated-immediate throughout. Mirrored here at
+   * the same kind of early, generic point, letting the existing `ADD
+   * None, Imm _` arm below handle both. Found stress-testing real
+   * lib_core/libc (rt0.s's own real "SUB $12,SP" stack-alignment
+   * prologue). *)
+  | Arith (SUB None, Imm i, middle, rt) -> Arith (ADD None, Imm (-i), middle, rt)
+  | Arith _ | ArithMul _ | ArithF _ | FCVTFF _ | FCVTFI _ | FCVTIF _
+  | CmpF _ | LUI _ | FENCE_I | JMP _ | JAL _ | JALR _ | JALRI _
+  | ECALL | BREAK | SYS | CSR _ -> i
+
 (* claude: is_64 is only ever read inside a `binary` thunk (never
  * during the sizing pass -- see size_of_instruction below), mirroring
  * how init_data is threaded; it's riscv64/ojl's equivalent of goken's
- * global `thechar == 'j'` check. *)
-let rules (is_64 : bool)
+ * global `thechar == 'j'` check. NOTE: `resolve_entities` above is a
+ * partial exception to that invariant -- its Local/Param offset
+ * computation genuinely depends on is_64 (ptrsize 4 vs 8), which can
+ * in turn flip `fits_addi_imm`'s own size branch. size_of_instruction
+ * always fakes is_64=false (see its own comment below), so this is
+ * only actually consistent between the sizing and binary-generation
+ * passes on riscv32 (is_64 always false there in practice); a real
+ * riscv64 Local/Param offset that straddles the BIG=2048 boundary
+ * only because of the +4-vs-+8 ptrsize difference could in principle
+ * size-mismatch between the two passes -- not yet hit by any real
+ * closure (riscv64's own hello_libc effort hasn't started). *)
+let rec rules (is_64 : bool)
     (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
   match node.instr with
   (* Reusable *)
   | T.Virt _ | T.TEXT _ | T.WORD _ ->
       Codegen.default_rules env init_data node
 
-  | T.I instr ->
+  | T.I instr0 ->
+    let instr = resolve_entities is_64 env instr0 in
     (match instr with
 
     (* --------------------------------------------------------------------- *)
@@ -357,6 +456,37 @@ let rules (is_64 : bool)
         let (funct3, funct7) = oprrr_arith_opcode op in
         { size = 4; x = None; binary = (fun () ->
           [ op_rtype op_op funct3 funct7 r rf rt ]
+        )}
+
+    (* claude: real RISC-V M-extension (MUL/DIV/DIVU/REM/REMU) --
+     * standard funct7=0x01 (the fixed "M-extension" marker, same
+     * major OP opcode 0x33 as plain ADD/SUB) with funct3 selecting
+     * the operation (0=MUL,4=DIV,5=DIVU,6=REM,7=REMU -- the standard
+     * RISC-V ISA encoding, not goken-specific). Same `middle`/`from`/
+     * `to` -> rs1/rs2/rd mapping as the base `Arith` reg-reg case
+     * just above (confirmed by hand-decoding real goken bytes for
+     * "DIV R5,R6,R7": rs1=R6(middle), rs2=R5(from), rd=R7(to) --
+     * genuinely worth checking separately from plain ADD/SUB since
+     * DIV/REM aren't commutative, so a left-right swap here would
+     * silently compute the wrong VALUE, not just wrong bytes for an
+     * equivalent value). The 2-register in-place form ("DIVU Rs,Rd"
+     * => Rd=Rd/Rs) defaults `middle` to the destination, mirroring
+     * plain `Arith`'s own identical default. MUL_ (opcode MUL, no
+     * sign) not wired -- no real closure needs it, only the *_ /REM_
+     * signed/unsigned forms do. Found stress-testing real
+     * lib_core/libc (port/vlrt.c's own 64-bit-division helpers). *)
+    | ArithMul (op, rf, middle, rt) ->
+        let r = middle ||| rt in
+        let funct3 = (match op with
+          | MUL -> 0
+          | DIV (None, A.S) -> 4 | DIV (None, A.U) -> 5
+          | REM (None, A.S) -> 6 | REM (None, A.U) -> 7
+          | DIV (Some _, _) | REM (Some _, _) ->
+              failwith "Codegeni: ArithMul: *W (RV64 32-bit-view) \
+                        variants not wired, no real closure needs them yet"
+        ) in
+        { size = 4; x = None; binary = (fun () ->
+          [ op_rtype op_op funct3 0x01 r rf rt ]
         )}
 
     (* case 1:		/* slli $I,[R,]D */ *)
@@ -462,6 +592,161 @@ let rules (is_64 : bool)
         { size = 4; x = None; binary = (fun () -> [ op_rftype 0x68 0 7 rs fd ]) }
     | FCVTIF (MOVWD, (R rs), (FR fd)) ->
         { size = 4; x = None; binary = (fun () -> [ op_rftype 0x69 0 7 rs fd ]) }
+    (* claude: MOVUF/MOVUD -- unsigned siblings of MOVWF/MOVWD, same
+     * funct7 (0x68/0x69), rs2_sel=1 instead of 0 (see optab.c's own
+     * adjacent "int->float"/"uint->float" rows). *)
+    | FCVTIF (MOVUF, (R rs), (FR fd)) ->
+        { size = 4; x = None; binary = (fun () -> [ op_rftype 0x68 1 7 rs fd ]) }
+    | FCVTIF (MOVUD, (R rs), (FR fd)) ->
+        { size = 4; x = None; binary = (fun () -> [ op_rftype 0x69 1 7 rs fd ]) }
+
+    (* claude: "MOVF Fs,Fd"/"MOVD Fs,Fd" -- a plain register move, real
+     * RISC-V's own "FSGNJ.S/D Fd,Fs,Fs" self-sign-inject idiom (copy
+     * Fs's own sign bit into itself, a no-op arithmetically, so the
+     * whole value round-trips unchanged) -- confirmed against real
+     * `linkers/il/optab.c`'s own "AMOVF/AMOVD, C_FREG,C_FREG ->
+     * OOP_FP" row (funct7=0x10 float / 0x11 double, funct3=0 selects
+     * FSGNJ specifically, as opposed to FSGNJN/FSGNJX for NEG/ABS).
+     * Reuses `op_rftype` -- its own `rs2_sel` parameter is genuinely
+     * just the rs2 register-number *field*, not always a fixed FCVT
+     * selector constant the way case 17's own six rows above use it;
+     * here it's the *same* source register as rs1, matching the real
+     * self-sign-inject encoding. Reached via the generic Move2
+     * (F__/D__) path (see the GFReg comment in Ast_asmi.ml), not a
+     * dedicated constructor -- goken's own grammar doesn't give this
+     * shape a separate mnemonic from the memory-access forms either. *)
+    | Move2 (F__, Left (GFReg (FR fs)), GFReg (FR fd)) ->
+        { size = 4; x = None; binary = (fun () -> [ op_rftype 0x10 fs 0 fs fd ]) }
+    | Move2 (D__, Left (GFReg (FR fs)), GFReg (FR fd)) ->
+        { size = 4; x = None; binary = (fun () -> [ op_rftype 0x11 fs 0 fs fd ]) }
+
+    (* claude: "MOVD $const,Fd" -- a bare double-precision float
+     * literal. Real goken's own linker (linkers/il/obj.c, case AMOVD)
+     * rewrites this into a synthesized global data symbol (an ADATA
+     * blob holding the raw IEEE754 bits, deduped by hex value) plus
+     * an ordinary SB-relative load -- not replicated here (would need
+     * this port's own linker to synthesize NEW global symbols mid-
+     * codegen, a much bigger undertaking). Instead: RV32's D
+     * extension keeps F registers 64 bits wide but has no FMV.D.X (no
+     * way to move a 64-bit value directly from a GP register pair
+     * into an F register -- that instruction only exists on RV64,
+     * with its 64-bit GP registers) -- genuinely requires going
+     * through memory on RV32. Materializes each 32-bit half into
+     * RTMP (same LUI+ADDI-or-plain-ADDI shape as case 9's own integer
+     * immediate) and stores it below the current SP (temporarily
+     * adjusting SP by -8/+8 around the sequence), then FLDs from
+     * there -- a real, standard technique (not goken's own, which
+     * this port's own linker doesn't replicate), but genuinely
+     * correct on real hardware, and this port's own binaries are
+     * simple flat ELF executables with no signal handlers that could
+     * ever observe the transiently-adjusted SP. NOT byte-identical
+     * to real goken (which uses a completely different, global-
+     * symbol-based mechanism) -- there is no goken reference to
+     * match against here anyway for the specific files that need
+     * this (build-c-program.py's own `patch_nonchipfloat_constants`
+     * replaces genuinely dead-code float literals with 0.5 so they
+     * assemble/link at all, never executed for real). *)
+    | Move2 (D__, Right (Float f), GFReg (FR fd)) ->
+        let bits = Int64.bits_of_float f in
+        let lo = Int64.to_int (Int64.logand bits 0xFFFFFFFFL) in
+        let hi = Int64.to_int (Int64.shift_right_logical bits 32) in
+        let materialize (rd : reg) (v : int) : int * (unit -> Bits.t list) =
+          if fits_addi_imm v
+          then 4, (fun () -> [ op_itype op_opimm 0 rZERO rd v ])
+          else 8, (fun () -> gen_absolute rd v)
+        in
+        let (lo_size, lo_bin) = materialize rTMP lo in
+        let (hi_size, hi_bin) = materialize rTMP hi in
+        { size = 4 + lo_size + 4 + hi_size + 4 + 4 + 4; x = None; binary = (fun () ->
+          [ op_itype op_opimm 0 rSP rSP (-8) ] @ lo_bin () @
+          [ op_stype 0x23 2 rSP rTMP 0 ] @ hi_bin () @
+          [ op_stype 0x23 2 rSP rTMP 4;
+            op_itype 0x07 3 rSP (R fd) 0;
+            op_itype op_opimm 0 rSP rSP 8 ]
+        )}
+
+    (* claude: real float/double arithmetic (FADD/FSUB/FMUL.S/D) --
+     * confirmed against real `linkers/il/optab.c`'s own "AADDD/ASUBD/
+     * AMULD, C_FREG,C_FREG -> OOP_FP" rows: funct7 selects both the
+     * operation and precision (ADD.S=0x00/ADD.D=0x01, SUB.S=0x04/
+     * SUB.D=0x05, MUL.S=0x08/MUL.D=0x09 -- low bit is the precision,
+     * matching real RISC-V's own F-extension encoding), funct3/rm is
+     * always 7 (dynamic rounding). Only the 3-explicit-register form
+     * ("ADDD Fa,Fb,Fc") is wired -- the 2-register in-place form
+     * ("ADDD Fa,Fb" => Fb=Fb+Fa) isn't, no real closure needs it yet.
+     * `from`/`middle`/`to` map to rs2/rs1/rd -- NOT the "obvious"
+     * left-to-right rs1/rs2/rd reading. Confirmed by hand-decoding
+     * real goken's own encoded bytes for "SUBD F0,F28,F0": the real
+     * instruction word has rs1=F28(middle), rs2=F0(from), rd=F0(to)
+     * -- an earlier attempt assumed left-to-right (rs1=from,
+     * rs2=middle) and produced a byte-identical *size* but wrong
+     * *content*, caught by diffing raw instruction words against
+     * real ia/il output, not by trusting the derivation. Same
+     * asymmetric convention as `Bxx`'s own `(middle,rf)` mapping. *)
+    (* claude: 2-register in-place form ("ADDD Fa,Fb" => Fb=Fb+Fa) --
+     * real goken's own grammar (assemblers/ia/a.y's `LFLT3 drreg ','
+     * freg ',' drreg` production) has NO 2-operand alternative for
+     * this instruction family at all (confirmed: real `ia` rejects
+     * "ADDD F2,F0" outright as a syntax error) -- yet real -S output
+     * genuinely contains this exact 2-operand spelling (found in
+     * port/vlrt.c.s and port/frexp.c.s, both already in the "goken
+     * can't reassemble its own -S output" set for unrelated reasons).
+     * A 6th instance of this whole effort's running "-S print
+     * artifact" bug family: the compiler's real internal `Prog` most
+     * likely has an explicit middle register equal to the
+     * destination (matching the SAME "middle defaults to `to`"
+     * convention already established and byte-verified for the
+     * *integer* `Arith` case just above -- goken's own asm.c: `if(r==
+     * NREG) ... default: r=p->to.reg`), but Pconv's printer omits it
+     * when it happens to already equal the destination, the same
+     * shape of omission as the AJAL/REGLINK bug found earlier in this
+     * session. No goken reference exists to byte-verify this specific
+     * construct against either way (real `ia` rejects it), so this is
+     * implemented by direct analogy rather than hand-decoded bytes --
+     * unlike every other gap this session, which was always verified
+     * against real encoded output before being trusted. *)
+    | ArithF ((op, prec), (FR fs1), None, (FR fd)) ->
+        rules is_64 env init_data
+          { node with instr = T.I (ArithF ((op, prec), (FR fs1), Some (FR fd), (FR fd))) }
+
+    | ArithF ((op, prec), (FR fs1), Some (FR fs2), (FR fd)) ->
+        let funct7 = (match op, prec with
+          | ADD_, A.F -> 0x00 | ADD_, A.D -> 0x01
+          | SUB_, A.F -> 0x04 | SUB_, A.D -> 0x05
+          | MUL_, A.F -> 0x08 | MUL_, A.D -> 0x09
+          (* claude: FDIV.S/D -- same "low bit selects precision"
+           * pattern as ADD/SUB/MUL above (confirmed against real
+           * RISC-V's own F-extension encoding, standard 0x0c/0x0d,
+           * not separately byte-verified against goken since it's
+           * the same op_rftype shape as the 3 already-verified ops
+           * above with only funct7 changing). Found stress-testing
+           * real lib_core/libc (fmt/fltfmt.c's own real "DIVD
+           * F2,F30,F0"). *)
+          | DIV_, A.F -> 0x0c | DIV_, A.D -> 0x0d
+          | (ABS_ | NEG_), _ ->
+              failwith "Codegeni: ArithF: ABS_/NEG_ not wired, \
+                        no real closure needs them yet"
+        ) in
+        { size = 4; x = None; binary = (fun () -> [ op_rftype funct7 fs1 7 fs2 fd ]) }
+
+    (* claude: "CMPEQD Fa,Fb,Rd"/"CMPLTD"/"CMPLED" -- real RISC-V
+     * FEQ/FLT/FLE.S/D, funct7=0x50 (float)/0x51 (double), funct3/rm
+     * selects which of the 3 (0=FLE,1=FLT,2=FEQ, standard RISC-V
+     * encoding) -- confirmed against real `linkers/il/optab.c`'s own
+     * "ACMPEQF/ACMPLTF/ACMPLEF/ACMPEQD/ACMPLTD/ACMPLED, C_FREG,C_REG
+     * -> OOP_FP" rows, and the funct3 values themselves by
+     * hand-decoding all 3 real double forms directly (goken's own
+     * optab.c param columns aren't self-evidently "which funct3" on
+     * their own). Same `from`->rs2 / `middle`->rs1 / `to`->rd mapping
+     * as `ArithF` above for all 3 (confirmed by hand-decoding
+     * "CMPEQD/CMPLTD/CMPLED F28,F0,Rd": real rs1=F0(middle),
+     * rs2=F28(from) in every case). *)
+    | CmpF ((op, A.F), (FR fs1), (FR fs2), (R rd)) ->
+        let funct3 = (match op with EQ_ -> 2 | LT_ -> 1 | LE_ -> 0) in
+        { size = 4; x = None; binary = (fun () -> [ op_rftype 0x50 fs1 funct3 fs2 rd ]) }
+    | CmpF ((op, A.D), (FR fs1), (FR fs2), (R rd)) ->
+        let funct3 = (match op with EQ_ -> 2 | LT_ -> 1 | LE_ -> 0) in
+        { size = 4; x = None; binary = (fun () -> [ op_rftype 0x51 fs1 funct3 fs2 rd ]) }
 
     (* --------------------------------------------------------------------- *)
     (* System *)
@@ -583,6 +868,23 @@ let rules (is_64 : bool)
           | Some rm -> (rm, rf)
           | None -> (rf, rZERO)
         ) in
+        (* claude: GT/LE have no direct hardware encoding -- goken's
+         * real linker (linkers/il/obj.c, case ABGT/ABGTU/ABLE/ABLEU)
+         * rewrites them into the reversed-relation LT/GE form, with
+         * both the condition *and* the two register roles reversed
+         * ("BLEU Ra,Rb,L" => hardware "BGEU" encoded exactly as
+         * source-level "BGEU Rb,Ra,L" would be) -- confirmed by
+         * decoding real ia/il's own output bytes directly (an earlier
+         * version of this fix assumed only the condition needed
+         * remapping, reusing `rs1`/`rs2` as computed above unchanged;
+         * that produced rs1/rs2 reversed from real goken's own bytes,
+         * caught immediately by comparing raw B-type instruction
+         * words, not just trusting the derivation). *)
+        let (cond, rs1, rs2) = match cond with
+          | GT sign -> (LT sign, rs2, rs1)
+          | LE sign -> (GE sign, rs2, rs1)
+          | c -> (c, rs1, rs2)
+        in
         let funct3 = opirr_bxx_funct3 cond in
         { size = 4; x = None; binary = (fun () ->
           [ op_btype funct3 rs1 rs2 (branch_delta node) ]
@@ -599,7 +901,13 @@ let rules (is_64 : bool)
      * default to r=destination); see also case 9 for imm too big to
      * fit in 12 bits.
      *)
-    | Move2 (W__, Right (Int i), Gen (GReg rt)) ->
+    (* claude: shared with V__ ("MOV $imm,R") -- both real AMOVW and
+     * AMOV immediate loads produce the exact same "addi"/"lui,addi"
+     * bytes (confirmed against real ia/il; unlike the reg-to-reg
+     * case just below, which is genuinely asymmetric between the two
+     * mnemonics -- there's no second real register here for that
+     * asymmetry to apply to, just RZERO either way). *)
+    | Move2 ((W__ | V__), Right (Int i), Gen (GReg rt)) ->
         if fits_addi_imm i
         then
           { size = 4; x = None; binary = (fun () ->
@@ -628,15 +936,86 @@ let rules (is_64 : bool)
         (* stricter? what does il do with that? confusing I think *)
         error node "string not allowed in MOVW; use DATA"
 
-    | Move2 (W__, Right (Address (Global (global, _offsetTODO))), Gen (GReg rt)) ->
-        let v = Hashtbl.find env.syms (T.symbol_of_global global) in
+    (* claude: shared with V__ ("MOV $sym(SB),R") -- same reasoning as
+     * the Int-immediate case above: this is an ADDI/LUI+ADDI address
+     * computation with only one real register operand (RSB), so
+     * there's no second-register slot for the MOV-vs-MOVW asymmetry
+     * (confirmed by the reg-to-reg case's own comment) to apply to. *)
+    | Move2 ((W__ | V__), Right (Address (Global (global, goffset))), Gen (GReg rt)) ->
+        (* claude: `env.syms`'s own TEXT entries (`T.SText2`) are
+         * added *incrementally*, one at a time, as Layouti.layout_text
+         * walks the code graph forward (a symbol's own real_pc isn't
+         * knowable until every instruction before it has already been
+         * sized) -- confirmed by reading Layouti.ml's own single
+         * forward `T.iter` loop, which calls this very function
+         * (`size_of_instruction`) and only *afterwards* registers the
+         * TEXT symbol for the node just visited. DATA symbols
+         * (`T.SData2`), by contrast, are all registered up front by
+         * `Layout.layout_data`, which runs *before* layout_text even
+         * starts (confirmed in CLI.ml's own linking pipeline order) --
+         * so a lookup miss here can only mean one of two things: a
+         * genuinely undefined symbol, or a real TEXT symbol that just
+         * hasn't been visited yet (a *forward* reference -- "MOV
+         * $later_func(SB),R" appearing textually before that
+         * function's own TEXT block, found stress-testing real
+         * lib_core/libc's fmt/fmtfd.c, whose own fmtfdinit takes the
+         * address of fmt/fmtfdflush.c's __fmtFdFlush, defined in a
+         * *later* unit of the very same link). Since a TEXT-symbol
+         * address-of always takes the absolute-load path regardless
+         * of its value (`size=8` unconditionally, same as the
+         * resolved case just below), the SIZE doesn't actually need
+         * the lookup to succeed at all here -- only the real *value*
+         * does, and that can wait for the binary thunk, evaluated
+         * later during the real codegen pass (by which point
+         * layout_text has finished and every TEXT symbol, including
+         * this one, is registered) -- same deferred-to-the-thunk
+         * pattern already used by the SData2 slow-path's own
+         * `init_data` lookup just below. A miss THERE (inside the
+         * thunk) is a genuine undefined-symbol error, not deferred
+         * further.
+         *
+         * claude: a real, confirmed bug found stress-testing real
+         * lib_core/libc (fmt/dofmt.c's own real "%d" digit-table
+         * setup, "MOV $.string<>+12(SB),R13" -- picking out the
+         * "0123456789..." table from partway into a larger, shared
+         * `.string<>` data blob): this case's own `global`'s offset
+         * field used to be named `_offsetTODO` and was never added
+         * into ANY of the 3 address formulas below -- every
+         * "$sym+N(SB)" address-of with a nonzero N silently computed
+         * the address of "$sym+0(SB)" instead, discarding N entirely.
+         * Caught by running the actual linked hello_libc binary under
+         * qemu and getting real but WRONG output ("hello from libc.a:
+         * i + i = >" instead of "2 + 2 = 4") -- byte-identical
+         * differential testing against goken can't catch this class
+         * of bug at all, since goken can't even assemble this file's
+         * own -S output in the first place (see this file's own
+         * running "-S print artifact" comments) -- only a real
+         * end-to-end run exposes it. Reproduced minimally with a
+         * hand-written multi-DATA `.string<>` blob and confirmed the
+         * exact same wrong byte comes back regardless of which
+         * nonzero offset is requested (always reads from +0). *)
+        (match (try Some (Hashtbl.find env.syms (T.symbol_of_global global)) with
+               Not_found -> None) with
+        | None ->
+            { size = 8; x = None; binary = (fun () ->
+              match Hashtbl.find_opt env.syms (T.symbol_of_global global) with
+              | Some (T.SText2 real_pc) -> gen_absolute rt (real_pc + goffset)
+              | Some (T.SData2 _) ->
+                  raise (Impossible "a symbol that was undefined during \
+                    layout can't have become a DATA symbol by codegen \
+                    time -- all DATA symbols are registered before \
+                    layout_text ever starts")
+              | None ->
+                  error node (spf "undefined: %s" (A.s_of_global global))
+            )}
+        | Some v ->
         (match v with
         | T.SText2 real_pc ->
             (* address of a procedure: always the absolute-load path,
              * same as ARM/MIPS (a TEXT symbol isn't RSB-relative) *)
-            { size = 8; x = None; binary = (fun () -> gen_absolute rt real_pc) }
+            { size = 8; x = None; binary = (fun () -> gen_absolute rt (real_pc + goffset)) }
         | T.SData2 (offset, _kind) ->
-            let final_offset = offset_to_SB offset in
+            let final_offset = offset_to_SB (offset + goffset) in
             (* case 11:	/* addi $I,R,D */
              * super important condition! for bootstrapping setSB in
              * MOVW $setSB(SB), RSB and not transform it into
@@ -662,7 +1041,7 @@ let rules (is_64 : bool)
                 match init_data with
                 | None -> raise (Impossible "init_data should be set by now")
                 | Some init_data ->
-                    let target_abs = offset + init_data in
+                    let target_abs = offset + goffset + init_data in
                     if is_64
                     then
                       (* claude: riscv64/ojl: `vv = regoff(&p->from) +
@@ -679,6 +1058,37 @@ let rules (is_64 : bool)
                       gen_pcrelative rt delta
                     else gen_absolute rt target_abs
               )}
+        ))
+
+    (* claude: "MOV $fmt+0(FP),R9" -- address of a Local/Param
+     * pseudo-frame entity, as opposed to `Gen (Entity (Param|Local))`
+     * (a memory ACCESS through it, already normalized away to a real
+     * `Indirect` by `resolve_entities` above) -- this is computing
+     * the address itself as a VALUE, the exact same "ADDI rd,base,
+     * offset" shape as case 2's own ADD-immediate (mirroring how the
+     * SB-relative address-of-global case just above reduces to an
+     * RSB-relative ADDI/LUI+ADDI): reuse `resolve_entity` to get the
+     * already-correct `Indirect(rSP, offset)`, then emit exactly what
+     * `Arith(ADD None, Imm offset, Some rSP, rt)` would. Found
+     * stress-testing real lib_core/libc (fmt/fmt.c's own real "MOV
+     * $fmt+0(FP),R9", taking the address of a local `Fmt` struct to
+     * pass to a helper by pointer). *)
+    | Move2 ((W__ | V__), Right (Address ((A.Param _ | A.Local _) as e)), Gen (GReg rt)) ->
+        (match resolve_entity is_64 env e with
+        | Indirect (rbase, offset) ->
+            if fits_addi_imm offset
+            then
+              { size = 4; x = None; binary = (fun () ->
+                [ op_itype op_opimm 0 rbase rt offset ]
+              )}
+            else
+              { size = 12; x = None; binary = (fun () ->
+                let (lui_bits, low12) = gen_upper_and_low_via op_lui rTMP offset in
+                [ lui_bits; op_itype op_opimm 0 rTMP rTMP low12;
+                  op_rtype op_op 0 0 rbase rTMP rt ]
+              )}
+        | GReg _ | Entity _ ->
+            raise (Impossible "resolve_entity always returns Indirect for Param/Local")
         )
 
     (* case 6:		/* sb R,I(S) */
@@ -702,10 +1112,87 @@ let rules (is_64 : bool)
     | Move2 (V__, Left (Gen (GReg rf)), Gen (Indirect (rbase, offset))) ->
         gen_store node (if is_64 then 3 (* SD *) else 2 (* SW *)) rbase rf offset
 
+    (* claude: "MOVW $0,off(Rbase)" -- storing a bare immediate
+     * directly to memory. Real RISC-V's S-type store has no immediate
+     * operand slot at all (rs2 is always a register field), so this
+     * can never be one real instruction as literally written --
+     * confirmed real goken's own `ia` REJECTS this exact syntax
+     * outright ("syntax error"), even though it's genuine -S output
+     * from a real closure (found in several files real goken already
+     * can't reassemble its own output for, e.g. fmt/dofmt.c). Root
+     * cause: goken's own optab.c has no "immediate -> memory" store
+     * row at all, only "AMOVW, C_ZREG, C_SOREG -> OSTORE" (a
+     * REGISTER classified as C_ZREG, i.e. REGZERO) -- a 5th instance
+     * of this whole effort's running "-S print artifact" bug family
+     * (compilers/ic/list.c's Pconv apparently renders a from-operand
+     * that's really `D_REG,REGZERO` as "$0" instead of "R0" when the
+     * value happens to be the constant 0, indistinguishable in VALUE
+     * but not in real ia's own grammar). Since there's no goken
+     * reference to byte-match against for these particular files
+     * anyway (goken can't assemble them either), fixed at this port's
+     * own assembler/codegen level instead of goken's C source: treat
+     * a zero-valued immediate store exactly as if RZERO had been
+     * written, which is unambiguously the objectively correct real
+     * encoding either way. Only $0 is handled -- a genuinely nonzero
+     * immediate store would need real materialization into a scratch
+     * register first (an `ADD $imm,RZERO,RTMP` ahead of the store),
+     * not yet implemented since no real closure needs it. *)
+    | Move2 (W__, Right (Int 0), Gen (Indirect (rbase, offset))) ->
+        gen_store node 2 (* SW, always *) rbase rZERO offset
+
+    (* claude: plain register-to-register move -- real RISC-V has no
+     * dedicated MOV opcode, spelled as the "ADD rd,x0,rs" idiom (the
+     * always-zero x0 register plus the source register). A previous
+     * version of this comment claimed "MOVW"/"MOV" (W__/V__) put the
+     * source register in a DIFFERENT operand slot from each other
+     * (rs1=source for MOVW vs rs1=x0 for MOV) -- that was a testing
+     * artifact: the fixture used to confirm it was "MOVW R0,R8",
+     * whose *source* happens to be x0 itself, making rs1-vs-rs2 order
+     * genuinely indistinguishable by construction (x0 in either slot
+     * produces identical bytes). Re-verified with a non-zero source
+     * ("MOVW R8,R10") and found real goken's own bytes actually match
+     * "MOV"'s own convention exactly (rs1=x0, rs2=source, same as
+     * V__ below) -- so W__ and V__ share the identical encoding here,
+     * unlike the case 6/7/15/16 memory-access shapes just above
+     * (whose W__-vs-V__ split is real and independently confirmed:
+     * MOVW is always 32-bit while a bare MOV is pointer-width). Found
+     * stress-testing real lib_core/libc (fmt/dofmt.c's own real
+     * "MOVW R8,R14"/"MOVW R14,R8" register moves). *)
+    | Move2 ((W__ | V__), Left (Gen (GReg rf)), Gen (GReg rt)) ->
+        { size = 4; x = None; binary = (fun () -> [ op_rtype op_op 0 0 rZERO rf rt ]) }
+
     | Move1 (B_ _, Left (GReg rf), Indirect (rbase, offset)) ->
         gen_store node 0 (* SB *) rbase rf offset
     | Move1 (H_ _, Left (GReg rf), Indirect (rbase, offset)) ->
         gen_store node 1 (* SH *) rbase rf offset
+
+    (* claude: "MOVB $0,off(Rbase)" -- same "immediate zero store"
+     * -S-print artifact as the MOVW $0 case above (goken's own
+     * optab.c: "AMOVB, C_ZREG, C_SOREG -> OSTORE" -- a register
+     * classified C_ZREG, not a real immediate-to-memory store; real
+     * `ia` has no such single instruction to encode this literally).
+     * Same fix: treat the zero immediate as RZERO. Found
+     * stress-testing real lib_core/libc (fmt/dofmt.c's own real
+     * "MOVB $0,0(R8)"). *)
+    | Move1 (B_ _, Right (Int 0), Indirect (rbase, offset)) ->
+        gen_store node 0 (* SB *) rbase rZERO offset
+    | Move1 (H_ _, Right (Int 0), Indirect (rbase, offset)) ->
+        gen_store node 1 (* SH *) rbase rZERO offset
+
+    (* claude: FSW/FSD -- same S-type shape as SW/SD above (goken's
+     * own optab.c: "fsw"/"fsd", C_FREG,C_SOREG -> OSTORE, same funct3
+     * convention as the load side's FLW/FLD, just STORE-FP's own
+     * major opcode 0x27 instead of LOAD-FP's 0x07). `gen_store`
+     * doesn't care which register *file* its `rf` belongs to (the
+     * bit-field encoding is identical either way) -- unwrap/rewrap
+     * the `freg` as a bare int through the same `R` constructor
+     * `op_stype` already expects, purely for that field. Found
+     * stress-testing real lib_core/libc (fmt/strtod.c's own real
+     * "MOVD F0,x-8(SP)"). *)
+    | Move2 (F__, Left (GFReg (FR rf)), Gen (Indirect (rbase, offset))) ->
+        gen_store ~opcode:0x27 node 2 (* FSW *) rbase (R rf) offset
+    | Move2 (D__, Left (GFReg (FR rf)), Gen (Indirect (rbase, offset))) ->
+        gen_store ~opcode:0x27 node 3 (* FSD *) rbase (R rf) offset
 
     (* case 7:		/* lb I(S),D */
      * claude: same generalization as case 6 -- goken picks the
@@ -716,6 +1203,13 @@ let rules (is_64 : bool)
         gen_load node 2 (* LW, always *) rbase rt offset
     | Move2 (V__, Left (Gen (Indirect (rbase, offset))), Gen (GReg rt)) ->
         gen_load node (if is_64 then 3 (* LD *) else 2 (* LW *)) rbase rt offset
+
+    (* claude: FLW/FLD -- mirror of FSW/FSD above, LOAD-FP's own major
+     * opcode 0x07 (vs the integer LOAD opcode 0x03). *)
+    | Move2 (F__, Left (Gen (Indirect (rbase, offset))), GFReg (FR rt)) ->
+        gen_load ~opcode:0x07 node 2 (* FLW *) rbase (R rt) offset
+    | Move2 (D__, Left (Gen (Indirect (rbase, offset))), GFReg (FR rt)) ->
+        gen_load ~opcode:0x07 node 3 (* FLD *) rbase (R rt) offset
 
     | Move1 (B_ A.S, Left (Indirect (rbase, offset)), GReg rt) ->
         gen_load node 0 (* LB *) rbase rt offset
@@ -768,10 +1262,10 @@ let rules (is_64 : bool)
                     if is_64 then
                       let delta = target_abs - node.real_pc in
                       let (lui_bits, low12) = gen_upper_and_low_via op_auipc rTMP delta in
-                      [ lui_bits; op_stype funct3 rTMP rf low12 ]
+                      [ lui_bits; op_stype 0x23 funct3 rTMP rf low12 ]
                     else
                       let (lui_bits, low12) = gen_upper_and_low_via op_lui rTMP target_abs in
-                      [ lui_bits; op_stype funct3 rTMP rf low12 ]
+                      [ lui_bits; op_stype 0x23 funct3 rTMP rf low12 ]
               )}
         )
 
@@ -802,6 +1296,38 @@ let rules (is_64 : bool)
                     else
                       let (lui_bits, low12) = gen_upper_and_low_via op_lui rTMP target_abs in
                       [ lui_bits; op_itype 0x03 funct3 rTMP rt low12 ]
+              )}
+        )
+
+    (* claude: SB-relative float load -- "MOVD sym(SB),F2" (e.g. real
+     * fmt/strtod.c's own "MOVD pows10<>+1272(SB),F2", reading a table
+     * entry from a real global). Mirror of the W__ Entity-load case
+     * just above, LOAD-FP opcode 0x07 instead of LOAD's 0x03; no
+     * store counterpart wired (no real closure stress-tested so far
+     * writes a float *to* a global, only reads tables like this one). *)
+    | Move2 ((F__ | D__) as sz, Left (Gen (Entity (A.Global (global, goffset)))), GFReg (FR rt)) ->
+        let v = Hashtbl.find env.syms (T.symbol_of_global global) in
+        (match v with
+        | T.SText2 _ -> error node "TODO: loading the value at a TEXT symbol"
+        | T.SData2 (offset, _kind) ->
+            let final_offset = offset_to_SB (offset + goffset) in
+            let funct3 = (match sz with F__ -> 2 (* FLW *) | D__ -> 3 (* FLD *)
+                          | W__ | V__ -> raise (Impossible "sz restricted to F__|D__ above")) in
+            if fits_addi_imm final_offset
+            then gen_load ~opcode:0x07 node funct3 rSB (R rt) final_offset
+            else
+              { size = 8; x = None; binary = (fun () ->
+                match init_data with
+                | None -> raise (Impossible "init_data should be set by now")
+                | Some init_data ->
+                    let target_abs = offset + goffset + init_data in
+                    if is_64 then
+                      let delta = target_abs - node.real_pc in
+                      let (lui_bits, low12) = gen_upper_and_low_via op_auipc rTMP delta in
+                      [ lui_bits; op_itype 0x07 funct3 rTMP (R rt) low12 ]
+                    else
+                      let (lui_bits, low12) = gen_upper_and_low_via op_lui rTMP target_abs in
+                      [ lui_bits; op_itype 0x07 funct3 rTMP (R rt) low12 ]
               )}
         )
 
@@ -838,7 +1364,7 @@ let rules (is_64 : bool)
     (* --------------------------------------------------------------------- *)
     (* Other: not ported yet *)
     (* --------------------------------------------------------------------- *)
-    | Arith _ | ArithMul _ | ArithF _
+    | Arith _
     | Move1 _ | Move2 _
     | JMP _ | JAL _ | JALR _ | Bxx _
     | FENCE_I | BREAK | SYS

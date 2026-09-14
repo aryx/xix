@@ -29,6 +29,14 @@ CASES=(
     "riscv_diff/lcon_case14.s"
     "riscv_diff/lreg_case15_16.s"
     "riscv_diff/fcvt_case17.s"
+    "riscv_diff/float_arith_case17.s"
+    "riscv_diff/float_mem_case17b.s"
+    "riscv_diff/sp_fp_pseudo.s"
+    "riscv_diff/branch_pseudo_ble_bgt.s"
+    "riscv_diff/muldiv_ext.s"
+    "riscv_diff/addr_global_offset.s"
+    "riscv_diff/fwd_text_ref.s"
+    "riscv_diff/addr_reg_indirect.s"
 )
 
 FAIL=0

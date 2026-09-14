@@ -242,19 +242,29 @@ let rewrite (is_64 : bool) (cg : instr T.code_graph) : instr T.code_graph =
             (* case 1: JMP (RLINK) *)
             n.instr <- T.I (JMP (ref (A.IndirectJump rLINK)))
           | Some (autosize, false) ->
-            (* case 2: ADD $autosize, SP; JMP (RLINK) *)
-            let rec n1 = T.{
-              instr = T.I (Arith (ADD None, Imm autosize, None, rSP));
-              next = Some n2;
-              branch = None; n_loc = n.n_loc; real_pc = -1;
-             }
-            and n2 = T.{
+            (* case 2: ADD $autosize, SP; JMP (RLINK) -- claude: unlike
+             * case 1/3 just above/below, this used to only set
+             * `n.next`, never `n.instr` itself -- leaving `n` still
+             * holding the ORIGINAL, untransformed `T.Virt A.RET`, which
+             * `Codegen.default_rules` then choked on ("rewrite should
+             * have transformed virtual instrs") for every leaf
+             * function with a nonzero frame (autosize<>0, no link
+             * save). Fixed by mirroring case 1/3's own pattern: set
+             * `n.instr` directly to the first real instruction, and
+             * chain only the remaining one via `n.next`. Found while
+             * testing this port's own new Local/Param-relative
+             * addressing (any leaf-with-locals function using it hit
+             * this), though the bug itself predates and is unrelated
+             * to that feature -- any leaf function with $>0 locals at
+             * all was already broken. *)
+            n.instr <- T.I (Arith (ADD None, Imm autosize, None, rSP));
+            let n2 = T.{
               instr = T.I (JMP (ref (A.IndirectJump rLINK)));
               next = n.next;
               branch = None; n_loc = n.n_loc; real_pc = -1;
             }
             in
-            n.next <- Some n1
+            n.next <- Some n2
           | Some (autosize, true) ->
             (* case 3: MOVW/MOV 0(SP), RLINK; ADD $autosize, SP;
              * JMP (RLINK) -- pointer-width restore, see the matching
@@ -301,7 +311,7 @@ let rewrite (is_64 : bool) (cg : instr T.code_graph) : instr T.code_graph =
      | T.I (Arith _ | ArithMul _ | ArithF _ | LUI _
            | Move1 _ | Move2 _ | FENCE_I
            | JMP _ | JAL _ | JALR _ | JALRI _ | Bxx _
-           | FCVTFF _ | FCVTFI _ | FCVTIF _
+           | FCVTFF _ | FCVTFI _ | FCVTIF _ | CmpF _
            | ECALL | BREAK | SYS | CSR _
            ) ->
         frame

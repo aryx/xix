@@ -88,6 +88,18 @@ type gen =
 (* alt: move_operand2 *)
 type vgen =
   | Gen of gen
+  (* claude: a float register as one side of a Move2 -- "MOVD
+   * x+4(FP),F1" (memory<->float reg), "MOVD $const,F2" (float
+   * immediate, via the stack-scratch expansion), and "MOVD Fs,Fd"
+   * (freg<->freg move, real RISC-V's own "FSGNJ.S/D Fd,Fs,Fs" self-
+   * sign-inject idiom -- real RISC-V has no dedicated float-move
+   * instruction; see move2_size's F__/D__ comment in Codegeni.ml).
+   * Mirrors Ast_asmv.ml's identical `GFReg` vgen case (MIPS's own
+   * MTC1/MFC1 family) -- goken's own lexer maps "MOVF"/"MOVD"
+   * uniformly to one token class covering all of these shapes too
+   * (confirmed against lex.c), so there's no need for this port to
+   * split them into a separate constructor per shape either. *)
+  | GFReg of freg
   (* | ... far more stuff *)
 [@@deriving show {with_path = false}]
 
@@ -115,6 +127,17 @@ type instr =
   | FCVTFF of fcvt_ff_opcode * freg * freg
   | FCVTFI of fcvt_fi_opcode * freg * reg
   | FCVTIF of fcvt_if_opcode * reg * freg
+  (* claude: goken's real "CMPEQD Fa,Fb,Rd"/"CMPLTD"/"CMPLED" -- a
+   * floating-point *compare*, writing 0/1 into a GP register (real
+   * RISC-V FEQ/FLT/FLE.S/D), genuinely NOT `ArithF` (whose own
+   * destination is always a `freg` -- `ArithF` can't type a
+   * GP-register destination at all, kept as its own constructor
+   * instead, same "alt" `arithf_opcode`'s own comment already
+   * anticipated). Only EQ/LT/LE are wired -- GE/GT would need the
+   * same operand-swap-to-LT/LE-and-back rewrite real 6a/ia's own
+   * linker does for Bxx's GT/LE (see Codegeni.ml's own Bxx comment),
+   * and no real closure stress-tested so far needs them. *)
+  | CmpF of (cmpf_opcode * A.floatp_precision) * freg * freg * reg
   (* Special RISCV: "lui $I,D" -- loads the raw 32-bit immediate's
    * upper 20 bits (bits [31:12], no rounding, unlike case 9's
    * MOVW-immediate expansion which rounds to compensate for ADDI's
@@ -190,17 +213,31 @@ type instr =
     | MUL (* TODO: lots of MUL *)(*size * A.sign*) 
     | DIV of w option * A.sign | REM of w option * A.sign
 
-  (* ABS/NEG are unary and can't take middle register. Same for CMPFxx 
-   * alt: define separate ArithFUnary CmpF constructs
-   *)
+  (* ABS/NEG are unary and can't take middle register.
+   * alt: define separate ArithFUnary construct
+   * claude: CMPEQ_/CMPGE_/CMPGT_ used to live here too (same "doesn't
+   * fit ArithF's shape" note) -- moved to their own `CmpF` instruction
+   * constructor instead (its destination is a GP register, which
+   * `ArithF`'s own type can't express at all), the "alt" this comment
+   * already anticipated. Only EQ is implemented so far. *)
   and arithf_opcode =
     | ADD_ | SUB_ | DIV_ | MUL_
     | ABS_ | NEG_
-    | CMPEQ_ | CMPGE_ | CMPGT_
+
+  (* claude: real RISC-V FEQ/FLT/FLE, GE_/GT_ not wired -- see CmpF's
+   * own comment. *)
+  and cmpf_opcode = EQ_ | LT_ | LE_
 
   and fcvt_ff_opcode = MOVFD (* float->double *) | MOVDF (* double->float *)
   and fcvt_fi_opcode = MOVFW (* float->int *) | MOVDW (* double->int *)
-  and fcvt_if_opcode = MOVWF (* int->float *) | MOVWD (* int->double *)
+  and fcvt_if_opcode =
+    | MOVWF (* int->float *) | MOVWD (* int->double *)
+    (* claude: MOVUF/MOVUD -- unsigned-int->float/double (real
+     * RISC-V FCVT.S.WU/FCVT.D.WU), goken's own AMOVUF/AMOVUD --
+     * same OOP_FP family as MOVWF/MOVWD, only the rs2_sel field
+     * differs (0=signed W, 1=unsigned WU; see optab.c's own
+     * "int->float"/"uint->float" adjacent rows). *)
+    | MOVUF (* uint->float *) | MOVUD (* uint->double *)
 
   and move1_size = 
      | B_ (* Byte *) of A.sign
@@ -249,7 +286,7 @@ let branch_opd_of_instr (instr: instr) : A.branch_operand option =
   | JALR (_, opd) -> Some opd
   | Bxx (_, _, _, opd) -> Some opd
   | Arith _ | ArithF _ | ArithMul _ | LUI _
-  | FCVTFF _ | FCVTFI _ | FCVTIF _
+  | FCVTFF _ | FCVTFI _ | FCVTIF _ | CmpF _
   | Move1 _ | Move2 _ | FENCE_I
   | ECALL | SYS | BREAK | CSR _ | JALRI _
      -> None
@@ -264,6 +301,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   let mov_vgen x =
     match x with
     | Gen x -> mov_operand x
+    | GFReg _ -> ()
   in
   match i with
   | Move1 (_, x1, gen2) -> 
@@ -287,6 +325,6 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
       A.visit_globals_branch_operand f b
   | JALRI _
   | Arith _ | ArithMul _ | ArithF _ | LUI _
-  | FCVTFF _ | FCVTFI _ | FCVTIF _
+  | FCVTFF _ | FCVTFI _ | FCVTIF _ | CmpF _
   | FENCE_I
   | ECALL | SYS | BREAK | CSR _ -> ()

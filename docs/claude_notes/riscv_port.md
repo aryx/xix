@@ -224,16 +224,177 @@ trigger them (e.g. "invert-and-skip-one-instruction" instead of
   case 0/1's register-register/shift-immediate arithmetic.
 - **`MULH`/`MULHSU`/`MULHU`** and the immediate CSR variants
   (`CSRRWI`/`CSRRSI`/`CSRRCI`) -- `Ast_asmi.ml`'s own opcode types
-  have no constructors for them yet.
-- **`BLE`/`BGT`** -- real RISC-V has no such hardware branch, only an
-  operand-swapping pseudo-op rewrite goken's own assembler doesn't
-  even accept as a mnemonic.
-- **Unsigned int↔float/double conversions** (`FCVT.*.WU`/`FCVT.WU.*`)
-  -- goken itself has no `MOVFWU`/`MOVDWU`/`MOVWUF`/`MOVWUD`
-  mnemonics either.
+  have no constructors for them yet. (`MUL`/`DIV`/`DIVU`/`REM`/`REMU`
+  themselves ARE wired now -- see the hello_libc section below.)
+- **Unsigned float→int conversions** (`FCVT.WU.*`) -- goken itself has
+  no `MOVFWU`/`MOVDWU` mnemonics for the reverse direction, though the
+  int→float direction (`MOVUF`/`MOVUD`, real goken mnemonics after
+  all) IS wired -- see the hello_libc section below.
+- **`ArithF`'s own `ABS_`/`NEG_`** (unary, don't fit the shared
+  2-or-3-register shape) and **`DIV_`'s single-precision form**
+  (`DIVF`) -- no real closure needs them yet, `ADD_`/`SUB_`/`MUL_`/
+  `DIV_` (double) and `CmpF`'s `EQ_`/`LT_`/`LE_` are wired.
 - **Case 18's full LUI+JALR far-branch fallback** -- see "Open
   issues" below; guarded against silently-wrong bytes but not
   implemented.
+
+## hello_libc integration test
+
+Status: **complete**. Same idea as `arm_port.md`'s/`arm64_port.md`'s/
+`mips_port.md`'s/`amd64_port.md`'s own equivalent sections (read
+`arm_port.md`'s first -- this is the RISC-V32 sibling, same
+methodology, run in a later session): beyond the hand-written
+`riscv_diff/` fixtures above (each one object file, one `TEXT`, no
+real linking), `tests/linker/hello_libc_riscv/` stress-tests the whole
+pipeline against goken's own real `hello.c` (which calls into a real,
+reusable `lib_core/libc/libc.a`), compiled via real `ic -S` for its
+full transitive libc dependency closure (36 files, found by
+`scripts/find-c-closure.py`'s BFS), assembled with `oia`, linked with
+`oil`, and run under `qemu-riscv32`. The fixture is self-contained
+(`hello.c`, `closure.tgz`, `test.sh`, `Makefile`, mirroring
+`hello_libc_amd64/`'s exact structure) and needs no goken checkout to
+run day-to-day. Unusually for this whole multi-arch effort, roughly
+half of the 36 closure files (`fmt_dofmt.c.s`, `fmt_fltfmt.c.s`,
+`fmt_nan64.c.s`, `fmt_strtod.c.s`, `port_vlrt.c.s`, and others) aren't
+assembleable by goken's own real `ia` either, for reasons predating
+and unrelated to this port -- `build-c-program.py` reports this
+informationally and proceeds anyway, since the requirement is a
+correctly *running* xix-built binary, not byte parity against a
+reference that can't itself be built for these files.
+
+**A 4th and 5th instance of this whole multi-arch effort's running
+"goken's own `-S` output isn't valid re-assembleable input to itself"
+bug family** (after the comma-padding artifact shared by 5c/7c/vc/6c,
+MIPS's unsigned-wraparound branch-offset printing, and ARM64's R31
+register-name bug):
+1. A compiled `JAL`'s own `p->reg` is legitimately `NREG` at the
+   object-file level (the *linker*'s own `AJAL` case substitutes
+   `REGLINK` for it at encode time) -- but real `ia`'s grammar has no
+   bare, register-less `"JAL target"` form at all (every real
+   hand-written `.s` in goken's own tree always spells out `"JAL
+   R1,target"` explicitly). Fixed in goken's own
+   `compilers/ic/list.c`'s `Pconv`: print the same `REGLINK`
+   substitution the linker itself already performs.
+2. `"MOVW $0,off(R)"` (an immediate-zero store to memory) isn't a real
+   single RISC-V instruction at all -- real goken's own `optab.c` only
+   has `"AMOVW, C_ZREG, C_SOREG -> OSTORE"`, i.e. a *register* known to
+   be zero (`REGZERO`), not a literal `$0` constant; real `ia` rejects
+   the bare-immediate spelling outright. Worked around at this port's
+   own `Codegeni.ml` level instead of goken's C source (unlike gap 1,
+   since there's no goken reference to match against for the specific
+   files that need this either way): treat a zero-valued store
+   immediate as `RZERO`, the objectively correct real encoding.
+
+**A real, confirmed bug in "MOV" vs "MOVW"'s own register-to-register
+encoding, caught the hard way (twice).** An earlier version of this
+session assumed the two mnemonics put their source register in
+different operand slots of the shared `"ADD rd,x0,rs"` idiom, based on
+a fixture (`"MOVW R0,R8"`) whose source happened to be `x0` itself --
+indistinguishable from either operand order by construction. That
+false "asymmetry" made it into this port's own code and comments;
+re-verified later with a non-zero source (`"MOVW R8,R10"`) and found
+real goken's own bytes actually match "MOV"'s own convention exactly
+(`rs1=x0, rs2=source`, not the other way around) -- the two mnemonics
+share one encoder after all. A cautionary tale for this whole session
+series' own "verify against real bytes" discipline: a fixture that
+happens to use the zero register as its one distinguishing operand
+can silently validate the wrong theory.
+
+**Roughly 20 more real gaps closed getting the 36-file closure to
+assemble+link+run** (most invisible to any `riscv_diff/*.s` fixture
+alone, all found by feeding the real closure through `oia`/`oil` and
+reading the resulting error, or -- for the last two below -- by
+actually *running* the linked binary): several previously entirely
+unwired real mnemonics (bare `"MOV"`, `"MOVWU"`, `"MOVUF"`/`"MOVUD"`
+-- unsigned int→float/double, real goken mnemonics confirmed against
+`lex.c`/`optab.c` despite an earlier, now-corrected comment claiming
+otherwise); the `BLE`/`BGT`/`BLEU`/`BGTU` pseudo-branch family (ALSO
+real goken mnemonics, an earlier comment's claim otherwise was simply
+wrong -- rewritten by the linker into the reversed-relation LT/GE
+hardware form with both the condition *and* the two register roles
+reversed, not just a condition remap: a first attempt that reused the
+already-computed registers unchanged produced the right size but wrong
+content, caught by hand-decoding real bytes); float move/arithmetic/
+compare (`FMOV`/`ArithF`/`CmpF`, including their own real-but-
+asymmetric `rs2/rs1/rd` mapping -- again only caught by hand-decoding
+real bytes, an "obvious" left-to-right guess produced byte-identical
+*size* but wrong *content*); float memory access (`FLD`/`FSD`, both
+plain register-indirect and SB-relative, needed by nearly every
+function touching a `double`); a completely unimplemented Local/Param
+pseudo-frame addressing story (`"off(SP)"`/`"off(FP)"`, goken's own
+`D_AUTO`/`D_PARAM`, including its own address-of form,
+`"$sym+N(SP)"`) -- this port's own `Param`/`Local` AST names are
+swapped relative to goken's `D_PARAM`/`D_AUTO` naming, see
+`Codegeni.ml`'s own `resolve_entity` comment; `"$const(Reg)"`
+(address-of an arbitrary-register indirect, a plain `ADDI`, NOT a
+memory load -- mirrors `Parser_asmv.mly`'s own identical MIPS
+production, confirmed the same real construct from the same real
+source file on both arches); and the real RISC-V M-extension (`MUL`/
+`DIV`/`DIVU`/`REM`/`REMU`, previously unimplemented despite existing
+AST/grammar scaffolding, genuinely worth its own byte-verification
+since division isn't commutative -- a left/right swap here would
+silently compute the wrong *value*).
+
+**Two real, confirmed bugs found only by *running* the linked
+binary**, not by getting it to assemble+link (same category as
+amd64's own "pseudo-SP" bug -- every individual instruction still
+encoded to *some* valid byte sequence):
+
+1. **A leaf function *with* a nonzero declared frame crashed the
+   linker outright** (`"rewrite should have transformed virtual
+   instrs"`) -- `Rewritei.ml`'s own RET-rewrite case 2 updated
+   `n.next` but never `n.instr` itself, leaving the original
+   un-transformed virtual `RET` node behind for codegen to choke on
+   (unlike case 1 and case 3 just above/below it, which both correctly
+   overwrite `n.instr`). A real, pre-existing bug, unrelated to and
+   predating this session's own Local/Param work -- just first exposed
+   by it, since a leaf function with real local variables is exactly
+   when this shape comes up.
+2. **`"MOV $sym+N(SB),R"` (address-of-a-global-with-a-nonzero-offset)
+   silently discarded N entirely for every N≠0**, always computing the
+   address of `"sym+0"` instead -- the offset field's own name in the
+   `Codegeni.ml` match arm was literally `_offsetTODO`, an explicit,
+   pre-existing "not implemented" marker never wired through any of
+   the case's 3 address formulas. No earlier fixture in this whole
+   port happened to use a nonzero address-of-global offset, so nothing
+   caught it until a real program produced plausible-looking but
+   *wrong* output: `fmt/dofmt.c`'s own `"%d"` digit-table setup,
+   `"MOV $.string<>+12(SB),R13"` (picking a `"0123456789..."`
+   sub-table out of a larger shared string-literal blob), landed on
+   the WRONG sub-string, printing `"hello from libc.a: i + i = >"`
+   instead of `"2 + 2 = 4"` -- confirmed once root-caused by hand-
+   decoding the actual bytes at the wrong vs. right offset, and by
+   reproducing the exact shape minimally (a hand-written multi-`DATA`
+   `.string<>`-style blob addressed at a nonzero offset).
+   Byte-identical differential testing against goken can't catch this
+   class of bug in general (goken can't even assemble several of the
+   files that exposed it in the first place) -- only a real end-to-end
+   run, checking actual printed output rather than just exit code or
+   crash-vs-no-crash, does.
+
+A third, unrelated pre-existing bug was also found and fixed while
+building the Local/Param-relative addressing fixtures above: a
+one-pass linker symbol-table construction issue where a TEXT symbol
+referenced *before* its own definition (a real forward reference --
+`fmt/fmtfd.c`'s own `fmtfdinit` takes the address of
+`fmt/fmtfdflush.c`'s `__fmtFdFlush`, defined in a *later* unit of the
+same link) crashed with a raw `Not_found` instead of resolving once
+layout completes -- fixed by deferring the lookup into the binary-
+emission thunk, the same pattern the SData2 slow path's own
+`init_data` lookup already used.
+
+**Fixture discipline**: eight new byte-identical `riscv_diff/`
+fixtures, one per gap area above with a real, verifiable encoding or
+behavior difference: `float_arith_case17.s` (FMOV/ArithF/CmpF and
+their real rs2/rs1/rd mapping), `float_mem_case17b.s` (FLD/FSD +
+MOVUF/MOVUD), `sp_fp_pseudo.s` (Local/Param addressing, also exercises
+the leaf-with-frame RET bug), `branch_pseudo_ble_bgt.s` (BLE/BGT/
+BLEU/BGTU and their real operand-swap), `muldiv_ext.s` (the
+M-extension, both 2- and 3-register forms), `addr_global_offset.s`
+(the `_offsetTODO` bug -- the most important one, since it produced
+wrong output rather than a crash or an assemble/link failure),
+`fwd_text_ref.s` (the forward-TEXT-reference symbol-table bug), and
+`addr_reg_indirect.s` (`"$const(Reg)"`).
 
 ## Open issues
 

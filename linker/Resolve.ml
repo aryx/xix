@@ -21,10 +21,16 @@ let resolve_branch_operand opd symbols =
         | T.SText virt_pc -> 
             opd := A.Absolute virt_pc; 
             Some virt_pc
-        | T.SXref -> raise (Impossible "SXRef raised by Check.check")
-              (* stricter: 5l converts them to SText 0 to avoid reporting
-               * multiple times the same error but we fail early instead.
-               *)
+        | T.SXref ->
+            (* stricter: 5l converts them to SText 0 to avoid reporting
+             * multiple times the same error but we fail early instead.
+             * claude: name the actual undefined symbol -- this fires
+             * before Check.check's own later, friendlier "%s: not
+             * defined" pass ever runs (Resolve.build_graph resolves
+             * branch targets eagerly, before Check.check in every
+             * link function), so without the symbol name here the
+             * only clue is a bare "Impossible" exception. *)
+            failwith (spf "undefined: %s (branch target)" (A.s_of_global x))
         | T.SData _ -> failwith "branching to a data symbol"
       )
   | A.Absolute virt_pc -> Some virt_pc

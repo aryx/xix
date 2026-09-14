@@ -209,10 +209,27 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
        );
        frame
 
-     | T.I  ( Arith _ | NOR _ | ArithMul _ | ArithF _
+     (* claude: real MIPS hardware has no immediate-SUB instruction at
+      * all (confirmed: optab.c's own ASUB rows are C_REG,[C_REG,]
+      * C_REG only, no C_SCON/C_ANDCON "from" class), so goken's own
+      * real assembler always rewrites "SUB $con,[Rn,]Rd" into
+      * "ADDU Rn,-con,Rd" before ever reaching codegen -- confirmed by
+      * manually decoding a linked real-goken binary's own raw
+      * instruction words ("SUBU $159,R7,R7" -> a plain ADDIU with
+      * imm=-159, not any ASUB-shaped encoding at all). Same general
+      * "goken pre-negates at a stage this port didn't originally
+      * model" category as ARM64/ARM32's own negative-ADD-to-SUB flip
+      * (Rewrite7.ml/Rewrite5.ml), just the opposite direction here.
+      * Found stress-testing real lib_core/libc (fmt/fltfmt.c's real
+      * "SUBU $159,R7,R7"). *)
+     | T.I (Arith (SUB (sz, sign), Imm i, r_opt, rt)) ->
+         n.instr <- T.I (Arith (ADD (sz, sign), Imm (- i), r_opt, rt));
+         frame
+
+     | T.I  ( Arith _ | NOR _ | ArithMul _ | ArithF _ | FCvt _
             | Move1 _ | Move2 _
             | JMP _ | RFE _ | JAL _ | JALReg _ | BEQ _ | BNE _
-            | Bxx _
+            | Bxx _ | BFP _
             | SYSCALL | BREAK | TLB _
             | LL _ | SC _
             ) ->

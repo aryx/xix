@@ -110,6 +110,24 @@ type instr =
   (* TODO: in theory takes F | D | W, not just A.floatp_precision *)
   | ArithF of (arithf_opcode * A.floatp_precision) *
        freg * freg option * freg
+  (* claude: the word<->float<->double conversion family (MOVWD/
+   * MOVDW/MOVWF/MOVFW/MOVDF/MOVFD) -- real goken grammar is the same
+   * generic LTYPE5 "vlgen,vgen" shape Move2 already covers, but
+   * these aren't a memory-width "move" at all (no soreg/lext/auto
+   * form exists for any of them in optab.c, only the plain
+   * C_FREG,C_NONE,C_FREG row, case 33 -- the same shape ABS_/NEG_
+   * above already use, reusing AMOVF/AMOVD's own case-33 table row
+   * via goken's buildrep() mechanism, confirmed in span.c's `case
+   * AMOVD: buildrep(6,AMOVD)` / `case AMOVF: buildrep(7,AMOVF)`),
+   * it's a genuine reinterpret+convert between a *different* source
+   * and destination kind -- doesn't fit ArithF's own single
+   * A.floatp_precision tag (which assumes one precision for the
+   * whole instruction), hence the TODO comment just above and this
+   * new, dedicated constructor instead of forcing a fit. Found
+   * stress-testing real lib_core/libc (fmt/fltfmt.c's real "MOVWD
+   * F0,F0", converting an int bit-pattern raw-moved into F0 via a
+   * prior "MOVW R5,F0" into a real double). *)
+  | FCvt of fcvt_dir * freg * freg
 
   (* Memory (Load/Store) *)
   (* "one side must be a register" *)
@@ -126,6 +144,20 @@ type instr =
   | BEQ of gen * reg option * A.branch_operand (* just Relative|LabelUse *)
   | BNE of gen * reg option * A.branch_operand (* just Relative|LabelUse *)
   | Bxx of b_condition * gen * A.branch_operand (* just Relative|LabelUse *)
+  (* claude: BFPT/BFPF ("branch if the FP condition flag is
+   * true/false") -- goken's real case 6 too (same LTYPE6-style
+   * "sbra" shape BEQ/BNE/Bxx share), but genuinely no register
+   * operand at all (the condition itself was already set by a
+   * preceding CMPxxF/CMPxxD, case 32/33's own FArith-family compare
+   * -- see ArithF's comment), so it doesn't fit Bxx's own `gen`
+   * field. Real goken grammar: `LTYPEG comma rel` (assemblers/va/
+   * a.y), i.e. "BFPT label" alone, no register. `bool` is true for
+   * BFPT, false for BFPF -- goken's own opirr() bakes the "257" vs
+   * "256" FP-condition-check selector directly into the base
+   * opcode, nothing else differs. Found stress-testing real
+   * lib_core/libc (fmt/fltfmt.c's real "CMPGED F4,F24; BFPT
+   * 4(PC)"). *)
+  | BFP of bool * A.branch_operand (* just Relative|LabelUse *)
 
   (* System *)
   | SYSCALL
@@ -163,7 +195,16 @@ type instr =
     | ABS_ | NEG_
     | CMPEQ_ | CMPGE_ | CMPGT_
 
-  and move1_size = 
+  (* claude: word<->float<->double conversion directions -- see
+   * FCvt's own comment. Goken's own asm.c: AMOVFW=FPF(4,4)
+   * (float->word), AMOVDW=FPD(4,4) (double->word), AMOVWF=FPW(4,0)
+   * (word->float), AMOVDF=FPD(4,0) (double->float), AMOVWD=FPW(4,1)
+   * (word->double), AMOVFD=FPF(4,1) (float->double) -- see
+   * Codegenv.ml's own oprrr_fcvt_opcode for the FPx(a,b) encoding
+   * itself. *)
+  and fcvt_dir = WD | DW | WF | FW | DF | FD
+
+  and move1_size =
      | B_ (* Byte *) of A.sign
      | H_ (* Half world *) of A.sign
      | W_ (* Word *) of move_dir
@@ -213,7 +254,8 @@ let branch_opd_of_instr (instr: instr) : A.branch_operand option =
   | BEQ (_, _, opd) -> Some opd
   | BNE (_, _, opd) -> Some opd
   | Bxx (_, _, opd) -> Some opd
-  | Arith _ | ArithF _ | NOR _ | ArithMul _ | Move1 _ | Move2 _ | SYSCALL | BREAK
+  | BFP (_, opd) -> Some opd
+  | Arith _ | ArithF _ | FCvt _ | NOR _ | ArithMul _ | Move1 _ | Move2 _ | SYSCALL | BREAK
   | TLB _ | LL _ | SC _ -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
@@ -258,7 +300,8 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | Bxx (_, gen, b) ->
       mov_operand gen;
       A.visit_globals_branch_operand f b
+  | BFP (_, b) -> A.visit_globals_branch_operand f b
   | LL (gen, _) -> mov_operand gen
   | SC (_, gen) -> mov_operand gen
-  | Arith _ | NOR _ | ArithMul _ | ArithF _
+  | Arith _ | NOR _ | ArithMul _ | ArithF _ | FCvt _
   | SYSCALL | BREAK | TLB _ -> ()

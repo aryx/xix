@@ -233,8 +233,13 @@ def main() -> None:
               f"own binary only", file=sys.stderr)
 
     xix_root = Path(__file__).resolve().parent.parent
-    xix_as = xix_root / "_build" / "default" / "bin_dune" / f"{xx_prefix}a"
-    xix_ld = xix_root / "_build" / "default" / "bin_dune" / f"{xx_prefix}l"
+    # claude: the top-level bin_dune/ symlink (-> _build/install/
+    # default/bin/) always tracks the freshest Main.exe;
+    # _build/default/bin_dune/ (dune's own snapshot copy of that same
+    # symlinked source directory) can go stale after a plain `dune
+    # build` and isn't reliably refreshed.
+    xix_as = xix_root / "bin_dune" / f"{xx_prefix}a"
+    xix_ld = xix_root / "bin_dune" / f"{xx_prefix}l"
     if not xix_as.is_file() or not xix_ld.is_file():
         sys.exit(f"error: {xix_as} / {xix_ld} not found (run 'dune build' first)")
 

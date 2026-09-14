@@ -52,8 +52,13 @@ XIX_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 # Prefer this repo's freshly-built binaries over whatever o5a/o5l
 # might be on PATH (e.g. an older opam-installed copy) -- we're
 # porting/testing this checkout, not some other installed version.
-XIX_O5A="$XIX_ROOT/_build/default/bin_dune/o5a"
-XIX_O5L="$XIX_ROOT/_build/default/bin_dune/o5l"
+# claude: uses the top-level bin_dune/ symlink (-> _build/install/
+# default/bin/), not _build/default/bin_dune/ like this script used
+# to -- found empirically that the latter can go stale after a plain
+# `dune build` (it's only refreshed reliably by the install
+# machinery), while bin_dune/ always tracks the freshest Main.exe.
+XIX_O5A="$XIX_ROOT/bin_dune/o5a"
+XIX_O5L="$XIX_ROOT/bin_dune/o5l"
 if [ ! -x "$XIX_O5A" ]; then XIX_O5A=$(command -v o5a || true); fi
 if [ ! -x "$XIX_O5L" ]; then XIX_O5L=$(command -v o5l || true); fi
 if [ ! -x "$XIX_O5A" ] || [ ! -x "$XIX_O5L" ]; then

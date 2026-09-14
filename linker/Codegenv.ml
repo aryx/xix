@@ -178,6 +178,24 @@ let opirr_mem (code : move2_size) (dir : mem_opcode) : Bits.t =
   | F__, LDR -> sp 6 1
   | D__, _ -> failwith "TODO: opirr_mem D__ = ?"
 
+(* claude: the byte/halfword-sized siblings of opirr_mem above, for
+ * Move1's own B_/H_ memory forms -- goken's asm.c: AMOVB/AMOVBU
+ * share one STORE opcode (SB doesn't care about sign at all,
+ * SP(5,0)), AMOVH/AMOVHU likewise (SP(5,1)); the LOAD side does
+ * distinguish sign (LB vs LBU, LH vs LHU): SP(4,0)/SP(4,4) and
+ * SP(4,1)/SP(4,5) respectively (goken's own "+ALAST" convention for
+ * selecting the load-opcode variant of a row that's store by
+ * default). *)
+let opirr_mem1 (sz : move1_size) (dir : mem_opcode) : Bits.t =
+  match sz, dir with
+  | B_ _, STR -> sp 5 0
+  | H_ _, STR -> sp 5 1
+  | B_ A.S, LDR -> sp 4 0
+  | B_ A.U, LDR -> sp 4 4
+  | H_ A.S, LDR -> sp 4 1
+  | H_ A.U, LDR -> sp 4 5
+  | (W_ _ | V_ _), _ -> failwith "TODO: opirr_mem1 W_/V_ (MOVWL/MOVWR/MOVVL/MOVVR)"
+
 let opirr_jmp (is_jal : bool) : Bits.t =
   if is_jal
   then sp 0 3
@@ -201,6 +219,33 @@ let opirr_bxx_opcode (c : b_condition) : Bits.t =
   | LEZ    -> sp 0 6
   | LTZ    -> sp 0 1 @ bcond 0 0
   | LTZAL  -> sp 0 1 @ bcond 2 0
+
+(* claude: BFPT/BFPF's own base opcode -- goken's asm.c: `case ABFPT:
+ * return SP(2,1)|(257<<16); case ABFPF: return SP(2,1)|(256<<16);`.
+ * 257/256 sit at bits [24:16], the same "sub-opcode selector" bit
+ * range BCOND uses for the other case-6 mnemonics, just a single
+ * flat field here instead of two (goken's own literal already
+ * combines what would otherwise be BCOND's two sub-fields). *)
+(* claude: split as two sub-fields at bit24 and bit16, not one flat
+ * [(257/256,16)] entry -- the latter passed type-checking but failed
+ * at LINK time ("value 257 overflow outside its space (21-16)"):
+ * Bits.sanity_check_32 infers each field's own width from the gap to
+ * its nearest NEIGHBORING declared position in the list, not from
+ * real bit 32 -- and op_irr_no_r3 (the caller) always places its own
+ * `r2` field at bit21, boxing in whatever's placed at bit16 to just
+ * 5 bits (21-16) -- too narrow for 257's own bit-24 contribution.
+ * 257<<16 sets exactly bits 16 and 24 (257 = 0b1_0000_0001); 256<<16
+ * sets only bit 24. Splitting as (1,24) + ((1|0),16) -- with bit24's
+ * own neighboring gap being sp's (_,26) entry (2 bits, value 1 fits)
+ * and bit16's gap being op_irr_no_r3's (_,21) entry (5 bits, value
+ * 0/1 fits) -- reproduces the exact same final OR'd bit pattern
+ * without straddling any single field's inferred width. A first fix
+ * attempt (bcond-style split at bit19/bit16) hit the identical
+ * problem one field over (32 overflowing a 2-bit 21-19 gap) before
+ * this one was found by working out which bits 257/256 actually set
+ * rather than guessing another 2-way split. *)
+let opirr_bfp_opcode (is_true : bool) : Bits.t =
+  sp 2 1 @ [(1, 24); ((if is_true then 1 else 0), 16)]
 
 let oprrr_arith_opcode (code : arith_opcode) : Bits.t =
   match code with
@@ -248,15 +293,34 @@ let oprrr_mul_opcode (code : mul_opcode) : Bits.t =
  * 17=double). *)
 let fpf (x : int) (y : int) : Bits.t = sp 2 1 @ [(16, 21)] @ op x y
 let fpd (x : int) (y : int) : Bits.t = sp 2 1 @ [(17, 21)] @ op x y
+(* claude: FPW(x,y) is the same shape with 20 instead of 16/17 --
+ * goken's own macro (`#define FPW(x,y) SP(2,1)|(20<<21)|(x<<3)|y`),
+ * the "fmt" field value for the word-integer source/dest format used
+ * by the MOVWF/MOVWD conversion pair -- see FCvt's own comment. *)
+let fpw (x : int) (y : int) : Bits.t = sp 2 1 @ [(20, 21)] @ op x y
 
-(* claude: only ADD_/SUB_/MUL_/DIV_ (case 32) and ABS_/NEG_ (case
- * 33) below -- CMPEQ_/CMPGT_/CMPGE_ also alias into case 32 per
- * goken's optab.c (ACMPEQF's row: `C_FREG,C_REG,C_NONE -> 32`, note
- * the C_REG not C_FREG on the *second* operand, and C_NONE dest --
- * a real comparison writes to an implicit FP condition flag, not a
- * normal freg, so it doesn't fit case 32's ArithF-with-a-real-dest
- * shape as cleanly as ADD/SUB/MUL/DIV/ABS/NEG do) -- left as a TODO
- * rather than guessed at. *)
+(* claude: goken's own asm.c case-46-ish opcode table for the
+ * word<->float<->double conversion family (see Ast_asmv.ml's own
+ * fcvt_dir comment for the exact FPx(a,b) per direction, individually
+ * verified against asm.c, not re-derived here). Shares case 33's
+ * exact encoding shape with ABS_/NEG_ above (OP_FRRR(op,0,from,to)),
+ * confirmed via goken's own span.c buildrep() mechanism replicating
+ * AMOVF/AMOVD's own case-33 optab row onto this whole family. *)
+let oprrr_fcvt_opcode (dir : fcvt_dir) : Bits.t =
+  match dir with
+  | FW -> fpf 4 4
+  | DW -> fpd 4 4
+  | WF -> fpw 4 0
+  | DF -> fpd 4 0
+  | WD -> fpw 4 1
+  | FD -> fpf 4 1
+
+(* claude: ADD_/SUB_/MUL_/DIV_ (case 32), ABS_/NEG_ (case 33), and
+ * CMPEQ_/CMPGT_/CMPGE_ (also case 32 -- see that dispatch arm's own
+ * comment for why the C_REG-not-C_FREG optab quirk doesn't actually
+ * matter here) -- goken's own asm.c: ACMPEQF=FPF(6,2),
+ * ACMPGTF=FPF(7,4), ACMPGEF=FPF(7,6) (and the D-precision siblings
+ * at the same (x,y) pair, just fpd instead of fpf). *)
 let oprrr_arithf_opcode ((code, prec) : arithf_opcode * A.floatp_precision) : Bits.t =
   let f = match prec with A.F -> fpf | A.D -> fpd in
   match code with
@@ -266,7 +330,9 @@ let oprrr_arithf_opcode ((code, prec) : arithf_opcode * A.floatp_precision) : Bi
   | DIV_ -> f 0 3
   | ABS_ -> f 0 5
   | NEG_ -> f 0 7
-  | CMPEQ_ | CMPGE_ | CMPGT_ -> failwith "TODO:oprrr_arithf CMPxx"
+  | CMPEQ_ -> f 6 2
+  | CMPGT_ -> f 7 4
+  | CMPGE_ -> f 7 6
 
 let op_frrr (op : Bits.t) (FR r1 : freg) (FR r2 : freg) (FR r3 : freg) : Bits.t =
   op @ [(r1, 16); (r2, 11); (r3, 6)]
@@ -422,6 +488,111 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             [ op_irr (opirr_arith_opcode op) i r rt ]
          ) }
 
+    (* case 4 sibling: SGT/SGTU $con,[r1],r2 -- real hardware
+     * SLTI/SLTIU (opirr_arith_opcode's own SGT rows, `sp 1 2`/`sp 1
+     * 3`, already decode to the real 0x0a/0x0b SLTI/SLTIU opcodes,
+     * confirmed by manually decoding a real goken-linked binary's
+     * raw words for "SGT $128,R11,R2" -> SLTI R2,R11,128, no operand
+     * swap despite the "greater than" name) -- same single-
+     * instruction 16-bit-signed-immediate range as ADD's own case 4
+     * just above, kept as its own guarded arm rather than widening
+     * ADD's (goken's own ADDCON/ANDCON/UCON/LCON fallback chain for
+     * out-of-range ADD immediates isn't verified to apply identically
+     * to SGT, so only the range actually proven needed is ported).
+     * Found stress-testing real lib_core/libc (utf/rune.c's real
+     * "SGT $128,R11,R2"). *)
+    | Arith (SGT _ as op, Imm i, r_opt, rt) when i >= -0x8000 && i <= 0x7fff ->
+        { size = 4; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_irr (opirr_arith_opcode op) i r rt ]
+         ) }
+
+    (* claude: NOT byte-identical to goken here (same "real literal
+     * pool this port doesn't implement" gap as the MOVW $lcon,R/
+     * AND-OR-XOR-with-a-huge-constant cases elsewhere in this file):
+     * SGT/SGTU with a constant too big for SLTI/SLTIU's own signed
+     * 16-bit immediate (e.g. a real "SGT $4294967292,R10,R2", i.e.
+     * -4 as a 32-bit pattern). Same REGTMP-materialize-then-
+     * register-op substitute as those other cases -- genuinely
+     * correct, just not a claim of real `va` byte parity. Found
+     * stress-testing real lib_core/libc (fmt/dofmt.c's real "SGT
+     * $4294967292,R10,R2"). *)
+    | Arith (SGT _ as op, Imm i, r_opt, rt) ->
+        { size = 12; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_irr op_last (i asr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) (i land 0xffff) rTMP rTMP;
+              op_rrr (oprrr_arith_opcode op) rTMP r rt;
+            ]
+         ) }
+
+    (* case 4 sibling: AND/OR/XOR $con,[r1],r2 -- real hardware
+     * ANDI/ORI/XORI, whose immediate is zero- not sign-extended
+     * (goken's own optab.c: `{AAND, C_AND0CON, ...}` uses this same
+     * case 4, gated on its own C_AND0CON class rather than ADD's
+     * C_ADD0CON -- real ANDI/ORI/XORI take a plain 16-bit unsigned
+     * immediate, [0,0xffff], not ADD's signed [-0x8000,0x7fff]).
+     * opirr_arith_opcode's own AND/OR/XOR rows already existed
+     * (`sp 1 4`/`sp 1 5`/`sp 1 6`); only this dispatch arm was
+     * missing. Found stress-testing real lib_core/libc (utf/rune.c's
+     * real "AND $1,R3", fmt/dofmt.c's real "OR $256,R9,R2"). *)
+    | Arith ((AND | OR | XOR) as op, Imm i, r_opt, rt) when i >= 0 && i <= 0xffff ->
+        { size = 4; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_irr (opirr_arith_opcode op) i r rt ]
+         ) }
+
+    (* claude: NOT byte-identical to goken here (same "real literal
+     * pool this port doesn't implement" gap as the general MOVW
+     * $lcon,R case above): AND/OR/XOR with a constant too big for
+     * ANDI/ORI/XORI's own 16-bit unsigned immediate (e.g. a real
+     * "AND $4294967247,R2,R9", i.e. 0xFFFFFFCF/-49 as a 32-bit
+     * pattern) needs its own real literal-pool mechanism in the
+     * assembler this port doesn't have. Deliberate xix-only
+     * substitute instead: materialize the constant into REGTMP via
+     * the exact same mathematically-exact LUI+ORI expansion the
+     * MOVW fallback above already uses, then the already-working
+     * register-register form of the same op -- genuinely correct,
+     * just not a claim of real `va` byte parity. Found stress-
+     * testing real lib_core/libc (fmt/dofmt.c's real "AND
+     * $4294967247,R2,R9"). *)
+    | Arith ((AND | OR | XOR) as op, Imm i, r_opt, rt) ->
+        { size = 12; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_irr op_last (i asr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) (i land 0xffff) rTMP rTMP;
+              op_rrr (oprrr_arith_opcode op) rTMP r rt;
+            ]
+         ) }
+
+    (* claude: "NOR $imm,Rd" -- a real goken 2-operand pseudo-op
+     * (Parser_asmv.mly's own `TNOR imr TC imr` production), computing
+     * Rd = ~(Rd | imm) in place -- MIPS's own idiom for bitwise NOT
+     * when imm=0 (there's no separate hardware "NOT"; confirmed
+     * directly against goken with "NOR $0,R1" on R1=5 -> R1=~5=250 as
+     * an exit code, and by decoding the real linked instruction word:
+     * a plain NOR with rs=R1, rt=R0, rd=R1). Real MIPS has no NORI
+     * (immediate NOR) hardware instruction either, so a nonzero imm
+     * needs the same REGTMP-materialize substitute as the AND/OR/XOR
+     * large-immediate case above; imm=0 (the only case any real
+     * closure stress-tested so far needs) skips that and uses rZERO
+     * directly, matching goken's own real bytes exactly. Found
+     * stress-testing real lib_core/libc (fmt/nan64.c's real "NOR
+     * $0,R0", clearing/complementing a flag register). *)
+    | NOR (Imm 0, r_opt, Reg rd) ->
+        { size = 4; x = None; binary = (fun () ->
+            let r = r_opt ||| rd in
+            [ op_rrr (op 4 7) rZERO r rd ]
+         ) }
+    | NOR (Imm i, r_opt, Reg rd) ->
+        { size = 12; x = None; binary = (fun () ->
+            let r = r_opt ||| rd in
+            [ op_irr op_last (i asr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) (i land 0xffff) rTMP rTMP;
+              op_rrr (op 4 7) rTMP r rd;
+            ]
+         ) }
+
     (* case 10:	/* add $con,[r1],r2 ==> mov $con,t; add t,[r1],r2 */ *)
     (* claude: the ANDCON range (0x8000-0xffff -- positive, doesn't
      * fit ADDI's signed immediate, but does fit a 16-bit OR-with-R0
@@ -529,6 +700,15 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             let r = r_opt ||| rt in
             [ op_rrr (oprrr_mul_opcode op) rf r rZERO ]
          ) }
+    (* case 22 sibling: DIV/DIVU -- same shape as MUL just above (real
+     * MIPS DIV also has no destination register field, result lands
+     * in HI/LO, retrieved separately via MFHI/MFLO). Found stress-
+     * testing real lib_core/libc (fmt/dofmt.c's real "DIV R4,R9"). *)
+    | ArithMul ((DIV (W, _) as op), rf, r_opt, rt) ->
+        { size = 4; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_rrr (oprrr_mul_opcode op) rf r rZERO ]
+         ) }
 
     (* case 30:	/* movw r,fr */ *)
     (* claude: MTC1/MFC1 (case 30/31) have a mandatory MIPS I COP1
@@ -606,13 +786,37 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
          ) }
 
     (* case 32:	/* fadd fr1,[fr2],fr3 */ *)
-    (* claude: ADD_/SUB_/MUL_/DIV_ only -- see oprrr_arithf_opcode's
-     * comment above for why CMPEQ_/CMPGT_/CMPGE_ (which also alias
-     * into this same oprange in goken) aren't included. *)
     | ArithF (((ADD_ | SUB_ | MUL_ | DIV_), _) as op, rf, r_opt, rt) ->
         { size = 4; x = None; binary = (fun () ->
             let r = r_opt ||| rt in
             [ op_frrr (oprrr_arithf_opcode op) rf r rt ]
+         ) }
+
+    (* case 32, compare variant: CMPEQ_/CMPGT_/CMPGE_ -- a REAL bug
+     * this session's first attempt got wrong, caught only by
+     * decoding real goken's own raw instruction words (not by
+     * reading asm.c's C source alone, which looked like it should
+     * "just work" via the same OP_FRRR(op,from,to,to) call every
+     * other case-32 op uses): goken's own C really does pass
+     * `p->to.reg` as OP_FRRR's third argument for a compare too, but
+     * a real MIPS FP *compare* has no third 5-bit register field at
+     * all in that bit position (bits[10:6]) -- that range is the
+     * condition-code selector (cc, bits[10:8]) plus 2 reserved bits,
+     * always 0 for the plain "cc0" form this port uses, NOT a
+     * register. Confirmed by manually decoding "CMPEQD F2,F4"
+     * linked with real goken: ft=2(F2), fs=4(F4), bits[10:6]=0 --
+     * NOT to.reg(=4) shifted into that slot, which is what op_frrr's
+     * generic 3-register shape (reused unmodified from the earlier,
+     * wrong attempt) actually produced, corrupting the encoding by
+     * exactly bit 8. Found the hard way: the closure linked and even
+     * *ran*, but silently computed the wrong CMPEQD/CMPGED condition
+     * result, discovered only via a hand-written CMPEQD+BFPF probe
+     * after a real closure-wide `%d`-formatting bug (a completely
+     * different, already-fixed issue) was ruled out first. *)
+    | ArithF (((CMPEQ_ | CMPGE_ | CMPGT_), _) as op, rf, r_opt, rt) ->
+        { size = 4; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_frrr (oprrr_arithf_opcode op) rf r (FR 0) ]
          ) }
 
     (* case 33:	/* fabs fr1,fr3 */ *)
@@ -623,6 +827,33 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | ArithF (((ABS_ | NEG_), _) as op, rf, None, rt) ->
         { size = 4; x = None; binary = (fun () ->
             [ op_frrr (oprrr_arithf_opcode op) (FR 0) rf rt ]
+         ) }
+
+    (* case 33, plain register move variant: "MOVF F1,F2"/"MOVD F1,F2"
+     * -- goken's own real optab.c rows (`{AMOVF, C_FREG, C_NONE,
+     * C_FREG, 33, ...}` / same for AMOVD) share this exact case with
+     * ABS_/NEG_ just above (`oprrr(AMOVF)=FPF(0,6)`,
+     * `oprrr(AMOVD)=FPD(0,6)`), just a genuine copy instead of a
+     * unary op. Already reachable via the existing Move2/vgen
+     * grammar (freg is already a real `vgen` alternative) -- no new
+     * AST constructor or grammar rule needed, only this dispatch
+     * arm. Found stress-testing real lib_core/libc (fmt/strtod.c's
+     * real "MOVD F4,F0"). *)
+    | Move2 (F__, Left (GFReg (FR fsrc)), GFReg (FR rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+            [ op_frrr (fpf 0 6) (FR 0) (FR fsrc) (FR rt) ]
+         ) }
+    | Move2 (D__, Left (GFReg (FR fsrc)), GFReg (FR rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+            [ op_frrr (fpd 0 6) (FR 0) (FR fsrc) (FR rt) ]
+         ) }
+
+    (* case 33, conversion variant: MOVWD/MOVDW/MOVWF/MOVFW/MOVDF/MOVFD
+     * -- same shape as ABS_/NEG_ just above (see FCvt's own comment
+     * for why this isn't just another arithf_opcode). *)
+    | FCvt (dir, rf, rt) ->
+        { size = 4; x = None; binary = (fun () ->
+            [ op_frrr (oprrr_fcvt_opcode dir) (FR 0) rf rt ]
          ) }
 
     (* case 20:	/* mov lohi,r */ *)
@@ -648,6 +879,17 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | Move2 (W__, Left (LoHi HI), Gen (GReg rt)) ->
         { size = 4; x = None; binary = (fun () ->
             [ op_rrr (op 2 0) rZERO rZERO rt ]
+         ) }
+
+    (* case 1: mov[v] r1,r2 ==> OR r1,r0,r2 *)
+    (* claude: plain register-to-register move -- no dedicated MIPS
+     * hardware "move" instruction, goken's own real case 1 synthesizes
+     * it as "OR r1,R0,r2" (goken's `OP_RRR(oprrr(AOR), p->from.reg,
+     * REGZERO, p->to.reg)`). Found stress-testing real lib_core/libc
+     * (fmt/nan64.c's real "MOVW R6,R4"). *)
+    | Move2 (W__, Left (Gen (GReg rf)), Gen (GReg rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+            [ op_rrr (oprrr_arith_opcode OR) rf rZERO rt ]
          ) }
 
     (* case 21:	/* mov r,lohi */ *)
@@ -724,25 +966,33 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
            [ op_irr op_last (i asr 16) rZERO rt ]
         ) }
 
-    (* claude: NOT case 19 -- tried that first (plain LU+OR, same
-     * shape as the Address-of-Global variant of case 19 further
-     * below) but it's WRONG here: confirmed via `vl -a` directly
-     * that a genuine LCON *literal* (nonzero low 16 bits, magnitude
-     * beyond case 10's ANDCON range) makes goken's `va` rewrite the
-     * MOVW into a completely different 4-instruction sequence that
-     * loads the constant's *value* from a synthesized SB-relative
-     * data symbol (a literal pool, analogous to ARM's -- see
-     * Layout5.ml/docs/claude_notes/arm_port.md's pool-dedup
-     * TODO) -- e.g. `MOVW $305419896,R1` assembles to LUI+ORI+ADD+
-     * LW against a symbol literally named "12345678(SB)", not a
-     * plain LU+OR. This is a genuine *assembler*-side mechanism
-     * (`va`/`ova`), not a linker/Codegenv.ml one -- case 19's LU+OR
-     * is only correct for the Address-of-Global path below, which
-     * goes through a different aclass() branch in goken (D_EXTERN/
-     * D_STATIC, not this literal-pool-rewriting D_CONST path).
-     * Unported (would need a MIPS literal pool in the assembler
-     * first), so this correctly falls through to the generic "not
-     * handled" error below instead of emitting the wrong bytes. *)
+    (* claude: NOT byte-identical to goken here (case 19's real
+     * mechanism, kept for real reference): a genuine LCON *literal*
+     * (nonzero low 16 bits, magnitude beyond case 10's ANDCON range)
+     * makes goken's `va` rewrite the MOVW into a completely
+     * different 4-instruction sequence that loads the constant's
+     * *value* from a synthesized SB-relative data symbol (a literal
+     * pool, analogous to ARM's -- see Layout5.ml/docs/claude_notes/
+     * arm_port.md's pool-dedup TODO) -- e.g. `MOVW $305419896,R1`
+     * assembles to LUI+ORI+ADD+LW against a symbol literally named
+     * "12345678(SB)", not a plain LU+OR. That's a genuine
+     * *assembler*-side mechanism (`va`/`ova`, a real MIPS literal
+     * pool) this port doesn't implement. The plain LUI+ORI expansion
+     * below IS still mathematically exact for any 32-bit value
+     * (`((i asr 16) land 0xffff) lsl 16 | (i land 0xffff) = i`,
+     * unconditionally) -- only the *bytes* differ from goken's own
+     * pool-based approach, not the resulting register value -- so
+     * this is a deliberate xix-only substitute (same category as
+     * every other REGTMP-materialize deviation this session),
+     * genuinely correct, just not a claim of real `va` byte parity.
+     * Found stress-testing real lib_core/libc (fmt/strtod.c's real
+     * "MOVW $1048575,R2" and many siblings). *)
+    | Move2 (W__, (Right (Int i)), Gen (GReg rt)) ->
+       { size = 8; x = None; binary = (fun () ->
+           [ op_irr op_last (i asr 16) rZERO rt;
+             op_irr (opirr_arith_opcode OR) (i land 0xffff) rt rt;
+           ]
+        ) }
 
     (* case 34:	/* mov $con,fr ==> or/add $i,r,r2 */ *)
     (* claude: float-constant load -- same OR-vs-ADDU choice as case
@@ -773,6 +1023,41 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               op_mfc_mtc true rtmp rt ]
          ) }
 
+    (* case 34, D__ variant: a genuine double-precision float
+     * *literal* ("MOVD $0.5,F2"), not an int bit-pattern reload --
+     * same "no native 64-bit FPU register-immediate load" story as
+     * case 27/28's own D__ memory forms above: split the constant's
+     * raw IEEE754 bit pattern (Int64.bits_of_float) into its two
+     * 32-bit halves and MTC1 each into the register pair separately.
+     * Register assignment (low half -> Fn, high half -> Fn+1) matches
+     * the ABI convention the memory-load case's own address-based
+     * ordering already implied (big-endian: low address holds the
+     * MSW, and that address mapped to Fn+1 there -- so Fn+1 = MSW =
+     * high half, Fn = LSW = low half, consistently). xix-only
+     * expansion (no `constant_kind`-style range restriction at all,
+     * unlike the W__/int-reload case just above, since an arbitrary
+     * double's bit pattern essentially never fits a narrow range) --
+     * not a claim of real `va` byte parity (goken's own chipfloat-
+     * style narrow immediate path, if any, isn't replicated). Found
+     * stress-testing real lib_core/libc (fmt/strtod.c's real "MOVD
+     * $0.5,F2" -- one of the 8 chipfloat-style constants elsewhere
+     * in this pipeline, but genuinely still a bare float literal
+     * here, not routed through any int-reload path). *)
+    | Move2 (D__, Right (Float f), GFReg (FR rt)) ->
+        { size = 24; x = None; binary = (fun () ->
+            let bits = Int64.bits_of_float f in
+            let lo = Int64.to_int (Int64.logand bits 0xFFFFFFFFL) in
+            let hi = Int64.to_int (Int64.shift_right_logical bits 32) in
+            let (R rtmp) = rTMP in
+            [ op_irr op_last (lo asr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) (lo land 0xffff) rTMP rTMP;
+              op_mfc_mtc true rtmp rt;
+              op_irr op_last (hi asr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) (hi land 0xffff) rTMP rTMP;
+              op_mfc_mtc true rtmp (rt + 1);
+            ]
+         ) }
+
     (* --------------------------------------------------------------------- *)
     (* Control flow *)
     (* --------------------------------------------------------------------- *)
@@ -784,6 +1069,25 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 8; x = None; binary = (fun () ->
            [ op_rrr op_jmp rZERO rt r; nop ]
          ) }
+    (* case 18, JAL variant: "JAL 0(R3)" -- a call through a function
+     * pointer, real MIPS grammar (unlike ARM32/ARM64's own "BL
+     * 0(Rn)" accommodation, see the grammar's own comment) --
+     * confirmed against goken's real optab.c: `{ AJAL, C_NONE,
+     * C_NONE, C_ZOREG, 18, 4, REGLINK }`, the same case-18 row as
+     * JMP's indirect form just above, just with REGLINK (R31) as the
+     * `o->param` fallback for the "rd" field instead of REGZERO
+     * (`p->reg` is NREG for this simple "0(Rn)" form, so `r =
+     * o->param` per goken's own `case 18` C code) -- a real JALR,
+     * not JR, so the return address genuinely gets written to R31,
+     * unlike JMP's own indirect form. `oprrr(AJAL) = OP(1,1)`, vs
+     * `oprrr(AJMP) = OP(1,0)` just above. Found stress-testing real
+     * lib_core/libc (fmt/dofmt.c's real "JAL 0(R3)"). *)
+    | JAL { contents = (IndirectJump rt) } ->
+        let op_jal = op 1 1 in
+        { size = 8; x = None; binary = (fun () ->
+           [ op_rrr op_jal rZERO rt rLINK; nop ]
+         ) }
+
     (* case 39:	/* rfe ==> jmp+rfe */ *)
     (* claude: kernel-only "return from exception": JR (r) followed
      * by a fixed RFE instruction (goken's `oprrr(ARFE)` = MMU(2,0),
@@ -851,6 +1155,15 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 8; x = None; binary = (fun () ->
             [ op_irr_no_r3 (opirr_bxx_opcode cond) (gbranch_offset node) rf; nop ]
          ) }
+    (* case 6, BFPT/BFPF variant: no register operand at all (the
+     * condition was already set by a preceding CMPxxF/CMPxxD), so
+     * this reuses op_irr_no_r3 with rZERO for the unused bit-21
+     * field, matching goken's own p->reg==NREG->0 default exactly.
+     * See Ast_asmv.ml's own BFP comment. *)
+    | BFP (is_true, _branch) ->
+        { size = 8; x = None; binary = (fun () ->
+            [ op_irr_no_r3 (opirr_bfp_opcode is_true) (gbranch_offset node) rZERO; nop ]
+         ) }
 
     (* --------------------------------------------------------------------- *)
     (* Memory *)
@@ -864,7 +1177,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | String _ -> 
             (* stricter? what does vl do with that? confusing I think *)
             error node "string not allowed in MOVW; use DATA"
-        | Address (Global (global, _offsetTODO)) ->
+        | Address (Global (global, goffset)) ->
               (* claude: no fast R30-relative path here -- see the
                * long comment on offset_to_R30/big above for why:
                * goken's own BIG=0 makes it permanently unreachable
@@ -874,7 +1187,26 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                * addressing -- e.g. O(R30) -- which is a different,
                * still-live code path; only the address-of-global
                * fast path here is dead.)
-               *)
+               *
+               * claude: `goffset` (formerly `_offsetTODO`, silently
+               * discarded) is a REAL, confirmed bug fix -- a genuine
+               * "MOVW $sym+N(SB),Rt" with nonzero N never arises from
+               * hand-written assembly (you'd just give each datum
+               * its own zero-offset symbol), but real 7c-style
+               * compilers pack every string literal in one C file
+               * into a single shared ".string<>" blob, each addressed
+               * at its own nonzero byte offset -- exactly ARM32's own
+               * already-documented and already-fixed version of this
+               * same bug (see arm_port.md's hello_libc section,
+               * `_offsetTODO` in Codegen5.ml/Codegen.ml), just never
+               * ported to MIPS's own Codegenv.ml until this stress
+               * test found it too. Silently computed sym+0 before,
+               * making e.g. fmt/dofmt.c's own shared digit-table
+               * string read a few bytes into the WRONG string
+               * literal -- confirmed exactly this way: hello.c's
+               * "%d" formatting printed plausible-looking but wrong
+               * ASCII (garbage read from unrelated string data)
+               * instead of real digit characters. *)
               (* case 19:	/* mov $lcon,r ==> lu+or */ *)
               { size = 8; x = None; binary = (fun () ->
               (* similar to WORD case *)
@@ -882,11 +1214,11 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               let v = Hashtbl.find env.syms (T.symbol_of_global global) in
               let lcon =
                 match v with
-                | T.SText2 real_pc -> real_pc
-                | T.SData2 (offset, _kind) -> 
+                | T.SText2 real_pc -> real_pc + goffset
+                | T.SData2 (offset, _kind) ->
                   (match init_data with
                   | None -> raise (Impossible "init_data should be set by now")
-                  | Some init_data -> init_data + offset
+                  | Some init_data -> init_data + offset + goffset
                   )
                 in
                 [ op_irr op_last (lcon lsr 16) rZERO rt;
@@ -975,6 +1307,47 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             op_irr (opirr_mem W__ STR) 0 rTMP rf;
           ]
           ) }
+    (* case 35 variant: "MOVW $0,off(Rbase)" -- storing a literal 0 to
+     * a nonzero-offset register-indirect address. Confirmed byte-
+     * identical against real goken by manually decoding a linked
+     * reference binary's raw words: goken exploits R0 (hardware-
+     * wired zero) as the store's own value register instead of
+     * materializing a separate one, so this is the exact same
+     * 3-instruction address computation as the plain register-source
+     * case just above, plus a plain SW with rZERO as the value --
+     * genuinely real goken behavior, not an xix-only expansion (only
+     * scoped to the literal 0 case, since that's the only one any
+     * real closure stress-tested so far has needed; a general
+     * nonzero immediate would need its own REGTMP-materialize step,
+     * not verified against real goken yet). Found stress-testing
+     * real lib_core/libc (fmt/fltfmt.c's real "MOVW $0,8(R29)"). *)
+    | Move2 (W__, Right (Int 0), Gen (Indirect (rbase, offset))) when offset <> 0 ->
+        { size = 16; x = None; binary = (fun () ->
+          [ op_irr op_last (offset lsr 16) rZERO rTMP;
+            op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+            op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+            op_irr (opirr_mem W__ STR) 0 rTMP rZERO;
+          ]
+          ) }
+    (* case 35 variant, Entity/named-local sibling: "MOVW $0,w-40(SP)"
+     * -- same rZERO-as-value trick as the plain Indirect variant just
+     * above, just resolving the real address via
+     * base_and_offset_of_entity first (matching the register-source
+     * Entity case near the top of this case-35 family). Found
+     * stress-testing real lib_core/libc (fmt/dofmt.c's real "MOVW
+     * $0,w-40(SP)"). *)
+    | Move2 (W__, Right (Int 0), Gen (Entity ent)) ->
+        { size = 16; x = None; binary = (fun () ->
+          let (rbase, offset) =
+                 base_and_offset_of_entity node env.syms env.autosize ent
+          in
+          [ op_irr op_last (offset lsr 16) rZERO rTMP;
+            op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+            op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+            op_irr (opirr_mem W__ STR) 0 rTMP rZERO;
+          ]
+          ) }
+
     (* case 36:	/* mov lext/lauto/lreg,r ==> lw o(r30) */ *)
     | Move2 (W__, Left (Gen (Entity ent)), Gen (GReg rt)) ->
         { size = 20; x = None; binary = (fun () ->
@@ -1072,6 +1445,76 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             ]
           ) }
 
+    (* case 27/28, D__ variant: MIPS32 has no native 64-bit FPU load/
+     * store at all -- goken's own real case 27/28 C code splits a
+     * double access into two F__-sized (LWC1/SWC1) halves against a
+     * register PAIR (Fn/Fn+1), confirmed directly: the LOW address
+     * word loads into Fn+1, the address+4 (high) word into Fn. This
+     * port always takes the REGTMP-materialize-the-full-address path
+     * (goken's own real "size 20" sub-case) regardless of whether a
+     * smaller offset could fit a cheaper encoding (its own "size
+     * 8/16" sub-cases) -- an xix-only simplification, not byte-
+     * identical to goken's own tiered fast paths, but always
+     * correct. Found stress-testing real lib_core/libc (fmt/
+     * strtod.c's real "MOVD d+4(FP),F4"). *)
+    | Move2 (D__, Left (Gen (Entity ent)), GFReg (FR rt)) ->
+        { size = 24; x = None; binary = (fun () ->
+            let (rbase, offset) =
+                   base_and_offset_of_entity node env.syms env.autosize ent
+            in
+            let (R rtmp) = rTMP in
+            [ op_irr op_last (offset lsr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+              op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+              op_irr_raw (opirr_mem F__ LDR) 0 rtmp (rt + 1);
+              op_irr_raw (opirr_mem F__ LDR) 4 rtmp rt;
+              nop;
+            ]
+          ) }
+    | Move2 (D__, Left (GFReg (FR fsrc)), Gen (Entity ent)) ->
+        { size = 20; x = None; binary = (fun () ->
+            let (rbase, offset) =
+                   base_and_offset_of_entity node env.syms env.autosize ent
+            in
+            let (R rtmp) = rTMP in
+            [ op_irr op_last (offset lsr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+              op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+              op_irr_raw (opirr_mem F__ STR) 0 rtmp (fsrc + 1);
+              op_irr_raw (opirr_mem F__ STR) 4 rtmp fsrc;
+            ]
+          ) }
+    (* case 27/28, D__/Indirect variant: same as the Entity forms
+     * just above, but the base is already a plain register (no
+     * base_and_offset_of_entity needed) -- see the BIG=0/SOREG
+     * comment elsewhere in this file for why even offset==0 still
+     * needs the full REGTMP address computation here (unlike the
+     * plain-word/F__ cases, this port doesn't bother with a separate
+     * ZOREG fast path for D__, since every real closure need so far
+     * has had a nonzero offset anyway). Found stress-testing real
+     * lib_core/libc (fmt/dofmt.c's real "MOVD F0,8(R29)"). *)
+    | Move2 (D__, Left (Gen (Indirect (rbase, offset))), GFReg (FR rt)) ->
+        { size = 24; x = None; binary = (fun () ->
+            let (R rtmp) = rTMP in
+            [ op_irr op_last (offset lsr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+              op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+              op_irr_raw (opirr_mem F__ LDR) 0 rtmp (rt + 1);
+              op_irr_raw (opirr_mem F__ LDR) 4 rtmp rt;
+              nop;
+            ]
+          ) }
+    | Move2 (D__, Left (GFReg (FR fsrc)), Gen (Indirect (rbase, offset))) ->
+        { size = 20; x = None; binary = (fun () ->
+            let (R rtmp) = rTMP in
+            [ op_irr op_last (offset lsr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+              op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+              op_irr_raw (opirr_mem F__ STR) 0 rtmp (fsrc + 1);
+              op_irr_raw (opirr_mem F__ STR) 4 rtmp fsrc;
+            ]
+          ) }
+
     (* case 7:		/* mov r, soreg ==> sw o(r) */ *)
     (* claude: ZOREG (offset==0) only -- see the BIG=0/SOREG comment
      * on case 35/36 above for any other offset. *)
@@ -1079,11 +1522,103 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 4; x = None; binary = (fun () ->
           [ op_irr (opirr_mem W__ STR) 0 rt rf ]
          ) }
+    (* case 7 variant: "MOVW $0,0(Rbase)" -- same rZERO-as-value trick
+     * as case 35's own $0 variant above, just for the ZOREG (offset
+     * == 0) fast path directly, no address materialization needed
+     * at all. Found stress-testing real lib_core/libc. *)
+    | Move2 (W__, Right (Int 0), Gen (Indirect (rt, 0))) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ op_irr (opirr_mem W__ STR) 0 rt rZERO ]
+         ) }
     (* case 8:		/* mov soreg, r ==> lw o(r) */ *)
     | Move2 (W__, Left (Gen (Indirect (rf, 0))), Gen (GReg rt)) ->
          { size = 8; x = None; binary = (fun () ->
            [ op_irr (opirr_mem W__ LDR) 0 rf rt; nop ]
          ) }
+    (* case 7/8, byte/halfword variant: MOVB/MOVBU/MOVH/MOVHU's own
+     * memory forms (SB/SH store, LB/LBU/LH/LHU load) -- same ZOREG-
+     * only scope as the plain word forms just above (BIG=0 makes any
+     * nonzero offset need the case 35/36-style REGTMP expansion,
+     * not yet ported for Move1). Found stress-testing real
+     * lib_core/libc (utf/rune.c's real "MOVBU 0(R9),R3"). *)
+    | Move1 (sz, Left (GReg rf), Indirect (rt, 0)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ op_irr (opirr_mem1 sz STR) 0 rt rf ]
+         ) }
+    (* case 7 variant: "MOVBU $0,0(Rbase)" -- same rZERO-as-value
+     * trick as the word-sized case 7/35 $0 variants above. Found
+     * stress-testing real lib_core/libc. *)
+    | Move1 (sz, Right (Int 0), Indirect (rt, 0)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ op_irr (opirr_mem1 sz STR) 0 rt rZERO ]
+         ) }
+    (* case 35 variant, byte/halfword: "MOVB $0,off(Rbase)" -- same
+     * REGTMP address-materialize + rZERO-as-value combo as the
+     * word-sized case 35 $0 variant above, for a nonzero-offset
+     * byte/halfword store. Found stress-testing real lib_core/libc
+     * (utf/rune.c's real "MOVB $0,1(R8)"). *)
+    | Move1 (sz, Right (Int 0), Indirect (rbase, offset)) when offset <> 0 ->
+        { size = 16; x = None; binary = (fun () ->
+          [ op_irr op_last (offset lsr 16) rZERO rTMP;
+            op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+            op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+            op_irr (opirr_mem1 sz STR) 0 rTMP rZERO;
+          ]
+          ) }
+    | Move1 (sz, Left (Indirect (rf, 0)), GReg rt) ->
+        { size = 8; x = None; binary = (fun () ->
+          [ op_irr (opirr_mem1 sz LDR) 0 rf rt; nop ]
+         ) }
+    (* case 35/36, byte/halfword variant: same REGTMP address-
+     * materialize expansion as the plain word Indirect forms above,
+     * for a nonzero-offset register-indirect byte/halfword access
+     * (BIG=0 rules out any single-instruction fast path here too).
+     * Found stress-testing real lib_core/libc (fmt/dofmt.c's real
+     * "MOVB 1(R9),R4"). *)
+    | Move1 (sz, Left (GReg rf), Indirect (rbase, offset)) when offset <> 0 ->
+        { size = 16; x = None; binary = (fun () ->
+          [ op_irr op_last (offset lsr 16) rZERO rTMP;
+            op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+            op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+            op_irr (opirr_mem1 sz STR) 0 rTMP rf;
+          ]
+          ) }
+    | Move1 (sz, Left (Indirect (rbase, offset)), GReg rt) when offset <> 0 ->
+        { size = 20; x = None; binary = (fun () ->
+          [ op_irr op_last (offset lsr 16) rZERO rTMP;
+            op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+            op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+            op_irr (opirr_mem1 sz LDR) 0 rTMP rt; nop;
+          ]
+          ) }
+    (* case 35/36, byte/halfword variant: MOVB/MOVBU/MOVH/MOVHU
+     * to/from a named local/param (real "x-4(SP)" addressing) --
+     * same REGTMP address-materialize shape as case 35/36's own
+     * word-sized Entity forms above, just with opirr_mem1 instead of
+     * opirr_mem for the final access. Found stress-testing real
+     * lib_core/libc (utf/rune.c's real "MOVB R4,x-4(SP)"). *)
+    | Move1 (sz, Left (GReg rf), Entity ent) ->
+        { size = 16; x = None; binary = (fun () ->
+          let (rbase, offset) =
+                 base_and_offset_of_entity node env.syms env.autosize ent
+          in
+          [ op_irr op_last (offset lsr 16) rZERO rTMP;
+            op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+            op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+            op_irr (opirr_mem1 sz STR) 0 rTMP rf;
+          ]
+          ) }
+    | Move1 (sz, Left (Entity ent), GReg rt) ->
+        { size = 20; x = None; binary = (fun () ->
+          let (rbase, offset) =
+                 base_and_offset_of_entity node env.syms env.autosize ent
+          in
+          [ op_irr op_last (offset lsr 16) rZERO rTMP;
+            op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+            op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+            op_irr (opirr_mem1 sz LDR) 0 rTMP rt; nop;
+          ]
+          ) }
 
     (* case 47:	/* sc r, soreg */ *)
     (* claude: atomic store-conditional. Unlike case 7 (plain SW),

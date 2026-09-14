@@ -37,6 +37,7 @@ CASES=(
     "mips_diff/fcr_move_case41_42.s"
     "mips_diff/rfe_case39.s"
     "mips_diff/atomic_case47_48.s"
+    "mips_diff/global_offset_case19.s"
 )
 # The corresponding *_check.s fixtures (functional-only: same
 # qemu-mips behavior on both sides, but not byte-identical, because

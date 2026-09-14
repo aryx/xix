@@ -103,6 +103,9 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
       | "BLTZ" -> TB LTZ
       | "BLTZAL" -> TB LTZAL
 
+      | "BFPT" -> TBFP true
+      | "BFPF" -> TBFP false
+
       | "SYSCALL" -> TSYSCALL
       | "SC" -> TSC
       | "LL" -> TLL
@@ -131,6 +134,10 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
       | "SUBF" -> TARITHF (SUB_, A.F) | "SUBD" -> TARITHF (SUB_, A.D)
       | "DIVF" -> TARITHF (DIV_, A.F) | "DIVD" -> TARITHF (DIV_, A.D)
       | "MULF" -> TARITHF (MUL_, A.F) | "MULD" -> TARITHF (MUL_, A.D)
+
+      | "MOVFW" -> TFCVT FW | "MOVDW" -> TFCVT DW
+      | "MOVWF" -> TFCVT WF | "MOVDF" -> TFCVT DF
+      | "MOVWD" -> TFCVT WD | "MOVFD" -> TFCVT FD
 
       (* advanced *)
       | "M" -> TM

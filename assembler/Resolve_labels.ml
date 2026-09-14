@@ -77,7 +77,23 @@ let resolve branch_opd_of_instr (prog : 'instr program) : 'instr program =
           match !opd with
           | SymbolJump _ | IndirectJump _ -> ()
           (* Relative and LabelUse -> Absolute *)
-          | Relative i -> 
+          | Relative i ->
+              (* claude: a real goken -S artifact, found stress-
+               * testing real lib_core/libc (utf/utfnlen.c's own
+               * backward loop branches): goken's own real Pconv
+               * prints a *negative* "N(PC)" relative offset as its
+               * raw 32-bit-wraparound unsigned decimal value instead
+               * of a signed one (e.g. "4294967291(PC)" for what's
+               * really -5(PC)) -- confirmed round-trips fine through
+               * goken's own real va (its C int32 arithmetic wraps the
+               * same way), but xix's OCaml `int` is 63-bit, so
+               * without this same 32-bit sign-extension `!pc + i`
+               * would land billions of instructions out of range
+               * instead of 5 instructions back. Applied
+               * unconditionally (not just when `i` looks suspiciously
+               * large) since it's a no-op for every realistic small
+               * relative offset, forward or backward. *)
+              let i = Int32.of_int i |> Int32.to_int in
               opd := Absolute (!pc + i)
           | LabelUse (lbl, i) ->
               (try

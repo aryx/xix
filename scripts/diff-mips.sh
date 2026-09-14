@@ -47,8 +47,13 @@ XIX_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 # Prefer this repo's freshly-built binaries over whatever ova/ovl
 # might be on PATH -- we're porting/testing this checkout, not some
 # other installed version.
-XIX_OVA="$XIX_ROOT/_build/default/bin_dune/ova"
-XIX_OVL="$XIX_ROOT/_build/default/bin_dune/ovl"
+# claude: uses the top-level bin_dune/ symlink (-> _build/install/
+# default/bin/), not _build/default/bin_dune/ like this script used
+# to -- found empirically that the latter can go stale after a plain
+# `dune build` (it's only refreshed reliably by the install
+# machinery), while bin_dune/ always tracks the freshest Main.exe.
+XIX_OVA="$XIX_ROOT/bin_dune/ova"
+XIX_OVL="$XIX_ROOT/bin_dune/ovl"
 if [ ! -x "$XIX_OVA" ]; then XIX_OVA=$(command -v ova || true); fi
 if [ ! -x "$XIX_OVL" ]; then XIX_OVL=$(command -v ovl || true); fi
 if [ ! -x "$XIX_OVA" ] || [ ! -x "$XIX_OVL" ]; then

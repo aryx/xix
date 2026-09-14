@@ -34,6 +34,7 @@ module L = Location_cpp
 
 %token <Ast_asmv.arith_opcode> TARITH
 %token <Ast_asmv.arithf_opcode * Ast_asm.floatp_precision> TARITHF
+%token <Ast_asmv.fcvt_dir> TFCVT
 %token TNOR
 %token <Ast_asmv.mul_opcode> TMULOP
 %token TSYSCALL TRFE TBREAK
@@ -41,6 +42,7 @@ module L = Location_cpp
 %token TJMP TJAL
 %token TBEQ TBNE
 %token <Ast_asmv.b_condition> TB
+%token <bool> TBFP
 %token <Ast_asmv.tlb_kind> TTLB
 %token <Ast_asmv.move1_size> TMOVE1
 %token <Ast_asmv.move2_size> TMOVE2
@@ -205,10 +207,39 @@ instr:
 
  | TARITHF freg         TC freg { ArithF ($1, $2, None, $4) }
  | TARITHF freg TC freg TC freg { ArithF ($1, $2, Some $4, $6) }
+ /*(* claude: real goken grammar is the same generic LTYPE5
+    * "vlgen,vgen" shape as Move2 (see Ast_asmv.ml's own FCvt
+    * comment for why this isn't wired through Move2 itself). *)*/
+ | TFCVT freg TC freg           { FCvt ($1, $2, $4) }
 
  /*(* TODO? check "one side must be register" but va code buggy I think *)*/
  | TMOVE1 lgen TC gen           { Move1 ($1, $2, $4) }
  | TMOVE2 vlgen TC vgen         { Move2 ($1, $2, $4) }
+ /*(* claude: real goken case 3 ("mov $soreg,r ==> or/add $i,o,r") --
+    * "$off(Rbase)" as a Move2 *source* isn't a memory load at all,
+    * it's "compute the EFFECTIVE ADDRESS Rbase+off into Rd" (an
+    * address-of, like C's "&x"), a genuinely different instruction
+    * shape (ADD-immediate) goken's own real assembler synthesizes
+    * for this "mov"-spelled pseudo-op -- confirmed real, not a xix-
+    * only accommodation (unlike the "BL 0(R2)" family): real va
+    * accepts "MOVW $4(R29),R2" directly (MOVW lexes as TMOVE2, not
+    * TMOVE1 -- confirmed by checking Parse_asmv.ml's own keyword
+    * table before wiring this into the wrong production first), and
+    * goken's own linkers/vl/asm.c case 3 shows the real ADDU/OR
+    * encoding. Not representable as this port's own shared
+    * Ast_asm.ximm (whose `Address` only wraps Param/Local/Global,
+    * never a plain arbitrary register+offset), so this bypasses
+    * Move2 entirely and produces the real Arith instruction goken's
+    * own case 3 emits directly, sidestepping any shared-type change
+    * (every real occurrence in a real closure so far uses R29/SP as
+    * the base, but goken's own case 3 is fully general, so this is
+    * too). The AOR micro-optimization goken's case 3 takes for
+    * certain AND-mask-shaped constants isn't replicated (always
+    * ADDU here) -- functionally identical, just not always byte-
+    * identical for that narrow constant shape. Found stress-testing
+    * real lib_core/libc (fmt/nan64.c's real "MOVW $4(R29),R2"). *)*/
+ | TMOVE2 TDOLLAR con TOPAR reg TCPAR TC reg
+     { Arith (ADD (W, A.U), Imm $3, Some $5, $8) }
 
  | TJMP branch { JMP $2 }
  | TJAL branch { JAL $2 }
@@ -222,6 +253,10 @@ instr:
  | TBNE gen TC reg TC rel    { BNE ($2, Some $4, $6) }
 
  | TB gen TC rel             { Bxx ($1, $2, $4) }
+ /*(* claude: real goken grammar `LTYPEG comma rel` -- no register
+    * operand at all, unlike every other case-6 branch above. See
+    * Ast_asmv.ml's own BFP comment. *)*/
+ | TBFP rel                  { BFP ($1, $2) }
 
  | TSYSCALL { SYSCALL }
  | TLL gen TC reg { LL ($2, $4) }
@@ -265,10 +300,26 @@ lgen:
 
 ireg: TOPAR reg TCPAR { $2 }
 
-branch: 
+branch:
  | rel               { $1 }
  | global            { ref (SymbolJump $1) }
  | ireg              { ref (IndirectJump $1) }
+ /*(* claude: real va grammar, unlike ARM32's own "BL 0(R2)"
+    * accommodation -- goken's real `assemblers/va/a.y` has `nireg:
+    * ireg | con ireg` (MIPS's own indirect-branch nonterminal is
+    * genuinely more permissive than ARM's `nireg: name | ireg`, no
+    * "con" alternative there at all), and real `va` accepts "JAL
+    * 0(R3)" directly (confirmed empirically). The constant is
+    * accepted but discarded here, matching real goken's own case-18
+    * codegen (`linkers/vl/asm.c`'s `OP_RRR(oprrr(p->as), 0,
+    * p->to.reg, r)`) which never reads p->to.offset at all -- an
+    * indirect JALR/JR has no immediate-offset field on real
+    * hardware, so any constant here is purely a real 5c -S printing
+    * artifact (always 0 in practice), not something with its own
+    * encoding to get right. Found stress-testing real lib_core/libc
+    * (fmt/dofmt.c's real "JAL 0(R3)", a call through a function
+    * pointer). *)*/
+ | con ireg          { ignore $1; ref (IndirectJump $2) }
 
 rel:
  | TIDENT offset        { ref (LabelUse ($1, $2)) }

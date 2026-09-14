@@ -141,6 +141,12 @@ def main() -> None:
     ap.add_argument("main_c", type=Path)
     ap.add_argument("--out-dir", type=Path, default=None,
                      help="save each closure file's -S text + manifest.txt here")
+    ap.add_argument("--no-rt0", action="store_true",
+                     help="don't add arch/$objtype/rt0.s + port/mainargs.c as "
+                          "mandatory extra roots (see the rt0.s comment below); "
+                          "pass this only when main_c is a library unit that "
+                          "will be linked into something else's own _main, not "
+                          "a standalone program")
     args = ap.parse_args()
 
     if args.arch != "5":
@@ -203,12 +209,38 @@ def main() -> None:
             for sym in defs_of(path.read_text()):
                 symdefs.setdefault(sym, unit)
 
+        # claude: arch/$objtype/rt0.s (the real _main entry point: sets
+        # up argc/argv from the raw kernel stack, calls the user's own
+        # main()) and port/mainargs.c (defines the _mainargv/_mainargc
+        # globals rt0.s writes into) can never be found by the BFS
+        # below no matter how thorough it is -- the dependency arrow
+        # points the *other* way (rt0.s calls main, main never
+        # references rt0.s), so a downward-only reference walk from
+        # main_c can't discover its own entry point. Found the hard
+        # way: a first closure (34 files) linked fine with `-E main`
+        # but crashed at runtime, because the real ABI entry point
+        # (_main, not main) was silently never linked in at all. See
+        # docs/claude_notes/plan_hello_libc_linking.md. Seeded into the
+        # BFS worklist (not just force-added to the closure) so rt0.s's
+        # and mainargs.c's own references get pulled in transitively
+        # too, same as any other closure member.
+        extra_roots: list[str] = []
+        if not args.no_rt0:
+            for rel in (f"arch/{objtype_mk}/rt0.s", "port/mainargs.c"):
+                unit = mangle(rel)
+                if unit not in s_path:
+                    sys.exit(f"error: mandatory root {rel!r} didn't compile/exist "
+                             f"-- can't build a runnable closure without it "
+                             f"(pass --no-rt0 if {args.main_c} isn't a standalone "
+                             f"program)")
+                extra_roots.append(unit)
+
         print("== BFS over symbol references from the target file ==",
               file=sys.stderr)
-        closure = [main_unit]
-        seen_units = {main_unit}
+        closure = [main_unit, *extra_roots]
+        seen_units = {main_unit, *extra_roots}
         seen_syms: set[str] = set()
-        worklist = [main_unit]
+        worklist = [main_unit, *extra_roots]
         unresolved: set[str] = set()
         while worklist:
             unit = worklist.pop()

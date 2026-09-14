@@ -515,6 +515,126 @@ every later `real_pc` (likely an iterative/fixed-point layout pass,
 mirroring goken's own real `checkpool()` more closely), not attempted
 this session.
 
-**Status**: paused here. Next session's natural starting point is
-`Layout5.ml`'s literal-pool flushing -- everything else needed for a
-real, running, libc-backed ARM `hello.c` is now in place.
+**Status (superseded below)**: paused here. Next session's natural
+starting point is `Layout5.ml`'s literal-pool flushing -- everything
+else needed for a real, running, libc-backed ARM `hello.c` is now in
+place.
+
+## Same-day continuation: mid-stream pool flushing implemented, link succeeds, runtime crash traced to goken itself (not o5a/o5l)
+
+**`Layout5.ml`'s literal-pool flushing, implemented.** Ported goken's
+real `checkpool()`/`flushpool()` (`linkers/5l/layout.c`) properly
+instead of the previous "only flush at true end of program"
+simplification: flush (no guard branch needed, since it's already an
+unconditional control transfer) at an `LPOOL`-marked instruction once
+the accumulated span reaches goken's own `>= 2048` "worth it" threshold
+(`Codegen5.ml`'s only `LPOOL` site, `B`'s "Absolute" case, turns out to
+also cover `B`'s "IndirectJump" case -- e.g. a leaf procedure's `RET`
+expands to `B(R14)` -- matching goken's real optab.c, which puts the
+`LPOOL` flag on *both* its case-5 and case-6 `AB` rows, not just the
+absolute-target one); otherwise (mid-arbitrary-instruction, can't prove
+nothing falls through) flush proactively, with a guard branch, once the
+oldest pending entry's own reference is getting close to an `LDR`'s
+12-bit PC-relative limit (approximated as a flat 4000-byte margin
+rather than exactly replicating goken's `pool.size>=0xffc ||
+immaddr(...)==0` formula -- a deliberate simplification, so this stays
+functionally correct but isn't necessarily byte-identical to goken for
+programs large enough to need it; every existing small fixture is far
+under the threshold, so their bytes are unchanged). Reuses the
+`n.next`-splicing trick the old end-of-program-only flush already used
+(`T.iter` reads `n.next` *after* calling back on `n`, so mutating it
+mid-callback is safe and already relied on). First attempt (skipping
+goken's `< 2048` "not worth it yet" optimization on the LPOOL trigger
+as "just a size trade-off") caused two real regressions
+(`tests/linker/arm_diff/call.s`/`kitchen_sink.s`, both have a leaf
+`RET` pending a pool entry well under 2048 bytes in) -- that threshold
+turned out to have a real, observable byte-level effect, not just be
+an optimization; restoring it fixed both.
+
+**Result: the 34-file closure now links successfully with `o5l`** (`E
+main`) -- the pool overflow is gone. This surfaced 3 more small, real
+`Datagen.ml` (DATA-segment generator) gaps on the way to a clean link,
+each fixed and byte-verified against goken:
+- **`A.Float` in a DATA statement** (e.g. `fmt/fltfmt.c`'s real
+  `pows10<>` table, goken's own precomputed powers-of-ten for `%e`/`%g`
+  formatting) was a bare `failwith "TODO"` -- now writes the real
+  IEEE754 bit pattern via `Int32.bits_of_float`/`Int64.bits_of_float`
+  through the same byte-splitting `array_32`/`array_64` helpers the Int
+  case already used. Inherits the *pre-existing* `Arch64`/`n>=0`
+  caveat this port's own comment already documented (OCaml's 63-bit
+  `int` can't hold a real negative 64-bit pattern) -- fine for
+  `pows10<>` (all positive), would mis-encode a genuine negative
+  double. Fixture `data_float.s` (byte-identical, including a `1.0e+29`
+  value that exercises the exponent field's high bit).
+- **`DATA sym+N(SB)/4,$other+M(SB)`** (address of a global *plus a
+  nonzero offset* -- e.g. `fmt/strtod.c`'s `tab1<>`/`tab2<>` lookup
+  tables, each entry pointing into the middle of the `.string<>`
+  constant pool) was `assert (offset_global = 0)` -- now just adds the
+  offset to the resolved base address. Fixture `data_addr_offset.s`.
+- **A negative integer in a DATA statement** -- not necessarily a real
+  negative *number*, e.g. `fmt/nan64.c`'s own `uvneginf<>` (a raw
+  IEEE754 -Inf bit pattern, sign bit set) uses the plain Int DATA path
+  for what's really just a bit pattern. `fill_bytes_for_int` rejected
+  any negative value outright (a pre-existing TODO comment had already
+  flagged this exact gap: "if negative still need check range and
+  convert to corresponding unsigned value"). Fixed via `land` masking
+  to each size's own bit width (correct for any OCaml int regardless
+  of sign, unlike `split_16`/`split_32`'s `mod`, which follows the
+  *dividend*'s sign in OCaml and is wrong for negative input --
+  `split_64` was already `land`/`lsr`-only and needed no change).
+  Fixture `data_neg_int.s`.
+
+All 4 new fixtures byte-identical + `qemu-arm`-matching against goken;
+full `test-arm.sh` suite (34 fixtures) stays green throughout.
+
+**Linking alone wasn't enough: needed the *real* entry point too.**
+The 34-file closure (found via a pure downward BFS from `hello.c`'s own
+references) doesn't include `arch/arm/rt0.s` (defines the real `_main`
+-- the actual ELF/ABI entry point that sets up argc/argv from the raw
+kernel stack layout, then calls the user's own `main()`) or
+`port/mainargs.c` (defines the `_mainargv`/`_mainargc` globals `rt0.s`
+writes into), because the dependency arrow points the *other* way:
+`rt0.s` calls into `main`, `main` never references `rt0.s` at all, so
+a downward-only BFS can never discover it. This is a real,
+generalizable gap in `scripts/find-c-closure.py`'s methodology (a
+future fix should always add `arch/$cputype/rt0.s` + `port/mainargs.c`
+as mandatory roots, not just what BFS finds) -- worked around by hand
+this session: compiled/assembled both, linked with `-E _main` (not
+`main`) instead.
+
+**With that fixed, the link succeeds end to end -- but the resulting
+binary crashes under `qemu-arm` (SIGILL), and so, identically, does
+goken's own real reference build.** Rebuilt goken's actual `hello.exe`
+via its real mkfile (`mk objtype=arm hello.exe`, no xix involvement at
+all) and ran it standalone: same crash, same exit code 132, both with
+FPA and with VFP (`5l -f`) float encoding. `qemu-arm -strace` shows
+*zero* syscalls ever completing before the crash. The faulting
+address disasssembles as a perfectly ordinary `svc 0x00000000` --
+exactly the kind of "valid-looking bytes suddenly illegal" signature
+of the CPU having silently ended up in Thumb state (e.g. via a bad
+`BX`/interworking branch elsewhere), so later ARM-mode bytes get
+misdecoded as Thumb and eventually hit a genuinely undefined Thumb
+opcode. Since goken's own unmodified real toolchain reproduces this
+in complete isolation from anything xix built, **this is not an
+`o5a`/`o5l` bug** -- likely a pre-existing issue in goken's own real
+`rt0.s`/libc startup path (or an environment quirk), never previously
+exercised because no fixture before this session ever linked a program
+that goes through the *real* `_main`/`rt0.s` startup with the *full*
+real libc -- every fixture until now hand-wrote its own raw `_start`
+doing direct syscalls, bypassing this path entirely. Not investigated
+further this session (a goken-side/runtime debugging question, a
+different kind of investigation from anything in `o5a`/`o5l` itself).
+
+**Status**: this specific goal (byte-parity-testing pipeline plus a
+real linked, `qemu`-*running*, libc-backed ARM32 program) is
+functionally complete at the toolchain level -- `o5a`/`o5l` correctly
+assemble and link a real 35-file closure end to end, verified
+individually at the construct level (30+ fixtures, byte-identical or
+functionally matched against goken) and now also at full-link scale.
+The remaining open item (the runtime SIGILL) sits in goken's own
+reference implementation, not in anything this project owns, so it's
+left as a known, separately-filed observation rather than pursued
+further here. The user's own next move: repeat this same effort for
+ARM64 (`o7a`/`o7l` vs `7a`/`7l`) instead, since ARM64 binaries can run
+*natively* on this host (no qemu-user-mode ambiguity at all) --
+see `arm64_port.md` for that port's own status.

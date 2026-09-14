@@ -750,6 +750,110 @@ halfword load is case 22, not this), 41 (`rfe -> movm.s.w.u
   against goken, traps identically as "Illegal instruction" on both
   sides.
 
+## hello_libc integration test
+
+Status: **complete**. Beyond the hand-written `tests/linker/arm_diff/`
+fixtures above (each one object file, one `TEXT`, no real linking),
+`tests/linker/hello_libc_arm/` stress-tests the *whole* pipeline
+against a real, non-trivial, unmodified C program: goken's own
+`hello.c` (which calls into a real, reusable `lib_core/libc/libc.a`,
+not a toy), compiled via real `5c -S` for its full transitive libc
+dependency closure, assembled with `o5a`, linked with `o5l`, and run
+under `qemu-arm`. The fixture is self-contained (`hello.c`,
+`closure.tgz`, `test.sh`, `Makefile` -- see its own `test.sh` header
+for how to regenerate the archive from a fresh goken checkout) and
+needs no goken checkout to run day-to-day.
+
+**Why this exists on top of the differential fixtures above**: small,
+hand-written fixtures are excellent at finding *encoding/grammar*
+gaps (as this whole file's Port Log proves) but structurally cannot
+find bugs that only manifest at real-program scale or convention --
+a real `_main`/`rt0.s` startup sequence, a large linked `.text`
+section, or real `5c`'s own multi-literal string-pooling. This test
+found exactly that class of bug, four times over, none of which any
+number of additional small fixtures could have caught:
+
+1. **`setR12` (the SB-bias register) was defined at data offset 0
+   instead of goken's real `BIG=4092`** (`linker/CLI.ml`). Invisible
+   to every small fixture because the only instruction that reads
+   this symbol's actual resolved value is `MOVW $setR12(SB),R12` in
+   `arch/arm/rt0.s`'s own bootstrap -- no hand-written `_start`-based
+   fixture ever links that in.
+2. **The ELF section-header table's file offset could overlap real
+   `.data` content** (`linker/executables/Elf.ml`) -- goken's own
+   `liblk/elf.c` has the identical unrounded placement formula, but
+   goken always emits a real (large) symbol table whose size absorbs
+   the rounding gap; `o5l` never emits one, so correctness silently
+   depended on a gap that's thousands of bytes for any tiny
+   hand-written `.text` and only shrinks below the ~134-byte section
+   table's own size once `.text` is large -- exactly this closure's
+   ~30KB across 35 objects.
+3. and 4. **`MOVW $sym+N(SB),Rt` silently computed `sym+0` for any
+   nonzero N** -- two separate copies of the identical bug (one in
+   `Codegen5.ml`'s ADD-based fast path, one in `Codegen.ml`'s
+   literal-pool `WORD` case; which one fires depends on whether the
+   R12-relative immediate fits an ARM rotated encoding). Both had the
+   offset parameter literally named `_offsetTODO`. This construct
+   never arises from hand-written assembly (you'd just give each
+   string its own zero-offset symbol) -- it only comes from real
+   `5c`'s own convention of packing every string literal in one C
+   file into a single shared `.string<>` blob, each addressed at its
+   own nonzero byte offset. `fmt/dofmt.c`'s own `"0123456789abcdef"`
+   digit table is exactly this pattern; the bug made `print("%d",
+   ...)` silently read a *different* string 12 bytes off instead,
+   printing garbage instead of digits.
+
+**A real toolchain-consistency gotcha found along the way, initially
+misdiagnosed**: goken's own real `5a` cannot assemble `port/vlrt.c`
+(needs `MOVFD`/`MOVDF`, a real but different FPA/VFP conversion
+instruction this port doesn't implement) or a handful of non-
+`chipfloat` float constants (need a real float literal pool) --
+neither is on `hello.c`'s actual `%d`-only execution path, so both
+are patched to an inert placeholder before feeding the closure to
+`o5a`/`o5l` (`scripts/build-c-program.py`'s
+`patch_nonchipfloat_constants`); this is why the test checks *correct
+behavior*, not byte-parity, against goken. Separately, xix's own
+crash was at one point wrongly attributed to "goken itself crashes
+too" -- that was cross-contamination from an unrelated `GOOS=plan9`
+libc.a build earlier in the same session silently clobbering the
+shared install path goken's own `mk objtype=arm hello.exe` reuses. A
+clean `GOOS=linux` libc.a rebuild restored goken as a trustworthy
+comparison target; the four bugs above were all found *after* that.
+
+**Debugging technique that worked well** for a crash with no useful
+local disassembly tooling (goken/xix's minimal ARM ELF output isn't
+`objdump`-friendly): `qemu-arm -g <port> ./binary &` +
+`gdb-multiarch -batch -ex "set architecture arm" -ex "target remote
+localhost:<port>" -ex "catch signal SIGSEGV" -ex continue -ex "printf
+...regs..." -ex "x/Ni $pc-N"`. gdb can't load the target ELF locally
+("not in executable format"), but register/memory inspection over the
+remote qemu gdbstub works fine regardless. `info registers` buries
+r0-r15/cpsr under a huge ARM coprocessor/debug-register dump -- ask
+for specific registers via `printf` instead. Hardware watchpoints
+(`rwatch`) are not supported by qemu-arm's gdbstub; use a plain
+breakpoint at a computed/disassembled address instead.
+
+**Environment gotcha**: `_build/default/bin_dune/o5l`/`o5a` are
+install-copies of one shared `Main.exe`; `dune build`/`--force` does
+not reliably refresh these copies even when the underlying `Main.exe`
+genuinely recompiles. `rm -f _build/default/bin_dune/o5l
+_build/default/bin_dune/o5a` before every `dune build` is the
+reliable fix -- don't trust the copy without deleting it first (a
+sharper, arch-independent version of this same gotcha resurfaced for
+ARM64, see `arm64_port.md`'s own writeup).
+
+**Result**: the real closure needed is 34 files (found by a
+symbol-reference-graph BFS from `hello.c`'s own `-S` output, *not*
+goken's full 142-file `libc.a`), all 34 assemble via `o5a`, link via
+`o5l`, and the resulting binary runs correctly under `qemu-arm` --
+output and exit code byte-identical to goken's own real reference
+build. Getting there also closed ~10 more real `o5a` grammar/codegen
+gaps not covered by the differential-fixture Port Log above (real
+`MOVW.S`/Arith's own `.S`, shifted-register-as-generic-operand,
+`DIV`/`MOD`/`DIVU`/`MODU` codegen, `MOVEF`'s plain-move form, `CMP`'s
+literal-pool fallback, and more -- see the closure `.s` files
+themselves and this project's own memory for the full list).
+
 ## Open issues
 
 - **Literal-pool value deduplication**: goken's `addpool()` reuses an

@@ -153,20 +153,26 @@ let op_rftype (funct7 : int) (rs2_sel : int) (rm : int) (rs1 : int) (rd : int) :
  * SLLW, etc -- a genuinely different opcode family, OOP_32 not OOP)
  * are left as a follow-up, same scoping as everywhere else this
  * session: fail loudly rather than silently emit the wrong opcode. *)
+(* claude: the *W (riscv64-only, explicit-32-bit-view) variants --
+ * ADDW/SUBW/SLLW/SRLW/SRAW -- share the exact same (funct3,funct7)
+ * as their native-width siblings (confirmed against real goken's own
+ * optab.c: "addw"/"subw"/"sllw"/"srlw"/"sraw" rows list the identical
+ * funct3/funct7 pair as "add"/"sub"/"sll"/"srl"/"sra"); only the
+ * major *opcode* differs (OOP_32=0x3b register-form / OOP_IMM_32=
+ * 0x1b immediate-form, instead of OOP=0x33/OOP_IMM=0x13) -- see each
+ * call site's own `op_opcode`-style local for that half. *)
 let oprrr_arith_opcode (op : arith_opcode) : int * int =
   match op with
-  | ADD None -> 0, 0
-  | SUB None -> 0, 0x20
-  | SLL None -> 1, 0
+  | ADD (None | Some W) -> 0, 0
+  | SUB (None | Some W) -> 0, 0x20
+  | SLL (None | Some W) -> 1, 0
   | SLT S -> 2, 0
   | SLT U -> 3, 0
   | XOR -> 4, 0
-  | SRL None -> 5, 0
-  | SRA None -> 5, 0x20
+  | SRL (None | Some W) -> 5, 0
+  | SRA (None | Some W) -> 5, 0x20
   | OR -> 6, 0
   | AND -> 7, 0
-  | ADD (Some _) | SUB (Some _) | SLL (Some _) | SRL (Some _) | SRA (Some _) ->
-      failwith "TODO:oprrr_arith_opcode RV64 *W ops"
 
 (* claude: goken's case 9/20 pattern for materializing an absolute
  * 32-bit value v into rd: LUI the upper 20 bits, rounding up (adding
@@ -409,6 +415,10 @@ let resolve_entities (is_64 : bool) (env : Codegen.env) (i : instr) : instr =
    * lib_core/libc (rt0.s's own real "SUB $12,SP" stack-alignment
    * prologue). *)
   | Arith (SUB None, Imm i, middle, rt) -> Arith (ADD None, Imm (-i), middle, rt)
+  (* claude: same rewrite for the *W sibling -- goken's own
+   * linkers/il/obj.c handles ASUB/ASUBW in the exact same switch
+   * case, both rewritten to their own AADD/AADDW. *)
+  | Arith (SUB (Some W), Imm i, middle, rt) -> Arith (ADD (Some W), Imm (-i), middle, rt)
   | Arith _ | ArithMul _ | ArithF _ | FCVTFF _ | FCVTFI _ | FCVTIF _
   | CmpF _ | LUI _ | FENCE_I | JMP _ | JAL _ | JALR _ | JALRI _
   | ECALL | BREAK | SYS | CSR _ -> i
@@ -450,12 +460,19 @@ let rec rules (is_64 : bool)
      * note rs1 is the *middle* operand and rs2 the *from* one, not
      * the other way around (confirmed via `il -a`: "ADD R1,R2,R3"
      * encodes rs1=R2(middle), rs2=R1(from), rd=R3). *)
-    | Arith (((ADD None | SUB None | SLL None | SRL None | SRA None
+    | Arith (((ADD _ | SUB _ | SLL _ | SRL _ | SRA _
               | SLT _ | XOR | OR | AND) as op), Reg rf, middle, rt) ->
         let r = middle ||| rt in
         let (funct3, funct7) = oprrr_arith_opcode op in
+        (* claude: OOP_32 (0x3b) instead of OOP (0x33) for the *W
+         * variants -- see oprrr_arith_opcode's own comment. *)
+        let opcode = (match op with
+          | ADD (Some W) | SUB (Some W) | SLL (Some W)
+          | SRL (Some W) | SRA (Some W) -> 0x3b
+          | _ -> op_op
+        ) in
         { size = 4; x = None; binary = (fun () ->
-          [ op_rtype op_op funct3 funct7 r rf rt ]
+          [ op_rtype opcode funct3 funct7 r rf rt ]
         )}
 
     (* claude: real RISC-V M-extension (MUL/DIV/DIVU/REM/REMU) --
@@ -471,22 +488,26 @@ let rec rules (is_64 : bool)
      * silently compute the wrong VALUE, not just wrong bytes for an
      * equivalent value). The 2-register in-place form ("DIVU Rs,Rd"
      * => Rd=Rd/Rs) defaults `middle` to the destination, mirroring
-     * plain `Arith`'s own identical default. MUL_ (opcode MUL, no
-     * sign) not wired -- no real closure needs it, only the *_ /REM_
-     * signed/unsigned forms do. Found stress-testing real
-     * lib_core/libc (port/vlrt.c's own 64-bit-division helpers). *)
+     * plain `Arith`'s own identical default. Found stress-testing real
+     * lib_core/libc (port/vlrt.c's own 64-bit-division helpers).
+     * MULW/DIVW/DIVUW/REMW/REMUW (riscv64-only *W variants) share the
+     * identical funct3/funct7 as their native-width siblings
+     * (confirmed against real goken's own optab.c), just under
+     * OOP_32 (0x3b) instead of OOP (0x33) -- same reasoning as plain
+     * `Arith`'s own *W handling just above. *)
     | ArithMul (op, rf, middle, rt) ->
         let r = middle ||| rt in
         let funct3 = (match op with
-          | MUL -> 0
-          | DIV (None, A.S) -> 4 | DIV (None, A.U) -> 5
-          | REM (None, A.S) -> 6 | REM (None, A.U) -> 7
-          | DIV (Some _, _) | REM (Some _, _) ->
-              failwith "Codegeni: ArithMul: *W (RV64 32-bit-view) \
-                        variants not wired, no real closure needs them yet"
+          | MUL _ -> 0
+          | DIV (_, A.S) -> 4 | DIV (_, A.U) -> 5
+          | REM (_, A.S) -> 6 | REM (_, A.U) -> 7
+        ) in
+        let opcode = (match op with
+          | MUL (Some W) | DIV (Some W, _) | REM (Some W, _) -> 0x3b
+          | _ -> op_op
         ) in
         { size = 4; x = None; binary = (fun () ->
-          [ op_rtype op_op funct3 0x01 r rf rt ]
+          [ op_rtype opcode funct3 0x01 r rf rt ]
         )}
 
     (* case 1:		/* slli $I,[R,]D */ *)
@@ -498,11 +519,22 @@ let rec rules (is_64 : bool)
      * or 0x20<<5 for SRAI) that lands in the immediate's own
      * bits [11:5] -- the real ISA's funct7 field for shift-immediate
      * specifically. *)
-    | Arith (((SLL None | SRL None | SRA None) as op), Imm i, middle, rt) ->
+    | Arith (((SLL _ | SRL _ | SRA _) as op), Imm i, middle, rt) ->
         let r = middle ||| rt in
         let (funct3, funct7) = oprrr_arith_opcode op in
+        (* claude: *W immediate shifts (SLLIW/SRLIW/SRAIW) use
+         * OOP_IMM_32 (0x1b) instead of OOP_IMM (0x13), and only a
+         * 5-bit shamt field (imm[4:0]) -- a 32-bit view can never
+         * shift by >=32, unlike the native 64-bit shift's own 6-bit
+         * shamt -- masked to 0x1f rather than 0x3f so a stray bit 5
+         * can't leak into what's really part of the funct7 field on
+         * this opcode. *)
+        let (opcode, shamt_mask) = (match op with
+          | SLL (Some W) | SRL (Some W) | SRA (Some W) -> 0x1b, 0x1f
+          | _ -> op_opimm, 0x3f
+        ) in
         { size = 4; x = None; binary = (fun () ->
-          [ op_itype op_opimm funct3 r rt ((i land 0x3f) lor (funct7 lsl 5)) ]
+          [ op_itype opcode funct3 r rt ((i land shamt_mask) lor (funct7 lsl 5)) ]
         )}
 
     (* case 2:		/* addi $I,[R,]D */ *)
@@ -521,6 +553,39 @@ let rec rules (is_64 : bool)
             [ lui_bits; op_itype op_opimm 0 rTMP rTMP low12;
               op_rtype op_op 0 0 r rTMP rt ]
           )}
+
+    (* claude: "ADDW $I,[R,]D" (ADDIW, riscv64-only) -- same shape as
+     * plain ADDI above, opcode OOP_IMM_32 (0x1b) instead of OOP_IMM
+     * (0x13), confirmed by hand-decoding real goken bytes. Only the
+     * fits-in-12-bits fast path is wired -- real goken's own linker
+     * has NO large-constant fallback for this specific op at all
+     * (confirmed: real il flatly rejects "ADDW $4294967295,R11,R13"
+     * as "illegal combination", even though this exact literal is
+     * genuine -S output from a real closure -- a 6th instance of
+     * this whole effort's running "-S print artifact" bug family:
+     * the compiled Prog's own immediate is a small, valid ADDIW
+     * value (-1), but Pconv prints it as the unsigned 32-bit
+     * representation instead, which real ia's own C_SCON class then
+     * rejects as too large). Fixed at this port's own level (no
+     * goken reference exists for the literal spelling either way):
+     * reinterpret the raw immediate as a 32-bit signed quantity via
+     * sign-extension *before* the fits-in-12-bits check, so
+     * "$4294967295" and "$-1" produce identical bytes, matching what
+     * the real compiled Prog always meant. Found stress-testing real
+     * lib_core/libc (port/strtod.c's own real "ADDW
+     * $4294967295,R11,R12"). *)
+    | Arith (ADD (Some W), Imm i, middle, rt) ->
+        let r = middle ||| rt in
+        let i32 = ((i land 0xffffffff) lxor 0x80000000) - 0x80000000 in
+        if fits_addi_imm i32
+        then
+          { size = 4; x = None; binary = (fun () ->
+            [ op_itype 0x1b 0 r rt i32 ]
+          )}
+        else
+          failwith (spf "Codegeni: ADDW: immediate %d doesn't fit ADDIW's \
+                         12-bit field, and real goken has no fallback for \
+                         this op either -- no real closure needs it yet" i)
 
     (* case 2 (generalized): andi/ori/xori/slti/sltiu $I,[R,]D --
      * goken's optab reuses the *same* funct3 for these immediate
@@ -1139,6 +1204,14 @@ let rec rules (is_64 : bool)
      * not yet implemented since no real closure needs it. *)
     | Move2 (W__, Right (Int 0), Gen (Indirect (rbase, offset))) ->
         gen_store node 2 (* SW, always *) rbase rZERO offset
+    (* claude: V__ ("MOV $0,off(R)") added alongside W__ -- same
+     * "immediate zero store" artifact, is_64-branching like every
+     * other V__ store (SD on riscv64, SW on riscv32). Found
+     * stress-testing real lib_core/libc on riscv64 (fmt/dofmt.c's
+     * own real "MOV $0,16(R2)", zero-initializing a pointer-width
+     * struct field). *)
+    | Move2 (V__, Right (Int 0), Gen (Indirect (rbase, offset))) ->
+        gen_store node (if is_64 then 3 (* SD *) else 2 (* SW *)) rbase rZERO offset
 
     (* claude: plain register-to-register move -- real RISC-V has no
      * dedicated MOV opcode, spelled as the "ADD rd,x0,rs" idiom (the
@@ -1230,7 +1303,15 @@ let rec rules (is_64 : bool)
      * C_SOREG class both a plain "sb R,I(S)" and a small-offset
      * "sb R,sym(SB)" resolve to), only reaching case 12 when the
      * resolved offset doesn't fit ADDI's 12-bit field. *)
-    | Move2 (W__, Left (Gen (GReg rf)), Gen (Entity (A.Global (global, goffset)))) ->
+    (* claude: V__ ("MOV R,sym(SB)", a bare/pointer-width store) added
+     * alongside W__ -- found stress-testing real lib_core/libc on
+     * riscv64 (port/mainargs.c's own real "MOV R9,_mainargv(SB)",
+     * storing a real 64-bit pointer). Unlike W__ (whose "32-bit,
+     * always" funct3 is unconditional per goken's own optab.c, see
+     * the comment below), V__ genuinely is_64-branches: SD (funct3=3)
+     * on riscv64, SW (funct3=2) on riscv32 -- a bare "MOV" is always
+     * pointer-width, matching every other V__ arm in this file. *)
+    | Move2 ((W__ | V__) as sz, Left (Gen (GReg rf)), Gen (Entity (A.Global (global, goffset)))) ->
         let v = Hashtbl.find env.syms (T.symbol_of_global global) in
         (match v with
         | T.SText2 _ -> error node "TODO: storing to a TEXT symbol"
@@ -1245,7 +1326,11 @@ let rec rules (is_64 : bool)
              * optab.c: `AMOVW,...,OSTORE,2` is unconditional, not
              * is_64-gated, since the "W" suffix itself already means
              * "32-bit", on either arch. *)
-            let funct3 = 2 (* SW, always -- see comment above *) in
+            let funct3 = (match sz with
+              | W__ -> 2 (* SW, always -- see comment above *)
+              | V__ -> if is_64 then 3 (* SD *) else 2 (* SW *)
+              | F__ | D__ -> raise (Impossible "sz restricted to W__|V__ above")
+            ) in
             (* claude: no "final_offset <> 0" exclusion here, unlike
              * case 11's address-of -- that exclusion exists solely to
              * avoid a circular ADDI when *defining* setSB itself (an
@@ -1272,15 +1357,22 @@ let rec rules (is_64 : bool)
     (* case 7 (SB-relative fast path) / case 13 (SB-relative slow
      * path, "mov lext,r"): "MOVW sym(SB),R" -- load the value at a
      * global, mirror of the store case above. *)
-    | Move2 (W__, Left (Gen (Entity (A.Global (global, goffset)))), Gen (GReg rt)) ->
+    (* claude: V__ ("MOV sym(SB),R") added alongside W__, mirror of
+     * the store case's own V__ addition just above -- same is_64
+     * branching (LD on riscv64, LW on riscv32). *)
+    | Move2 ((W__ | V__) as sz, Left (Gen (Entity (A.Global (global, goffset)))), Gen (GReg rt)) ->
         let v = Hashtbl.find env.syms (T.symbol_of_global global) in
         (match v with
         | T.SText2 _ -> error node "TODO: loading the value at a TEXT symbol"
         | T.SData2 (offset, _kind) ->
             let final_offset = offset_to_SB (offset + goffset) in
-            (* claude: always LW (funct3=2) -- see the mirror-image
-             * store arm's own comment above. *)
-            let funct3 = 2 in
+            (* claude: always LW (funct3=2) for W__ -- see the
+             * mirror-image store arm's own comment above. *)
+            let funct3 = (match sz with
+              | W__ -> 2
+              | V__ -> if is_64 then 3 (* LD *) else 2 (* LW *)
+              | F__ | D__ -> raise (Impossible "sz restricted to W__|V__ above")
+            ) in
             if fits_addi_imm final_offset
             then gen_load node funct3 rSB rt final_offset
             else

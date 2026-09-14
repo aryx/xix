@@ -210,7 +210,7 @@ type instr =
   (* alt: W ...| V (* vlong, 64 bits *) *)
   and w = W (* word, forcing 32 bits *) 
   and mul_opcode =
-    | MUL (* TODO: lots of MUL *)(*size * A.sign*) 
+    | MUL of w option
     | DIV of w option * A.sign | REM of w option * A.sign
 
   (* ABS/NEG are unary and can't take middle register.

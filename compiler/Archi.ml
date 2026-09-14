@@ -80,7 +80,7 @@ let arith_instr_of_op (op : C.binaryOp) r1 r2 r3 =
       | C.ShiftLeft -> Ai.Arith (Ai.SLL size, Ai.Reg r1, r2_opt, r3)
       | C.ShiftRight -> Ai.Arith (Ai.SRA size, Ai.Reg r1, r2_opt, r3)
       (* todo: need type info for A.MULU, etc *)
-      | C.Mul -> Ai.ArithMul (Ai.MUL, r1, r2_opt, r3)
+      | C.Mul -> Ai.ArithMul (Ai.MUL None, r1, r2_opt, r3)
       | C.Div -> Ai.ArithMul (Ai.DIV (size, sign), r1, r2_opt, r3)
       | C.Mod -> raise Todo
       )

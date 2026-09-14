@@ -29,6 +29,8 @@ CASES=(
     "riscv64_diff/lcon_case14.s"
     "riscv64_diff/lreg_case15_16.s"
     "riscv64_diff/fcvt_case17.s"
+    "riscv64_diff/w32_variants.s"
+    "riscv64_diff/v_pointer_global.s"
 )
 
 FAIL=0

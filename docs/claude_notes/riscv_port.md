@@ -219,13 +219,14 @@ trigger them (e.g. "invert-and-skip-one-instruction" instead of
 
 ## Deliberately out of scope (not investigated as dead, just not attempted)
 
-- **The explicit-32-bit-on-riscv64 `*W` variants** (`ADDW`/`SLLW`/
-  etc, a genuinely separate opcode family, `OOP_32` not `OOP`) for
-  case 0/1's register-register/shift-immediate arithmetic.
 - **`MULH`/`MULHSU`/`MULHU`** and the immediate CSR variants
   (`CSRRWI`/`CSRRSI`/`CSRRCI`) -- `Ast_asmi.ml`'s own opcode types
   have no constructors for them yet. (`MUL`/`DIV`/`DIVU`/`REM`/`REMU`
-  themselves ARE wired now -- see the hello_libc section below.)
+  themselves, and their riscv64-only `*W` siblings, ARE wired now --
+  see the hello_libc section below.) `ADDW`'s own immediate form
+  (`ADDIW`) only wires the fits-in-12-bits fast path -- real goken
+  has no large-constant fallback for it at all (see the hello_libc
+  RISC-V64 section's own bug writeup).
 - **Unsigned float→int conversions** (`FCVT.WU.*`) -- goken itself has
   no `MOVFWU`/`MOVDWU` mnemonics for the reverse direction, though the
   int→float direction (`MOVUF`/`MOVUD`, real goken mnemonics after
@@ -395,6 +396,80 @@ M-extension, both 2- and 3-register forms), `addr_global_offset.s`
 wrong output rather than a crash or an assemble/link failure),
 `fwd_text_ref.s` (the forward-TEXT-reference symbol-table bug), and
 `addr_reg_indirect.s` (`"$const(Reg)"`).
+
+## hello_libc RISC-V64 integration test
+
+Status: **complete**. Same idea as the RISC-V32 section just above
+(read that one first -- this is the RISC-V64 sibling, same
+methodology, run in a later session): `tests/linker/hello_libc_riscv64/`
+stress-tests the whole pipeline against goken's own real `hello.c`,
+compiled via real `jc -S` for its full transitive libc dependency
+closure (35 files -- one fewer than RISC-V32's own 36, since
+riscv64's native 64-bit integers don't need `port/vlrt.c`'s software
+int64-emulation helpers), assembled with `oja`, linked with `ojl`,
+and run under `qemu-riscv64`. The fixture is self-contained (`hello.c`,
+`closure.tgz`, `test.sh`, `Makefile`) and needs no goken checkout to
+run day-to-day.
+
+**Much smaller gap than RISC-V32's own effort, since `Codegeni.ml`/
+`Rewritei.ml`/`Layouti.ml`/`Ast_asmi.ml` are all fully shared between
+the two arches** -- every gap the RISC-V32 session closed (Local/
+Param addressing, float arithmetic/compare, the M-extension, FLD/FSD,
+the address-of-global offset bug, the leaf-with-frame RET bug, the
+forward-TEXT-reference bug, and more) was already fixed before this
+session started. The riscv64 closure linked and ran correctly
+(printing the exact expected output) on the very *first* successful
+link attempt, once the genuinely riscv64-specific gaps below were
+closed:
+
+- **The explicit-32-bit-view `*W` opcode family**
+  (`ADDW`/`SUBW`/`SLLW`/`SRLW`/`SRAW`/`MULW`/`DIVW`/`DIVUW`/`REMW`/
+  `REMUW`, plus `ADDIW`'s own immediate form) -- real RISC-V's own
+  `OOP_32`/`OOP_IMM_32` major opcodes (`0x3b`/`0x1b`) instead of
+  `OOP`/`OOP_IMM`'s `0x33`/`0x13`, otherwise identical funct3/funct7
+  to their native-width siblings (confirmed against real goken's own
+  `optab.c`). `SUBW`'s own immediate form gets the exact same
+  negate-and-rewrite-to-`ADDW` treatment plain `SUB` already does
+  (goken's own linker handles `ASUB`/`ASUBW` in the identical switch
+  case). Previously entirely unimplemented -- `oprrr_arith_opcode`
+  had a standing `failwith "TODO:...RV64 *W ops"` for every one of
+  them, and `Ast_asmi.ml`'s own `MUL` constructor didn't even carry a
+  `w option` yet (unlike `DIV`/`REM`, which already did).
+- **A `V__` (bare, pointer-width) sibling for `"MOV R,sym(SB)"`/
+  `"MOV sym(SB),R"` (store/load-to-global) and `"MOV $0,off(R)"`
+  (zero-immediate store)** -- both already had a `W__` arm (always
+  32-bit), but riscv64's own real 64-bit pointers need the genuinely
+  is_64-dependent SD/LD-vs-SW/LW split every other `V__` arm in this
+  file already has. Found stress-testing real lib_core/libc
+  (`port/mainargs.c`'s own real `"MOV R9,_mainargv(SB)"`, storing a
+  real pointer; `fmt/dofmt.c`'s own real `"MOV $0,16(R2)"`).
+- **A 6th instance of this whole multi-arch effort's running
+  "goken's own `-S` output isn't valid re-assembleable input to
+  itself" bug family.** A compiled `Prog`'s own small, valid `ADDIW`
+  immediate (e.g. `-1`) gets printed by `ic`'s own `Pconv` as its
+  *unsigned* 32-bit representation (`"$4294967295"`) instead of the
+  signed one (`"$-1"`) -- real goken's own `ja`/`jl` then reject that
+  exact spelling outright (`"illegal combination"`, confirmed
+  empirically: `ADDIW`'s own operand-class check has no large-
+  constant fallback at all, unlike plain `ADDI`'s own case
+  9/14-style `LUI`+`ADDI` expansion). Since there's no goken reference
+  to byte-match against for this literal spelling either way, worked
+  around at this port's own `Codegeni.ml` level: reinterpret the raw
+  immediate as a 32-bit signed quantity (sign-extend from bit 31)
+  *before* the fits-in-12-bits check, so `"$4294967295"` and `"$-1"`
+  produce identical bytes -- verified by comparing this port's own
+  output for both spellings against each other (no goken reference
+  possible), and confirmed correct via a `qemu-riscv64` run checking
+  the actual computed value. Found stress-testing real lib_core/libc
+  (`port/strtod.c`'s own real `"ADDW $4294967295,R11,R12"`).
+
+**Fixture discipline**: two new byte-identical `riscv64_diff/`
+fixtures (`w32_variants.s`, `v_pointer_global.s`) plus one functional-
+only fixture not wired into `test-riscv64.sh`'s own `CASES` array
+(`addiw_signext.s` -- no goken reference exists for it either way,
+same reasoning as the two zero-immediate-store gaps above; verified
+by comparing this port's own two immediate spellings against each
+other, plus a `qemu-riscv64` run).
 
 ## Open issues
 

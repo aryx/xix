@@ -235,11 +235,12 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
        * rule (which already covers R8-R15 directly, no mapping needed
        * here -- see Ast_asm6.ml's prelude). SP is deliberately absent
        * here: it's the shared TSP token (see Parser_asm6.mly's `reg`
-       * comment), not a plain TIDENT. BP isn't wired yet. *)
+       * comment), not a plain TIDENT. *)
       | "AX" -> TRx (A.R 0)
       | "CX" -> TRx (A.R 1)
       | "DX" -> TRx (A.R 2)
       | "BX" -> TRx (A.R 3)
+      | "BP" -> TRx (A.R 5)
       | "SI" -> TRx (A.R 6)
       | "DI" -> TRx (A.R 7)
 

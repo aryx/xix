@@ -362,7 +362,8 @@ let link6 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
     | Some kind -> Profile.rewrite kind arch.rTMP symbols graph
   in
   let data = data @ new_data in
-  let graph = Rewrite6.rewrite graph in
+  let graph, fconst_data = Rewrite6.rewrite symbols graph in
+  let data = data @ fconst_data in
   let symbols2, (data_size, bss_size) =
     Layout.layout_data symbols data in
   Check.check symbols;

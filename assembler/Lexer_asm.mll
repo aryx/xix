@@ -26,6 +26,27 @@ module L = Location_cpp
 let error s =
   raise (L.Error (spf "Lexical error: %s" s, !L.line))
 (*e: function [[Lexer_asm.error]] *)
+(* claude: A.integer is a plain OCaml `int` (63-bit on a 64-bit
+ * platform), which cannot represent every genuine 64-bit constant --
+ * `int_of_string` raises Failure for one that doesn't fit. Real amd64
+ * code routinely needs the full 64-bit range (IEEE754 double bit
+ * patterns in particular: fmt/nan64.c's own real "uvnan<>" DATA
+ * statement needs the literal 9218868437227405312 = 0x7ff0000000000000,
+ * +Infinity's raw bits). Falling back to Int64.of_string/Int64.to_int
+ * (documented as "taken modulo 2^63" on a 64-bit platform, i.e. the
+ * same wraparound reinterpretation OCaml's own native int arithmetic
+ * already does on overflow) correctly preserves the full 64-bit BIT
+ * PATTERN for any later `lsr`-based byte extraction -- verified by
+ * hand for this exact value (all 8 bytes round-trip correctly via
+ * `(i lsr (k*8)) land 0xff)`, confirmed wrong via `asr` instead,
+ * which sign-extends). Doesn't help a value needing bit 63 itself
+ * set (e.g. a negative-signed double's raw bits, >= 2^63) -- not
+ * needed by any real closure stress-tested so far; would need
+ * `integer` to become `int64` throughout to fix properly, out of
+ * scope for this narrow parsing fix. *)
+let int_of_string_wide (s : string) : int =
+  try int_of_string s
+  with Failure _ -> Int64.of_string s |> Int64.to_int
 (*s: function [[Lexer_asm.code_of_escape_char]] *)
 let code_of_escape_char c =
   match c with
@@ -168,15 +189,15 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (*s: [[Lexer_asm.token]] numbers cases *)
   (*s: [[Lexer_asm.token]] octal case *)
-  | "0"  (oct+ (*as s*)) 
+  | "0"  (oct+ (*as s*))
       { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
-        TINT (int_of_string ("0o" ^ s))  }
+        TINT (int_of_string_wide ("0o" ^ s))  }
   (*e: [[Lexer_asm.token]] octal case *)
   (*s: [[Lexer_asm.token]] hexadecimal case *)
-  | "0x" hex+        { TINT (int_of_string (Lexing.lexeme lexbuf)) }
+  | "0x" hex+        { TINT (int_of_string_wide (Lexing.lexeme lexbuf)) }
   (*e: [[Lexer_asm.token]] hexadecimal case *)
   (*s: [[Lexer_asm.token]] decimal case *)
-  | digit+           { TINT (int_of_string (Lexing.lexeme lexbuf)) }
+  | digit+           { TINT (int_of_string_wide (Lexing.lexeme lexbuf)) }
   (*e: [[Lexer_asm.token]] decimal case *)
   (*s: [[Lexer_asm.token]] float case *)
   (* stricter: I impose some digit+ after '.' and after 'e' *)

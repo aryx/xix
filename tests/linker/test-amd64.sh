@@ -1,6 +1,6 @@
 #!/bin/bash
-# Differential test driver for the amd64 port (complete -- see
-# docs/claude_notes/amd64_port.md). Mirrors test-arm64.sh's shape.
+# Differential test driver for the amd64 port -- see
+# docs/claude_notes/amd64_port.md. Mirrors test-arm64.sh's shape.
 #
 # Usage: ./test-amd64.sh
 
@@ -31,6 +31,12 @@ CASES=(
     "amd64_diff/indirect_call_jmp.s:_start"
     "amd64_diff/static_symbol.s:_start"
     "amd64_diff/imm64.s:_start"
+    "amd64_diff/named_local_sp.s:_start"
+    "amd64_diff/prologue_epilogue.s:_start"
+    "amd64_diff/scaled_index.s:_start"
+    "amd64_diff/bp_memory_base.s:_start"
+    "amd64_diff/address_imm.s:_start"
+    "amd64_diff/float_literal.s:_start"
 )
 
 FAIL=0

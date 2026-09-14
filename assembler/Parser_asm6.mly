@@ -192,6 +192,15 @@ line:
  |               TSEMICOLON { [] }
  | instr         TSEMICOLON { [(Instr $1, $2)] }
  | pseudo_instr  TSEMICOLON { [(Pseudo $1, $2)] }
+ /*(* claude: end-of-file marker (real 6a accepts a bare "END", no
+    * operands) -- a true no-op, same as every other arch's own
+    * "TEND TSEMICOLON" line rule (ARM32/ARM64/MIPS's own
+    * Parser_asm{5,7,v}.mly) -- just never wired here before, since
+    * no amd64_diff fixture happened to end with a real "END" line
+    * until this closure stress test hit one (real 6c -S always
+    * emits a trailing "END" after the comma-padding fix strips its
+    * own dangling comma). *)*/
+ | TEND          TSEMICOLON { [] }
 
  | label_def line           { $1::$2 }
 
@@ -260,6 +269,8 @@ instr:
                                     let amount = match $2 with
                                       | Imm v -> ShiftImm v
                                       | Reg r -> ShiftReg r
+                                      | Mem _ -> error "shift amount can't be a memory operand"
+                                      | Addr _ -> error "shift amount can't be an address immediate"
                                     in
                                     Shift (w, op, amount, $4) }
 
@@ -312,17 +323,17 @@ instr:
  | TCDQ                          { Cdq }
  | TCQO                          { Cqo }
 
- /*(* goken's Zaut_r "built-in LEAQ" -- address-of-global only (see
-    * Ast_asm6.ml's Lea comment). *)*/
- | TLEA global_and_offset TC reg { Lea (fst $2, snd $2, $4) }
+ /*(* goken's real LEA -- any memory operand (register-indirect, scaled-
+    * index, global, or local), see Ast_asm6.ml's Lea comment. *)*/
+ | TLEA gen TC reg { Lea ($2, $4) }
 
  /*(* direct near call/jump, goken's ycall/yjmp's 0xe8/0xe9 rel32 forms
     * (the indirect-through-register/memory forms aren't wired). *)*/
  | TCALL branch                  { Call $2 }
- | TJMP branch                   { Jmp $2 }
+ | TJMP branch                   { Jmp ($2, ref false) }
  /*(* goken's yjcond-shaped conditional jump -- always to a label
     * (goken's own Ybr class), never register-indirect. *)*/
- | TJcc rel                      { Jcc ($1, $2) }
+ | TJcc rel                      { Jcc ($1, $2, ref false) }
 
  | TRET                          { Ret }
  | TSYSCALL                      { Syscall }
@@ -355,8 +366,28 @@ instr:
 /*(*************************************************************************)*/
 
 imr:
- | imm   { Imm $1 }
- | reg   { Reg $1 }
+ | imm                 { Imm $1 }
+ | reg                 { Reg $1 }
+ | ireg                { Mem (Indirect ($1, 0)) }
+ | con ireg            { Mem (Indirect ($2, $1)) }
+ | name                { Mem (Entity $1) }
+ /*(* claude: "s+0(FP)" as an Arith *source* -- e.g. real "SUBQ
+    * s+0(FP),AX" (port_strlen.c.s's real strlen) -- same named-local-
+    * against-a-real-register case as `gen`'s own analogous alternative,
+    * just for `imr`'s own memory case (see Ast_asm6.ml's `imr` comment
+    * for why real ADD/SUB/etc. accept a memory source at all). *)*/
+ | TIDENT offset TOPAR TSP TCPAR { ignore $1; Mem (LocalSP $2) }
+ /*(* claude: "$fmtalloc<>+1032(SB)" -- an address-of-global immediate,
+    * see Ast_asm6.ml's `imr`/Addr comment (real fmt/fmt.c's own "CMPQ
+    * DX,$fmtalloc<>+1032(SB)"). *)*/
+ | TDOLLAR name        { Addr $2 }
+ /*(* claude: same scaled-index case as `gen`'s own analogous
+    * alternatives above -- real fmt/strtod.c's own "ADDL
+    * low+-40(SP)(CX*4),AX". *)*/
+ | ireg scaled_index                          { Mem (IndirectScaled ($1, 0, fst $2, snd $2)) }
+ | con ireg scaled_index                      { Mem (IndirectScaled ($2, $1, fst $3, snd $3)) }
+ | name scaled_index                          { Mem (EntityScaled ($1, fst $2, snd $2)) }
+ | TIDENT offset TOPAR TSP TCPAR scaled_index { ignore $1; Mem (LocalSPScaled ($2, fst $6, snd $6)) }
 
 imm: TDOLLAR con      { $2 }
 
@@ -371,9 +402,7 @@ imm: TDOLLAR con      { $2 }
    * every other arch. R8-R15 need no grammar case at all -- the shared
    * "R"+digit lexer rule already produces them as plain TRx tokens,
    * matched by the very next alternative below (Codegen6.ml's `rex`
-   * threads the needed REX.R/.B bits through). BP isn't wired yet
-   * (would just need its own TIDENT mapping, same shape as AX/CX/../
-   * DI below in Parse_asm6.ml). *)*/
+   * threads the needed REX.R/.B bits through). *)*/
 reg:
  | TRx                { $1 }
  | TSP                { rSP }
@@ -391,10 +420,54 @@ reg:
    * memory-operand cases instead (SB-relative globals as a plain memory
    * reference i.e. without a leading "$", and FP-relative parameters,
    * e.g. "buf+0(FP)" as MOVQ's *source*). *)*/
+/*(* claude: real x86 SIB scaled-index "(CX*4)" suffix -- confirmed
+   * against goken's real assemblers/6a/a.y (`checkscale`): only 1/2/4/8
+   * are valid multipliers, everything else is a real assembler error,
+   * not a codegen-time Impossible/Todo. *)*/
+scaled_index:
+ | TOPAR reg TMUL con TCPAR
+     { if $4 = 1 || $4 = 2 || $4 = 4 || $4 = 8
+       then ($2, $4)
+       else error "scale must be 1, 2, 4, or 8"
+     }
+
 gen:
  | reg                 { GReg $1 }
- | con TOPAR reg TCPAR { Indirect ($3, $1) }
+ | ireg                { Indirect ($1, 0) }
+ | con ireg            { Indirect ($2, $1) }
  | name                { Entity $1 }
+ /*(* claude: "u+8(SP)"/"u-8(SP)" -- a real, *named* local-variable
+    * reference against the real SP register (confirmed against real
+    * 6a: it accepts this and it's genuinely common, real 6c -S
+    * output labels every stack slot with the C variable's own name
+    * even though SP is a real, concrete register here, unlike every
+    * other arch's own virtual FP/SP addressing -- see `gen`'s own
+    * comment above and Ast_asm6.ml's prelude for why TSP never goes
+    * through `pointer`/`name`/Entity at all). The leading identifier
+    * is purely cosmetic for this port's own purposes (no local-
+    * variable-name tracking to validate it against) -- discarded. Real
+    * 6a/6l does NOT treat this like the bare, unlabeled "8(SP)" form
+    * just above (confirmed the hard way against real fmt/vfprint.c's
+    * own "f+-104(SP)"/"buf+-360(SP)": with vfprint's own real $400
+    * frame these assemble to "lea 0x128(%rsp)"/"lea 0x28(%rsp)", i.e.
+    * hardware offset autosize+N, not the raw N this port's earlier,
+    * unverified version used) -- see Ast_asm6.ml's own LocalSP
+    * comment for the full story. *)*/
+ | TIDENT offset TOPAR TSP TCPAR { ignore $1; LocalSP $2 }
+ /*(* claude: real SIB scaled-index addressing -- "(BX)(CX*4)" (bare
+    * register base), "8(BX)(CX*4)" (register base with an offset), and
+    * "tab<>+0(SB)(CX*8)" (SB-relative global base, no base register at
+    * all) -- see `gen`'s own scaled_index comment and Ast_asm6.ml's
+    * IndirectScaled/EntityScaled comment. Found stress-testing real
+    * lib_core/libc (fmt/dofmt.c's own "LEAQ (BX)(CX*1),AX" and
+    * fmt/strtod.c's own "_ctype+0(SB)(CX*1)"). *)*/
+ | ireg scaled_index                          { IndirectScaled ($1, 0, fst $2, snd $2) }
+ | con ireg scaled_index                      { IndirectScaled ($2, $1, fst $3, snd $3) }
+ | name scaled_index                          { EntityScaled ($1, fst $2, snd $2) }
+ /*(* claude: same named-local-against-real-SP-register case as this
+    * `gen`'s own TIDENT-offset alternative above, plus a scaled index --
+    * real fmt/strtod.c's own "a+-1573(SP)(CX*1)". *)*/
+ | TIDENT offset TOPAR TSP TCPAR scaled_index { ignore $1; LocalSPScaled ($2, fst $6, snd $6) }
 
 /*(* claude: XMM register-or-memory operand -- same addressing modes as
    * `gen` above (memory is still addressed through an ordinary GP
@@ -406,8 +479,27 @@ xreg:
 
 xgen:
  | xreg                { XReg $1 }
- | con TOPAR reg TCPAR { XIndirect ($3, $1) }
+ | ireg                { XIndirect ($1, 0) }
+ | con ireg            { XIndirect ($2, $1) }
  | name                { XEntity $1 }
+ /*(* claude: same "named local against the real SP register" case as
+    * `gen`'s own analogous alternative above (e.g. real MOVSD's own
+    * "u+-8(SP)" memory operand) -- xreg's memory operand shares the
+    * exact same real addressing modes as `gen`'s, this is just the
+    * XMM/float-instruction-operand sibling (see Ast_asm6.ml's LocalSP
+    * comment for why this needs env.autosize, not the raw offset). *)*/
+ | TIDENT offset TOPAR TSP TCPAR { ignore $1; XLocalSP $2 }
+ /*(* claude: same scaled-index case as `gen`'s own analogous
+    * alternatives above (e.g. real fmt/fltfmt.c's own "MOVSD
+    * pows10<>+0(SB)(AX*8),X0"). *)*/
+ | ireg scaled_index                          { XIndirectScaled ($1, 0, fst $2, snd $2) }
+ | con ireg scaled_index                      { XIndirectScaled ($2, $1, fst $3, snd $3) }
+ | name scaled_index                          { XEntityScaled ($1, fst $2, snd $2) }
+ | TIDENT offset TOPAR TSP TCPAR scaled_index { ignore $1; XLocalSPScaled ($2, fst $6, snd $6) }
+ /*(* claude: "$(1.0e+00)" -- a literal float source, see Ast_asm6.ml's
+    * XFloatImm comment (real fmt/fltfmt.c's own "MOVSD $(1.0e+00),X0"
+    * and "MULSD $(3.0e-01),X0"). *)*/
+ | fcon                                        { XFloatImm $1 }
 
 ximm:
  | imm             { Int $1 }
@@ -481,8 +573,13 @@ offset:
 /*(*-----------------------------------------*)*/
 
 fcon:
- | TDOLLAR TFLOAT         { $2 }
- | TDOLLAR TMINUS TFLOAT  { -. $3 }
+ | TDOLLAR TFLOAT               { $2 }
+ | TDOLLAR TMINUS TFLOAT        { -. $3 }
+ /*(* claude: "$(1.0e+00)" -- confirmed against goken's real
+    * assemblers/6a/a.y ("'$' '(' LFCONST ')'"), genuinely common in
+    * real fmt/fltfmt.c's own DATA statements (a parenthesized float
+    * constant table, one entry per line). *)*/
+ | TDOLLAR TOPAR TFLOAT TCPAR   { $3 }
 
 /*(*-----------------------------------------*)*/
 /*(*2 number constant and expression (arch independent)  *)*/

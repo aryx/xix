@@ -137,6 +137,28 @@ type xgen =
   | XReg of xregister
   | XIndirect of register * A.offset
   | XEntity of A.entity
+  (* claude: same scaled-index case as `gen`'s own IndirectScaled/
+   * EntityScaled above (e.g. real fmt/fltfmt.c's own "MOVSD
+   * pows10<>+0(SB)(AX*8),X0" -- indexing a table of double constants). *)
+  | XIndirectScaled of register * A.offset * register * int
+  | XEntityScaled of A.entity * register * int
+  (* claude: real x86 has no opcode to move/combine an immediate float
+   * directly into an XMM register -- goken's own linkers/6l/obj.c
+   * (AMOVSD/AMULSD/etc.'s D_FCONST preprocessing case) handles a
+   * literal float source by synthesizing a hidden DATA symbol (named
+   * by the float's own IEEE754 bit pattern) and rewriting the
+   * instruction to reference it instead, i.e. an auto-generated
+   * literal pool. This port does the same in Rewrite6.ml, *before*
+   * Codegen6.ml ever runs -- `XFloatImm` only exists between parsing
+   * and that rewrite pass; Codegen6.ml's `gen_of_xgen` raises
+   * Impossible if it ever sees one, since that would mean Rewrite6.ml
+   * was skipped or missed a case. Found stress-testing real
+   * lib_core/libc (fmt/fltfmt.c's own "MOVSD $(1.0e+00),X0"). *)
+  | XFloatImm of float
+  (* claude: same named-local-against-SP case as `gen`'s own LocalSP/
+   * LocalSPScaled above -- see that comment. *)
+  | XLocalSP of A.offset
+  | XLocalSPScaled of A.offset * register * int
 [@@deriving show { with_path = false }]
 
 type crregister = CR of int (* between 0 and 15 *)
@@ -147,13 +169,6 @@ type drregister = DR of int (* between 0 and 7 *)
 
 type trregister = TR of int (* between 0 and 7 *)
 [@@deriving show]
-
-(* claude: goken's own `imr`/`imsr`-shaped source operand -- an
- * immediate or a register (never memory) -- used by Arith's source. *)
-type imr =
-  | Imm of A.integer
-  | Reg of register
-[@@deriving show { with_path = false }]
 
 (* claude: goken's general "m" operand class (register, register-
  * indirect-with-displacement, or an SB/FP-relative symbolic entity) --
@@ -166,6 +181,63 @@ type gen =
   | GReg of register
   | Indirect of register * A.offset
   | Entity of A.entity
+  (* claude: real x86 SIB scaled-index addressing -- "(BX)(CX*4)"
+   * (register base) or "tab<>+0(SB)(CX*8)" (SB-relative global base,
+   * no base register in the SIB byte itself, same disp32-only
+   * convention as plain `Entity (A.Global ...)` -- see Codegen6.ml's
+   * `RAbs` comment). Confirmed against goken's real assemblers/6a/a.y
+   * (`omem`'s "con '(' LLREG '*' con ')'" / "'(' LLREG ')' '(' LLREG
+   * '*' con ')'" rows and `nmem`'s "nam '(' LLREG '*' con ')'" row) --
+   * genuinely common in real fmt/utf code for indexing an array by a
+   * loop variable (e.g. fmt/dofmt.c's own "LEAQ (BX)(CX*1),AX"). Kept
+   * as two separate constructors (not a `register option` field on
+   * `Indirect`/`Entity`) so every existing non-indexed match arm stays
+   * exhaustive without a wildcard. *)
+  | IndirectScaled of register * A.offset * register * int (* base, offset, index, scale *)
+  | EntityScaled of A.entity * register * int (* entity, index, scale *)
+  (* claude: a *named* local variable against SP (e.g. real fmt/
+   * vfprint.c's own "LEAQ f+-104(SP),AX" -- $400-frame vfprint's own
+   * on-stack Fmt struct), genuinely NOT the same addressing mode as
+   * the bare, unlabeled "N(SP)" form `Indirect (rSP, N)` already
+   * covers (that one is always a small, non-negative, purely hardware-
+   * SP-relative offset, used only for marshaling an *outgoing* call's
+   * own arguments at the very bottom of the frame). Confirmed against
+   * real 6a/6l (vfprint's own real bytes: "f+-104(SP)" with a real
+   * $400 frame assembles to "lea 0x128(%rsp),%rax", i.e. hardware
+   * offset 400+(-104)=296=0x128, NOT the raw -104 this port's earlier,
+   * unverified version used) -- goken's own convention here is the
+   * same "pseudo-SP" scheme Go's own assembler is famous for: a
+   * *named* "name+N(SP)" addresses "N bytes above the TOP of the
+   * local frame" (autosize+N), while a bare "N(SP)" addresses
+   * "N bytes above the hardware SP" directly (no autosize bias) --
+   * two genuinely different addressing modes that happen to share the
+   * same source syntax shape. Resolved in Codegen6.ml's own
+   * `resolve_gen`, the same "needs env.autosize, not knowable at parse
+   * time" deferral every other frame-relative case here already uses
+   * (see `Entity (A.Local ...)`'s own comment). *)
+  | LocalSP of A.offset
+  | LocalSPScaled of A.offset * register * int (* offset, index, scale *)
+[@@deriving show { with_path = false }]
+
+(* claude: goken's own `imr`/`imsr`-shaped source operand -- an
+ * immediate, a register, or (confirmed against 6l/optab.c's yaddl:
+ * "Yml,Yrl,Zm_r,1") a memory operand -- used by Arith's source.
+ * `Mem`'s own payload is never `GReg` in practice (the grammar routes a
+ * bare register through `Reg` instead), but reusing `gen` wholesale
+ * avoids a fourth near-duplicate memory-operand type. *)
+type imr =
+  | Imm of A.integer
+  | Reg of register
+  | Mem of gen
+  (* claude: goken's real "$name(SB)" address-of-global immediate
+   * (D_ADDR, same shape as `A.ximm`'s own `Address` -- see that type's
+   * comment) -- confirmed against real fmt/fmt.c's own "CMPQ
+   * DX,$fmtalloc<>+1032(SB)" (comparing a moving pointer against the
+   * end of a static allocation pool). Non-PIE: the address is a fixed
+   * link-time constant, resolved the same way `Lea`'s own Global case
+   * is (see Codegen6.ml's Cmp/Addr comment for why it still needs the
+   * same lazy resolution as Lea, even though it's not a Lea). *)
+  | Addr of A.entity
 [@@deriving show { with_path = false }]
 
 (* ------------------------------------------------------------------------- *)
@@ -334,18 +406,21 @@ type instr =
    * uses), destination is always a `gen` (real amd64 MOV can never
    * write to an immediate, obviously). *)
   | Move of width * (gen, A.ximm) Either_.t * gen
-  (* claude: goken's Zaut_r/"built-in LEAQ" case (optab.c's ymovq table
-   * has its own Zaut_r row just for this, span.c's doasm() `case
-   * Zaut_r` comment literally says "leal" -- LEA is encoding-wise its
-   * own opcode (0x8d), not a MOV variant, even though source-level it
-   * reads like one; kept as a separate constructor to match, rather
-   * than folding into Move). Only the "address of a global" form is
-   * wired (goken's own D_ADDR-with-D_EXTERN/D_STATIC index, see
-   * Codegen6.ml) -- address-of-local/-param is a real, separate goken
-   * feature (the *actual* Zaut_r case: "leal" is used for taking the
-   * address of an *auto* local) not needed by hello_linux_amd64.s and
-   * not wired here. *)
-  | Lea of A.global * A.offset * register
+  (* claude: goken's real LEA (optab.c's `ym_rl` row, opcode 0x8d) --
+   * *any* memory operand (register-indirect, scaled-index, SB-relative
+   * global, or FP-relative local), never an immediate or a bare
+   * register (real 6a's own `ym` class excludes both); kept as its own
+   * constructor rather than folding into `Move` since LEA's own opcode
+   * (0x8d) and semantics (compute the address, don't dereference it)
+   * are genuinely distinct, not just another Move row. Confirmed
+   * against real 6a/6l stress-testing lib_core/libc's own
+   * "LEAQ (BX)(CX*1),AX" (fmt/dofmt.c) and "LEAQ tab1<>+0(SB)(CX*1),AX"
+   * (fmt/strtod.c) -- this port's earlier version only wired the
+   * "address of a global, no index" case (goken's own D_ADDR-with-
+   * D_EXTERN/D_STATIC), see Codegen6.ml's own Lea comment for why the
+   * global case still needs its own lazy/forward-reference-safe
+   * resolution while every other `gen` shape doesn't. *)
+  | Lea of gen * register
 
   (* Control flow *)
   (* claude: goken's ycall-shaped CALL (optab.c) -- direct (to a label,
@@ -354,11 +429,21 @@ type instr =
    * is a separate y-class row, not wired yet. *)
   | Call of A.branch_operand
   (* claude: goken's yjmp-shaped unconditional jump -- direct (to a
-   * label) only, same indirect-form gap as Call. *)
-  | Jmp of A.branch_operand
+   * label) only, same indirect-form gap as Call. Real amd64 (confirmed
+   * against goken's own optab.c: AJMP's row lists both 0xeb and 0xe9)
+   * has *two* encodings -- short (rel8, 2 bytes) and near (rel32, 5
+   * bytes) -- and real 6l picks whichever fits, like any assembler's
+   * branch relaxation. The trailing `bool ref` is that decision,
+   * `false` until Layout6.ml's own fixed-point relaxation pass mutates
+   * it (see that file's own comment) -- a real `ref`, not a plain
+   * `bool`, so Layout6.ml can flip it in place without reconstructing
+   * this instruction (mirroring `A.branch_operand`'s own established
+   * "resolved late, in place" convention). *)
+  | Jmp of A.branch_operand * bool ref
   (* claude: goken's yjcond-shaped conditional jump -- always to a
-   * label (goken's own Ybr class, never register-indirect). *)
-  | Jcc of condition * A.branch_operand
+   * label (goken's own Ybr class, never register-indirect). Same
+   * short-vs-near relaxation story as `Jmp` above. *)
+  | Jcc of condition * A.branch_operand * bool ref
   | Ret
 
   (* Floating point *)
@@ -370,10 +455,13 @@ type instr =
    * own `Zr_m`-before-`Zm_r`, confirmed against real 6a/6l ("MOVSD
    * X0,X1" -> `f2 0f 10 c8`, the load opcode, even though both
    * operands are plain registers) -- so `MovF`'s own codegen clauses
-   * must be ordered opposite from `Move`'s (see Codegen6.ml). No
-   * float-immediate form exists at all (confirmed: real 6a rejects
-   * "MOVSD $0,X0" outright), matching every other arch's own choice
-   * to skip float immediates (e.g. Ast_asm7.ml's `FArith` comment).
+   * must be ordered opposite from `Move`'s (see Codegen6.ml). A
+   * float-immediate source *is* real (confirmed against real
+   * lib_core/libc, e.g. fmt/fltfmt.c's own "MOVSD $(1.0e+00),X0") --
+   * see `xgen`'s own `XFloatImm` comment for why it's still not a
+   * direct hardware operand (real amd64 has no such opcode at all;
+   * goken's real 6l synthesizes a hidden DATA symbol for it instead,
+   * which this port's Rewrite6.ml mirrors).
    * `A.floatp_precision` (shared with Ast_asmv.ml/Ast_asmi.ml/
    * Ast_asm7.ml) picks MOVSD vs MOVSS -- goken's own `yxmov` table is
    * identical for both, just `Pf2` vs `Pf3` (see Codegen6.ml). *)
@@ -541,8 +629,8 @@ type program = instr A.program
 let branch_opd_of_instr (instr : instr) : A.branch_operand option =
   match instr with
   | Call opd -> Some opd
-  | Jmp opd -> Some opd
-  | Jcc (_, opd) -> Some opd
+  | Jmp (opd, _) -> Some opd
+  | Jcc (_, opd, _) -> Some opd
   | Arith _ | Cmp _ | Test _ | CmpXchg _ | Lock | Shift _ | Extend _ | Unary _ | MulDiv _ | Imul2 _
   | Cwd | Cdq | Cqo | Move _ | Lea _ | Ret | Syscall -> None
   | MovF _ | ArithF _ | CmpF _ | CvtIntToF _ | CvtFToInt _ | CvtFPrec _ | XorClearF _ -> None
@@ -553,13 +641,42 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
     match x with
     | Entity (A.Global (x, _)) -> f x
     | Entity (A.Param _ | A.Local _) -> ()
-    | GReg _ | Indirect _ -> ()
+    | EntityScaled (A.Global (x, _), _, _) -> f x
+    | EntityScaled ((A.Param _ | A.Local _), _, _) -> ()
+    | GReg _ | Indirect _ | IndirectScaled _ | LocalSP _ | LocalSPScaled _ -> ()
   in
   let xgen_operand x =
     match x with
     | XEntity (A.Global (x, _)) -> f x
     | XEntity (A.Param _ | A.Local _) -> ()
-    | XReg _ | XIndirect _ -> ()
+    | XEntityScaled (A.Global (x, _), _, _) -> f x
+    | XEntityScaled ((A.Param _ | A.Local _), _, _) -> ()
+    | XReg _ | XIndirect _ | XIndirectScaled _ | XFloatImm _
+    | XLocalSP _ | XLocalSPScaled _ -> ()
+  in
+  (* claude: `imr`'s own memory/address cases (Arith's source, Cmp's
+   * second operand) -- found the hard way (Not_found at link time,
+   * resolve_global_addr): a global reached *only* through one of
+   * these (e.g. real fmt/fmt.c's own "CMPQ DX,$fmtalloc<>+1032(SB)")
+   * still needs Load.ml's own `process_global` to run on it (sets its
+   * `priv` field, registers it in the symbol table) -- skipping this
+   * doesn't crash outright when the same global is *also* reached some
+   * other way in the same file (the other reference's `process_global`
+   * call already registers the name), but it silently leaves *this*
+   * occurrence's own `A.global` record with `priv = None`, so its own
+   * `T.symbol_of_global` computes a different (Public, not Private
+   * idfile) hashtable key than the one actually registered -- a
+   * `Not_found` at codegen time, not at load time, and easy to miss
+   * until a real closure's own object happens to be private *and*
+   * reached this way. *)
+  let imr_operand x =
+    match x with
+    | Imm _ | Reg _ -> ()
+    | Mem g -> gen_operand g
+    | Addr e -> (match e with
+        | A.Global (x, _) -> f x
+        | A.Param _ | A.Local _ -> ()
+      )
   in
   match i with
   | Move (_, x1, gen2) ->
@@ -568,10 +685,10 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
       | Either.Right ximm1 -> A.visit_globals_ximm f ximm1
       );
       gen_operand gen2
-  | Lea (g, _, _) -> f g
-  | Call b | Jmp b | Jcc (_, b) -> A.visit_globals_branch_operand f b
-  | Arith (_, _, _, gen1) -> gen_operand gen1
-  | Cmp (_, gen1, _) -> gen_operand gen1
+  | Lea (g, _) -> gen_operand g
+  | Call b | Jmp (b, _) | Jcc (_, b, _) -> A.visit_globals_branch_operand f b
+  | Arith (_, _, imr1, gen1) -> imr_operand imr1; gen_operand gen1
+  | Cmp (_, gen1, imr1) -> gen_operand gen1; imr_operand imr1
   | Test (_, _, gen1) -> gen_operand gen1
   | CmpXchg (_, _, gen1) -> gen_operand gen1
   | Lock -> ()

@@ -1,24 +1,35 @@
 # Porting the amd64 toolchain (6a/6l) against goken, byte-equal
 
-Status: **complete** for the scoped feature set. `o6a`/`o6l` exist,
-and twenty-one fixtures assemble+link to executables byte-identical
-to goken's real `6a`/`6l` output, verified under `qemu-x86_64`.
-Covered: the full Q/L/W/B-width integer ISA (ADD/SUB/XOR/AND/OR/CMP/
-TEST/MOV, including the `0x81` imm32 form and goken's own `Yi32`
-immediate class), SHL(=SAL)/SHR/SAR shifts, sign/zero-extending moves
-(MOVBLSX/MOVBLZX/etc, MOVLQSX/MOVLQZX), NEG/NOT/INC/DEC,
-MUL/IMUL/DIV/IDIV (both the single-operand and IMUL's own 2-operand
-form) plus CWD/CDQ/CQO, CMPXCHG+LOCK, LEAQ (address-of-global),
-direct+indirect CALL/JMP, short-form (rel8) Jcc, RET, SYSCALL, `foo<>`
-static symbols, true 64-bit MOVQ immediates, and single- and
-double-precision SSE floating point (MOVSD/MOVSS, ADDSD/SUBSD/MULSD/
-DIVSD + SS siblings, UCOMISD/UCOMISS, both int widths of
-CVTS{L,Q}2S{D,S}/CVTTS{D,S}2S{L,Q}, CVTSD2SS/CVTSS2SD, XORPD/XORPS's
-self-clear idiom, a raw GP&harr;XMM MOVQ bit-copy, and PSLLQ). A full
-amd64-wide mnemonic sweep -- every buildable file under `tests/c/*.c`
-and every real, hand-written amd64 `.s` file anywhere in goken's own
-tree -- confirms nothing else is missing. Deliberately out of scope:
-see "Deliberately out of scope" and "Open issues" below.
+Status: **complete**, hello_libc integration test included. `o6a`/
+`o6l` exist; twenty-seven `amd64_diff/` fixtures assemble+link to
+executables byte-identical to goken's real `6a`/`6l` output (verified
+under `qemu-x86_64`), and `tests/linker/hello_libc_amd64/` links and
+correctly *runs* goken's own real `hello.c` against its real,
+non-trivial `lib_core/libc` dependency closure (see "hello_libc
+integration test" below). Covered: the full Q/L/W/B-width integer ISA
+(ADD/SUB/XOR/AND/OR/CMP/TEST/MOV, including the `0x81` imm32 form,
+goken's own `Yi32` immediate class, CMP's reverse-direction `Zr_m`
+row, and an address-of-global immediate), SHL(=SAL)/SHR/SAR shifts,
+sign/zero-extending moves (MOVBLSX/MOVBLZX/etc, MOVLQSX/MOVLQZX),
+NEG/NOT/INC/DEC, MUL/IMUL/DIV/IDIV (both the single-operand and
+IMUL's own 2-operand form) plus CWD/CDQ/CQO, CMPXCHG+LOCK, LEAQ
+(any memory operand -- register-indirect, scaled-index, global, or
+local, not just address-of-global), direct+indirect CALL/JMP,
+short-*and*-near-form (rel8/rel32) Jcc/Jmp with real branch
+relaxation, RET, SYSCALL, `foo<>` static symbols, true 64-bit MOVQ
+immediates, real x86 SIB scaled-index addressing, BP/R13 as an
+ordinary memory base, an automatic TEXT-frame-size-driven SP
+prologue/epilogue, a named local variable against SP (goken's own
+"pseudo-SP" convention), an auto-generated literal-float DATA pool,
+and single- and double-precision SSE floating point (MOVSD/MOVSS,
+ADDSD/SUBSD/MULSD/DIVSD + SS siblings, UCOMISD/UCOMISS, both int
+widths of CVTS{L,Q}2S{D,S}/CVTTS{D,S}2S{L,Q}, CVTSD2SS/CVTSS2SD,
+XORPD/XORPS's self-clear idiom, a raw GP&harr;XMM MOVQ bit-copy, and
+PSLLQ). A full amd64-wide mnemonic sweep -- every buildable file
+under `tests/c/*.c` and every real, hand-written amd64 `.s` file
+anywhere in goken's own tree -- confirms nothing else is missing.
+Deliberately out of scope: see "Deliberately out of scope" and "Open
+issues" below.
 
 ## Goal
 
@@ -77,26 +88,53 @@ a real, non-cosmetic design point:
    `include/objexec/6.out.h`) *is* the real hardware register --
    confirmed against goken's own `hello_linux_amd64.s`, which uses
    bare "SP" as an ordinary arithmetic operand (`SUBQ $16,SP`) and
-   "0(SP)"/"8(SP)" as already-concrete indirect-with-displacement
-   addressing, needing no linker-side rewriting at all. Only "x(FP)"
-   is the traditional Plan9 *virtual* addressing convention here
-   (goken's `D_PARAM`), resolved the same way every other arch
-   resolves its own frame-relative entity -- except the fixed bias
-   added on top of the frame size is "+8" here (the return address
-   goken's real `CALL` pushes onto the stack in hardware), not some
-   arch-specific link-register-save-slot size.
+   "0(SP)"/"8(SP)" (no name attached) as already-concrete indirect-
+   with-displacement addressing, needing no linker-side rewriting at
+   all. "x(FP)" is the traditional Plan9 *virtual* addressing
+   convention here (goken's `D_PARAM`), resolved the same way every
+   other arch resolves its own frame-relative entity -- except the
+   fixed bias added on top of the frame size is "+8" here (the return
+   address goken's real `CALL` pushes onto the stack in hardware), not
+   some arch-specific link-register-save-slot size.
 
-   A direct consequence: amd64 needs **no auto-generated
-   prologue/epilogue** at all (`Rewrite6.ml` is a genuine no-op) --
-   `CALL`/`RET` push/pop the return address in hardware, and any real
-   stack adjustment is already explicit source-level instructions
-   (goken's own `hello_linux_amd64.s` does its own "SUBQ $16,SP" /
-   "ADDQ $16,SP"), unlike ARM32/MIPS/RISC-V/ARM64's own
-   frame-size-driven synthesis. Similarly **no literal pool**
-   (`Layout6.ml` is a plain PC-accumulation walk, no pool-splicing
-   machinery at all) -- LEAQ's absolute address and any move-immediate
-   are both encoded inline in the instruction stream, not through a
-   separate pool the way ARM32/ARM64/MIPS/RISC-V all need one.
+   **Revised once a real hello_libc closure hit it (see "hello_libc
+   integration test" below): a *named* "name+N(SP)" is a genuine
+   *third* addressing convention, not covered by either of the two
+   above.** Real `6c -S` output labels every stack slot with the C
+   variable's own name even against the real SP register (e.g.
+   "f+-104(SP)"), and -- despite SP being a real, concrete register
+   here -- this named form still needs the *same* kind of linker-side,
+   frame-size-dependent rewriting "x(FP)" does: goken's own "pseudo-SP"
+   convention resolves the real hardware offset as `autosize+N` (`N`
+   often negative), not the bare, unlabeled "N(SP)" form's own literal
+   `N`. This port's original version didn't distinguish the two
+   (`Indirect (rSP, offset)` either way) -- silently wrong for the
+   named case, and the hardest bug of the whole session to actually
+   find (see gap 3 in "hello_libc integration test" below).
+
+   A direct consequence, revised once a real hello_libc closure hit it
+   (see "hello_libc integration test" below): amd64's own
+   auto-generated prologue/epilogue turned out to be needed after all,
+   just simpler than ARM32/MIPS/RISC-V/ARM64's own -- `CALL`/`RET`
+   still push/pop the return address in hardware (no link-register
+   save/restore to synthesize), but real 6a *does* automatically
+   synthesize a `"SUB $autosize,SP"`/`"ADD $autosize,SP"` around a
+   TEXT's own body based on its declared frame size, exactly like every
+   other arch's own frame-size-driven synthesis, just without the
+   register-save part (`Rewrite6.ml`'s own `add_prologue_epilogue`).
+   This port's original, narrower claim held only for
+   `hello_linux_amd64.s` (hand-written, `autosize=0` everywhere, every
+   real stack adjustment spelled out explicitly, e.g. its own
+   "SUBQ $16,SP"/"ADDQ $16,SP") -- never tested against a real
+   `6c`-compiled function with actual locals until this session.
+   Similarly **no literal pool** (`Layout6.ml` is a plain
+   PC-accumulation walk, no pool-splicing machinery at all) -- LEAQ's
+   absolute address and any move-immediate are both encoded inline in
+   the instruction stream, not through a separate pool the way
+   ARM32/ARM64/MIPS/RISC-V all need one -- this part still holds; the
+   one real exception is a literal *float* source (`Rewrite6.ml`'s own
+   auto-generated DATA pool for a `"MOVSD $1.0,X0"`-shaped operand, see
+   below), which real amd64 genuinely has no direct opcode for at all.
 
 ## Grounding
 
@@ -382,16 +420,14 @@ opcode either way.
   the same gap found on ARM.
 - **RIP-relative addressing** (needed the moment a fixture targets a
   non-Linux `HEADTYPE`, or if this project ever wants
-  position-independent amd64 output) and **indexed addressing**
-  (SIB.index, hence REX.X) -- REX.X is always 0 here.
-- **BP/R12/R13 as a memory base** -- BP/R13 need a real ModRM special
-  case for `[rip+disp32]` (mod=00/rm=101 means RIP-relative in real
-  amd64, not "no displacement"); R12 needs the same mandatory-SIB
-  quirk SP already gets. Every *other* register works as an ordinary
-  memory base now (see "Real findings" above).
-- **BP as a plain register token** -- not wired in this arch's own
-  grammar at all, not just as a memory base; only
-  SP/AX/CX/DX/BX/SI/DI/R8-R15 are.
+  position-independent amd64 output). Real SIB scaled-index addressing
+  (`(reg)(index*scale)`, hence real REX.X) *is* wired now -- see
+  "hello_libc integration test" below.
+- **R12 as a memory base** (plain or scaled-index alike) -- needs the
+  same mandatory-SIB quirk SP already gets. BP/R13 *are* wired now (a
+  real ModRM special case for the mod=00/rm=101-means-RIP-relative
+  quirk) -- see "hello_libc integration test" below. Every *other*
+  register already worked as an ordinary memory base.
 - **Legacy AH/BH/CH/DH byte-register forms** -- this port's register
   model has no token for them; whenever SP/BP/SI/DI are named at byte
   width, they always mean the low-byte (SPL/BPL/SIL/DIL) forms, see
@@ -408,18 +444,191 @@ opcode either way.
   `Unary`/`Test`/`CmpXchg` families beyond what's already covered by
   the width-generic tables.
 
+## hello_libc integration test
+
+Status: **complete**. Same idea as `arm_port.md`'s/`arm64_port.md`'s/
+`mips_port.md`'s own equivalent sections (read `arm_port.md`'s first --
+this is the amd64 sibling, same methodology, run in a later session):
+beyond the hand-written `amd64_diff/` fixtures above (each one object
+file, one `TEXT`, no real linking), `tests/linker/hello_libc_amd64/`
+stress-tests the whole pipeline against goken's own real `hello.c`
+(which calls into a real, reusable `lib_core/libc/libc.a`), compiled
+via real `6c -S` for its full transitive libc dependency closure (35
+files, found by `scripts/find-c-closure.py`'s BFS), assembled with
+`o6a`, linked with `o6l`, and run under `qemu-x86_64`. The fixture is
+self-contained (`hello.c`, `closure.tgz`, `test.sh`, `Makefile`,
+mirroring `hello_libc_arm/`'s exact structure) and needs no goken
+checkout to run day-to-day.
+
+**The goken-side assembler bug, found first, same shape as
+5c/7c/vc's already-fixed one.** goken's own `6c -S` has the identical
+comma-padding `Pconv` artifact `compilers/{5c,7c,vc}/list.c` already
+needed fixing earlier in this same session series --
+`compilers/6c/list.c`'s own `Pconv` prints a stray leading/trailing
+comma next to a `D_NONE` operand (`"RET\t,"`, `"CALL\t,foo+0(SB)"`),
+which isn't valid `6a` input either. Same fix applied: strip the
+dangling comma inside `Pconv` itself, right before `fmtstrcpy`.
+Rebuilt cleanly via `mk objtype=boot-gcc install`.
+
+**A genuine architecture difference from every arch ported so far,
+found immediately.** amd64's own `Ast_asm6.ml`/`Parser_asm6.mly`
+already routed `SP` through a plain, real `reg` (see the prelude
+above) rather than the virtual FP/SP addressing every RISC arch uses
+-- correct as far as it went, but left two real, closure-sized gaps
+that only a real `6c`-compiled function ever exercises: a *named*
+local variable against SP (`"u+-8(SP)"`, real `6c -S` output labels
+every stack slot with the C variable's own name even though SP is a
+real register here) had no grammar production at all; and (found much
+later, the hardest bug of this whole session -- see below) once
+wired, its *hardware* offset needed goken's own "pseudo-SP"
+convention, not the raw source-level offset.
+
+**~15 real gaps closed getting the 35-file closure to assemble+link+
+run** (most invisible to any `amd64_diff/*.s` fixture alone, all found
+by feeding the real closure through `o6a`/`o6l` and reading the
+resulting error, or -- for the two "real bugs" below -- by actually
+*running* the linked binary): real x86 SIB scaled-index addressing
+(`"(BX)(CX*4)"`, `"tab<>+0(SB)(CX*8)"`, both the `gen`/`xgen`
+register-or-memory operand and `imr`'s own memory case); BP/R13 as an
+ordinary memory base (the real mod=00-means-RIP-relative ModRM
+special case, `encode_rm`'s own new `RMem` guard); the reverse-
+direction CMP row (`"CMPQ Rs,mem"`, goken's own `Zr_m`, opposite role
+order from the already-wired `"CMPQ mem,Rs"` `Zm_r`); an address-of-
+global immediate for both MOVQ and CMP (`"$fmtalloc<>+8(SB)"`, each
+with its own AX-implicit short-encoding special case, confirmed
+byte-identical against real 6a/6l rather than left at the safe-but-
+longer imm64/general-ModRM form); a `SData2` (DATA-segment, not TEXT)
+global reachable through almost every instruction shape once a real
+closure was tried (`Extend`, `Unary`, `Arith`'s `Mem` source, ...) --
+resolved by switching every remaining `resolve_gen` call site in
+`Codegen6.ml` to the already-existing, strictly-more-capable
+`resolve_gen_full` (a verified-safe blanket change: identical output
+for every case the narrower version already handled, confirmed via a
+full 6-arch zero-regression run); a literal float source to
+MOVSD/MULSD/etc (`"MOVSD $(1.0e+00),X0"`) -- real amd64 has no such
+opcode at all, so goken's own `linkers/6l/obj.c` (`AMOVSD`/`AMULSD`'s
+own D_FCONST preprocessing) synthesizes a hidden DATA symbol for the
+constant and rewrites the operand to reference it, a real auto-
+generated literal pool this port now mirrors in `Rewrite6.ml`; and
+real amd64 JMP/Jcc short-vs-near (rel8/rel32) branch relaxation (a
+genuine multi-pass sizing problem, resolved with a classic fixed-
+point in `Layout6.ml`: assume every jump short, lay out the whole
+program, check every still-short one against its now-known distance,
+force any that don't fit to the near form and re-lay-out if anything
+changed -- monotonic and always terminates, since forcing a jump long
+only ever grows sizes, never shrinks them).
+
+**Three real, confirmed bugs found and fixed along the way** (not new
+gaps -- genuine bugs in behavior this port already claimed to
+support), the last two found only by *running* the linked binary, not
+by getting it to assemble+link:
+
+1. **A wide-integer decimal/hex/octal literal (needing the full 64-bit
+   range) crashed the shared `Lexer_asm.mll` with `Failure
+   "int_of_string"`.** `Ast_asm.integer` is a plain OCaml `int` (63-bit
+   on a 64-bit platform); real fmt/nan64.c's own IEEE754 double bit-
+   pattern DATA statements (`$9218868437227405312`, +Infinity's raw
+   bits) exceed it. Fixed with an `int_of_string_wide` fallback
+   (`Int64.of_string` then `Int64.to_int`, which preserves the full
+   64-bit bit pattern for any later `lsr`-based byte extraction,
+   verified by hand byte-by-byte) wired into the three `TINT`-
+   producing lexer rules only (the four octal-*escape-sequence* call
+   sites, always 0-255, are untouched) -- doesn't help a value needing
+   bit 63 itself set, out of scope, `integer` would need to become
+   `int64` throughout for that.
+2. **A single OCaml pattern-match on this port's own newly-added
+   `Jmp`/`Jcc` `bool ref` (the branch-relaxation decision) reproducibly
+   SIGSEGV'd this port's own native `o6l` binary on this session's own
+   aarch64 host, specifically when linking the real 35-file closure --
+   never in any smaller test.** Root-caused via `valgrind` ("Invalid
+   read... Address 0x700 is not stack'd, malloc'd or (recently)
+   free'd") and `gdb`+`qemu-x86_64`'s own gdbstub after ruling out
+   stack overflow (`ulimit -s unlimited`, verified applied in the exact
+   child process, made no difference) and an oversized single-function
+   compile unit (splitting `Codegen6.ml`'s own giant `rules` match into
+   four section-sized helper functions did *not* fix it, ruling that
+   theory out cleanly). The actual fix: pattern-matching `Jmp (_,
+   {contents = false})`/`Jcc (..., {contents = true})` directly inline
+   in the big `instr` match -- reading the ref's own current value via
+   a nested record pattern two levels deep inside a variant constructor
+   -- was the trigger; extracting `!is_long_ref` into a plain `let`
+   first, then branching on the resulting `bool` with an ordinary
+   `if`/guard clause instead of matching the ref's shape at all, made
+   the crash disappear completely, with zero regressions across all 6
+   arches. Never fully root-caused beyond that empirical fix (a
+   plausible guess: this OCaml 4.14 non-flambda aarch64 backend detail
+   is a compiler quirk, not a logic bug in this port's own code -- but
+   that's inference from the fix working, not a confirmed compiler-bug
+   reference).
+3. **A named local variable reference against SP (`"f+-104(SP)"`) used
+   the raw, unadjusted source-level offset as the real hardware
+   displacement, instead of goken's own "pseudo-SP" convention
+   (hardware offset = `autosize + offset`).** The exact same kind of
+   "silently wrong, not caught by assembling or linking" bug MIPS's own
+   `"MOVW $sym+N(SB),Rt"` bug was (see `mips_port.md`) -- every
+   individual instruction still encoded to *some* valid byte sequence,
+   and a fixture that only writes-then-reads the same named slot (the
+   most natural way to test it) stays functionally self-consistent
+   even when completely wrong, so only a byte-for-byte comparison
+   against real 6a/6l -- or, as it played out here, a real program
+   silently corrupting its own stack and crashing far away from the
+   actual bug -- catches it. Found by chasing a real runtime SIGSEGV
+   (RIP landing in the *data* segment -- a corrupted return address)
+   all the way back through `gdb`+`qemu-x86_64`'s own gdbstub to real
+   fmt/vfprint.c's own `"LEAQ f+-104(SP),AX"` with a genuine $400
+   frame, then confirming the correct formula directly against real
+   6a/6l's own bytes (`"lea 0x128(%rsp)"`, i.e. `400+(-104)=296=0x128`,
+   not a literal `-104` displacement) before fixing it. Also the origin
+   of this session's real, *fourth* gap: real amd64 TEXT's own frame-
+   size operand isn't just documentation -- real 6a automatically
+   synthesizes a `"SUB $autosize,SP"`/`"ADD $autosize,SP"` prologue/
+   epilogue around a TEXT's own body (`Rewrite6.ml`'s own
+   `add_prologue_epilogue`, inserting new graph nodes right after each
+   `TEXT` and right before each `Ret` -- found the hard way too, this
+   port's earlier version emitted nothing for TEXT at all, since its
+   only prior fixture, `hello_linux_amd64.s`, happens to have
+   `autosize=0` everywhere).
+
+**Fixture discipline**: six new byte-identical `amd64_diff/` fixtures,
+one per gap above with a real, verifiable encoding difference:
+`named_local_sp.s` (the pseudo-SP bug, gap 3 above -- the most
+important one, since a naive functional check can't catch it),
+`prologue_epilogue.s`, `scaled_index.s`, `bp_memory_base.s`,
+`address_imm.s` (also covers the reverse-direction CMP row and both
+AX-implicit short-encoding special cases), and `float_literal.s`
+(deliberately uses only one distinct literal value -- see "Open
+issues" below for why more than one doesn't stay byte-identical). The
+OCaml-compiler-crash bug (2 above) has no fixture of its own -- it's a
+toolchain-implementation-level bug with no meaningful "real 6a/6l
+byte output" to compare against, verified instead by the full
+`hello_libc_amd64/` closure itself no longer crashing, plus a clean
+6-arch regression run.
+
 ## Open issues
 
-- **Direct (non-indirect) `Jmp`/`JMP` has no byte-identical fixture at
-  all**, and Jcc/Jmp's near-form (rel32) relaxation isn't implemented
-  -- both blocked on the same real obstacle (see "Real findings"
-  above): goken's own dead-code elision and loop rotation around an
-  unconditional jump make the two most natural ways to force/exercise
-  the near form actively misleading to test against, and the near-form
-  relaxation itself is a genuine multi-pass sizing problem (closer in
-  scope to ARM32/MIPS/RISC-V's own branch-range stories than an
-  isolated encoder function). Every fixture so far avoids the patterns
-  that trigger either. Revisit with either a large enough real program
-  that naturally needs the near form without artificial dead-code
-  padding, or by root-causing goken's own transformation precisely
-  enough to construct a fixture around it deliberately.
+- **Goken's own "Jcc L1; JMP L2; L1: ..." branch-over-branch
+  simplification isn't implemented.** Real 6l collapses this idiom
+  (found stress-testing lib_core/libc, a genuinely common compiler
+  pattern) into a single inverted-condition branch straight to L2; this
+  port emits both instructions as written. Functionally harmless (both
+  encodings reach the same place), but a byte-identical fixture can't
+  contain this pattern -- confirmed hitting it while writing
+  `amd64_diff/address_imm.s` (see "hello_libc integration test"
+  below), worked around there by avoiding the idiom rather than
+  implementing the peephole optimization.
+- **Multiple distinct synthesized float-literal DATA symbols (see
+  `Rewrite6.ml`'s own literal-pool synthesis) don't necessarily land in
+  the same order as real 6l's own.** Each constant's own value and the
+  program's own observable behavior match; only the *ordering* of
+  several distinct constants in the data segment can legitimately
+  differ (goken's own internal symbol-table ordering isn't something
+  this port's `Rewrite6.ml` tries to replicate). Confirmed harmless via
+  `amd64_diff/float_literal.s`'s own comment; a fixture using only one
+  distinct literal value (referenced more than once) avoids the
+  question entirely and stays byte-identical.
+- **Real 6l's own dead-code elimination isn't implemented** -- an
+  unreachable "RET;RET" double-return (or any other genuinely dead
+  code) stays in this port's own output instead of being deleted, a
+  real, cosmetic-only byte-count difference (see "hello_libc
+  integration test" below, comparing `hello_libc_amd64/`'s own final
+  linked size against goken's).

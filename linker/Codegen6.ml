@@ -38,26 +38,22 @@ open Ast_asm6
  * not "a multiple of 4". See linker/Types.ml's `bytes_of_words` comment
  * for how the shared executable writer was generalized to accept this.
  *
- * Scope (complete for this port's own feature set -- see
- * Ast_asm6.ml's own prelude and amd64_port.md for the full writeup):
- * every operand-class combination this port's own fixtures need is
- * implemented; every unhandled shape raises Todo rather than silently
- * emitting wrong bytes (same convention as every other arch's own
- * "not wired yet" gaps). Real, deliberate gaps that remain:
+ * Scope (see Ast_asm6.ml's own prelude and amd64_port.md for the full
+ * writeup): every operand-class combination this port's own fixtures
+ * need is implemented, including every ordinary register (BP/R13
+ * included, see `encode_rm`'s own comment for their real mod=00-means-
+ * RIP-relative quirk) as a memory base, and full SIB scaled-index
+ * addressing (`RMemIndexed`/`RAbsIndexed`, REX.X included) -- every
+ * unhandled shape still raises Todo rather than silently emitting
+ * wrong bytes (same convention as every other arch's own "not wired
+ * yet" gaps). Real, deliberate gaps that remain:
  *  - Arith/Cmp/Test/CmpXchg's own immediate forms don't cover every
  *    real x86 immediate-group opcode variant (e.g. Arith/Cmp's own
  *    imm32 form, `0x81`, IS wired; IMUL's 3-operand immediate forms
  *    aren't).
- *  - Memory operands support any *ordinary* register as the base
- *    (`Indirect`) -- BP/R13 (goken's own asmandsz() has real special
- *    cases for them: mod=00/rm=101 means RIP-relative/absolute instead
- *    of "[BP+0]" in 64-bit mode) and R12 (needs the same mandatory-SIB
- *    quirk as SP) aren't replicated.
- *  - No SIB-index (indexed addressing, e.g. "(R1)(R2*4)") -- REX.X is
- *    always 0 here. R8-R15 *are* wired (REX.R/.B, see the `rex`/
- *    `rex_b_of_resolved_gen` helpers below) for every ModRM.reg/rm
- *    role every encoder already uses; only the SIB.index role (not
- *    used by anything wired so far -- see prelude) is unhandled.
+ *  - R12 as a memory base (needs the same mandatory-SIB quirk as SP,
+ *    plain or scaled-index alike) isn't wired -- no real closure
+ *    stress-tested so far needs it.
  *)
 
 (*****************************************************************************)
@@ -106,6 +102,13 @@ type resolved_gen =
   | RMem of A.register * int (* base register (always SP here -- see
                                * this file's prelude), displacement *)
   | RAbs of int (* absolute virtual address (SB-relative global) *)
+  (* claude: real x86 SIB scaled-index addressing -- see Ast_asm6.ml's
+   * IndirectScaled/EntityScaled comment. `RMemIndexed`'s base is a real
+   * register (SIB.base); `RAbsIndexed`'s base is absent (SIB.base=101,
+   * no-base, disp32-only, same convention as `RAbs` above), used for a
+   * scaled index off an SB-relative global. *)
+  | RMemIndexed of A.register * int * A.register * int (* base, offset, index, scale *)
+  | RAbsIndexed of int * A.register * int (* absolute address, index, scale *)
 
 (* claude: REX prefix -- 0x40 | W<<3 | R<<2 | X<<1 | B. Ported from
  * goken's own obj.c reg[]/regrex[] table init (span.c/obj.c: register
@@ -129,8 +132,18 @@ type resolved_gen =
  * also both 0. Returns a 0-or-1-element list so callers can just `@`
  * it in either case. *)
 let rex_b_of_resolved_gen = function
-  | RReg (A.R n) | RMem (A.R n, _) -> if n >= 8 then 1 else 0
-  | RAbs _ -> 0
+  | RReg (A.R n) | RMem (A.R n, _) | RMemIndexed (A.R n, _, _, _) -> if n >= 8 then 1 else 0
+  | RAbs _ | RAbsIndexed _ -> 0
+
+(* claude: REX.X (SIB.index's own high bit) -- the scaled-index sibling
+ * of `rex_b_of_resolved_gen` above, needed now that a `resolved_gen`
+ * can carry a real index register. 0 for every non-indexed case (no
+ * SIB byte, so no index field to extend). Not reachable with an
+ * R8-R15 index by any real closure stress-tested so far, but wired for
+ * correctness rather than left as a silent gap, same as B/R above. *)
+let rex_x_of_resolved_gen = function
+  | RReg _ | RMem _ | RAbs _ -> 0
+  | RMemIndexed (_, _, A.R n, _) | RAbsIndexed (_, A.R n, _) -> if n >= 8 then 1 else 0
 
 (* claude: goken's own regrex[D_SPB..D_DIB] = 0x40 quirk (obj.c) --
  * real amd64 ModRM/opcode-embedded register field values 4-7, when
@@ -169,16 +182,17 @@ let rex_opt ~(reg_is_register : bool) ~(width : width) ~(reg_field : int)
     ~(rm : resolved_gen) : int list =
   let w = match width with Q_ -> 8 | L_ | W_ | B_ -> 0 in
   let r = if reg_field >= 8 then 4 (* Rxr *) else 0 in
+  let x = rex_x_of_resolved_gen rm lsl 1 in
   let b = rex_b_of_resolved_gen rm in
   let forced =
     width = B_ &&
     ((reg_is_register && regrex_forces_rex reg_field)
      || (match rm with
          | RReg (A.R n) -> regrex_forces_rex n
-         | RMem _ | RAbs _ -> false))
+         | RMem _ | RAbs _ | RMemIndexed _ | RAbsIndexed _ -> false))
   in
-  if w <> 0 || r <> 0 || b <> 0 || forced
-  then [ 0x40 lor w lor r lor b ]
+  if w <> 0 || r <> 0 || x <> 0 || b <> 0 || forced
+  then [ 0x40 lor w lor r lor x lor b ]
   else []
 
 (* claude: goken's own "Pe" prefix (0x66, operand-size override) for a
@@ -192,47 +206,96 @@ let prefix66 (width : width) : int list =
   match width with W_ -> [0x66] | Q_ | L_ | B_ -> []
 
 (* claude: `init_data` is `None` here (as opposed to `resolve_gen_full`
- * below) -- callers that only ever pass a `gen` built from this arch's
- * own grammar without a `Global` case (currently just `Arith`'s dest,
- * see Ast_asm6.ml: hello_linux_amd64.s never targets a global directly
- * with ADD/SUB/XOR) can use this simpler version; anything that might
- * see `Entity (A.Global ...)` (Move's src/dst) must use
- * `resolve_gen_full` instead, which threads init_data through so a
- * SData2 (data-segment) global resolves correctly. *)
+ * below) -- raises Impossible on any `Entity`/`EntityScaled (A.Global
+ * ...)` reaching a SData2 (data-segment) symbol, since resolving one
+ * needs init_data. `rules` below now calls `resolve_gen_full`
+ * unconditionally instead of this simpler version -- real closures
+ * (stress-testing lib_core/libc) turned out to reach a data-segment
+ * global through almost every instruction shape (Extend, Unary,
+ * Arith's Mem source, Cmp's Zr_m row, ...), not just Move's own src/
+ * dst, so there was no instruction-shape-based way left to tell in
+ * advance which callers could safely skip init_data. Kept as the
+ * lower-level primitive `resolve_gen_full` itself still falls back to
+ * (see its own `| _ -> resolve_gen ...` case) for every non-Global
+ * `gen`. *)
+(* claude: `Entity (A.Global ...)`'s own SText2-only resolution, shared
+ * with `EntityScaled`'s analogous case below -- see `resolve_gen`'s own
+ * comment for why SData2 needs `resolve_gen_full` instead. *)
+let resolve_global_text_addr (env : Codegen.env) (node : 'a T.node)
+    (glob : A.global) (off : A.offset) : int =
+  match Hashtbl.find env.syms (T.symbol_of_global glob) with
+  | T.SText2 real_pc -> real_pc + off
+  | T.SData2 _ ->
+      raise (Impossible
+        (spf "amd64: a SData global needs init_data -- use \
+              resolve_gen_full, not resolve_gen, at %s"
+              (T.s_of_loc node.T.n_loc)))
+
+(* claude: `Entity (A.Local ...)`'s own FP-relative resolution, shared
+ * with `EntityScaled`'s analogous case below. *)
+let resolve_local_offset (env : Codegen.env) (off : A.offset) : int =
+  (* claude: "buf+0(FP)" -- see Ast_asm6.ml's prelude for why this
+   * is the FP-relative *virtual* addressing convention (unlike
+   * bare "SP", which this arch's own grammar never routes through
+   * Entity at all). The "+8" bias is amd64-specific: goken's real
+   * CALL pushes an 8-byte return address onto the stack in
+   * hardware (no link-register save to synthesize, unlike every
+   * RISC arch ported so far), so by the time a callee's own body
+   * runs, its first parameter sits 8 bytes above wherever its own
+   * (already-fully-adjusted, see env.autosize) SP points --
+   * confirmed against goken's real 6a/6l byte output for
+   * hello_linux_amd64.s's own write(buf,len) (autosize=0 there, so
+   * FP+0 resolves to exactly SP+8, matching the real bytes:
+   * "MOVQ buf+0(FP),SI" assembles to "48 8b 74 24 08", i.e.
+   * "mov rsi,[rsp+8]"). *)
+  env.autosize + 8 + off
+
+(* claude: `LocalSP`/`LocalSPScaled`'s own resolution -- a *named*
+ * local against SP (e.g. real fmt/vfprint.c's own "f+-104(SP)") is
+ * goken's own "pseudo-SP" convention (the same one Go's own assembler
+ * is famous for): "name+N(SP)" addresses N bytes above the TOP of the
+ * local frame, i.e. `autosize + N` -- genuinely different from the
+ * bare, unlabeled "N(SP)" form (`Indirect`/`IndirectScaled`, no
+ * autosize bias at all, used only for marshaling an outgoing call's
+ * own arguments at the bottom of the frame). No "+8" here, unlike
+ * `resolve_local_offset` above -- this is SP-relative, not FP-
+ * relative, so there's no return-address bias to add. Confirmed
+ * against real 6a/6l: vfprint's own real $400 frame, "f+-104(SP)" ->
+ * "lea 0x128(%rsp)" (400+(-104)=296=0x128), "buf+-360(SP)" ->
+ * "lea 0x28(%rsp)" (400+(-360)=40=0x28). Found stress-testing real
+ * lib_core/libc -- this port's earlier version used the raw,
+ * unadjusted offset directly, which happened to still produce
+ * syntactically valid (if wrong) bytes for every smaller fixture
+ * tested so far, corrupting the stack (and eventually crashing at
+ * runtime, nowhere near the actual bug) only once a real closure hit
+ * a function whose own local's true hardware offset differed enough
+ * from its raw source-level offset to overlap live data. *)
+let resolve_local_sp_offset (env : Codegen.env) (off : A.offset) : int =
+  env.autosize + off
+
 let resolve_gen (env : Codegen.env) (node : 'a T.node) (g : gen) : resolved_gen =
   match g with
   | GReg r -> RReg r
   | Indirect (r, off) -> RMem (r, off)
-  | Entity (A.Global (glob, off)) ->
-      (match Hashtbl.find env.syms (T.symbol_of_global glob) with
-      | T.SText2 real_pc -> RAbs (real_pc + off)
-      | T.SData2 _ ->
-          raise (Impossible
-            (spf "amd64: a SData global needs init_data -- use \
-                  resolve_gen_full, not resolve_gen, at %s"
-                  (T.s_of_loc node.T.n_loc)))
-      )
-  | Entity (A.Local (_, off)) ->
-      (* claude: "buf+0(FP)" -- see Ast_asm6.ml's prelude for why this
-       * is the FP-relative *virtual* addressing convention (unlike
-       * bare "SP", which this arch's own grammar never routes through
-       * Entity at all). The "+8" bias is amd64-specific: goken's real
-       * CALL pushes an 8-byte return address onto the stack in
-       * hardware (no link-register save to synthesize, unlike every
-       * RISC arch ported so far), so by the time a callee's own body
-       * runs, its first parameter sits 8 bytes above wherever its own
-       * (already-fully-adjusted, see env.autosize) SP points --
-       * confirmed against goken's real 6a/6l byte output for
-       * hello_linux_amd64.s's own write(buf,len) (autosize=0 there, so
-       * FP+0 resolves to exactly SP+8, matching the real bytes:
-       * "MOVQ buf+0(FP),SI" assembles to "48 8b 74 24 08", i.e.
-       * "mov rsi,[rsp+8]"). *)
-      RMem (rSP, env.autosize + 8 + off)
+  | Entity (A.Global (glob, off)) -> RAbs (resolve_global_text_addr env node glob off)
+  | Entity (A.Local (_, off)) -> RMem (rSP, resolve_local_offset env off)
   | Entity (A.Param _) ->
       raise (Impossible
         (spf "amd64 grammar never constructs Entity(Param) -- see \
               Ast_asm6.ml's prelude (bare SP is a real register here, \
               not a virtual pseudo-register) at %s" (T.s_of_loc node.T.n_loc)))
+  | IndirectScaled (r, off, idx, scale) -> RMemIndexed (r, off, idx, scale)
+  | EntityScaled (A.Global (glob, off), idx, scale) ->
+      RAbsIndexed (resolve_global_text_addr env node glob off, idx, scale)
+  | EntityScaled (A.Local (_, off), idx, scale) ->
+      RMemIndexed (rSP, resolve_local_offset env off, idx, scale)
+  | EntityScaled (A.Param _, _, _) ->
+      raise (Impossible
+        (spf "amd64 grammar never constructs EntityScaled(Param) -- see \
+              Ast_asm6.ml's prelude (bare SP is a real register here, \
+              not a virtual pseudo-register) at %s" (T.s_of_loc node.T.n_loc)))
+  | LocalSP off -> RMem (rSP, resolve_local_sp_offset env off)
+  | LocalSPScaled (off, idx, scale) -> RMemIndexed (rSP, resolve_local_sp_offset env off, idx, scale)
 
 (* claude: builds the ModRM(+SIB+disp) bytes for a `resolved_gen` used
  * as the r/m operand, with `reg_field` as ModRM.reg (either a real
@@ -276,9 +339,27 @@ let encode_rm (reg_field : int) (rm : resolved_gen) : int list =
       else if off >= -128 && off < 128
       then [ modrm ~md:1 ~reg:reg_field ~rm:rmv; off land 0xff ]
       else [ modrm ~md:2 ~reg:reg_field ~rm:rmv ] @ le32 off
+  (* claude: BP/R13 as a memory base -- unlike every other register,
+   * mod=00/rm=101 is reserved for RIP-relative addressing in real
+   * amd64, not "no displacement", so an *actual* zero offset still
+   * needs an explicit 1-byte $0 displacement (mod=01) -- confirmed
+   * against real 6a/6l: "MOVBLZX (BP),AX" -> `0f b6 45 00` (mod=01,
+   * disp8=0x00), not the disp-less `0f b6 45` a naive mod=00 read
+   * would produce. Found stress-testing real lib_core/libc -- goken's
+   * own compiled fmt.c/dofmt.c genuinely reuse BP as a plain struct-
+   * pointer GPR (not a frame pointer) whenever a function doesn't
+   * need one, e.g. "MOVQ 24(BP),SI". R12 (rm=100, the same mandatory-
+   * SIB quirk as SP) isn't wired -- no real closure needs it yet. *)
+  | RMem (r, off) when reg_num r land 7 = 5 ->
+      let rmv = reg_num r land 7 in
+      if off = 0
+      then [ modrm ~md:1 ~reg:reg_field ~rm:rmv; 0 ]
+      else if off >= -128 && off < 128
+      then [ modrm ~md:1 ~reg:reg_field ~rm:rmv; off land 0xff ]
+      else [ modrm ~md:2 ~reg:reg_field ~rm:rmv ] @ le32 off
   | RMem (_, _) ->
-      raise Todo (* BP/R13 (rip-relative mod=00 quirk) and R12 (mandatory
-                   * SIB, like SP) as a memory base aren't wired, see prelude *)
+      raise Todo (* R12 (mandatory SIB, like SP) as a memory base isn't
+                   * wired, see prelude *)
   | RAbs addr ->
       (* claude: mod=00/rm=100(SIB)/SIB=no-index,no-base(base=101) ->
        * absolute disp32 -- goken's own non-PIE amd64 addressing
@@ -286,6 +367,35 @@ let encode_rm (reg_field : int) (rm : resolved_gen) : int list =
        * "temporary" comment: real bytes confirmed for "LEAQ msg(SB),AX"
        * -> "48 8d 04 25 <disp32>"). *)
       [ modrm ~md:0 ~reg:reg_field ~rm:4; sib ~scale:0 ~index:4 ~base:5 ] @ le32 addr
+
+  (* claude: SIB scaled-index case (`gen`'s IndirectScaled) -- same
+   * base-register split as plain `RMem` just above (SP always needs
+   * a SIB anyway, so it needs no separate case here at all -- unlike
+   * plain `RMem`, where SIB is *only* needed because SP happens to
+   * share rm=100 with "SIB follows"; here a SIB is already mandatory
+   * for the index, so SP-as-base falls out of the ordinary case for
+   * free). BP/R13 excluded for the same rip-relative-mod=00 reason as
+   * plain `RMem`'s own BP/R13 exclusion -- not wired, see prelude. *)
+  | RMemIndexed (r, off, idx, scale) when reg_num r land 7 <> 5 ->
+      let scale_bits = match scale with 1 -> 0 | 2 -> 1 | 4 -> 2 | 8 -> 3
+        | _ -> raise (Impossible "scale must be 1/2/4/8 -- checked by the grammar") in
+      let sib_byte = sib ~scale:scale_bits ~index:(reg_num idx land 7) ~base:(reg_num r land 7) in
+      if off = 0
+      then [ modrm ~md:0 ~reg:reg_field ~rm:4; sib_byte ]
+      else if off >= -128 && off < 128
+      then [ modrm ~md:1 ~reg:reg_field ~rm:4; sib_byte; off land 0xff ]
+      else [ modrm ~md:2 ~reg:reg_field ~rm:4; sib_byte ] @ le32 off
+  | RMemIndexed (_, _, _, _) ->
+      raise Todo (* BP/R13 as a scaled-index base -- not wired, see prelude *)
+
+  (* claude: SIB scaled-index off an SB-relative global (`gen`'s
+   * EntityScaled) -- same no-base disp32 convention as plain `RAbs`
+   * above, just with a real index register in the SIB instead of
+   * SIB's own "no index" encoding. *)
+  | RAbsIndexed (addr, idx, scale) ->
+      let scale_bits = match scale with 1 -> 0 | 2 -> 1 | 4 -> 2 | 8 -> 3
+        | _ -> raise (Impossible "scale must be 1/2/4/8 -- checked by the grammar") in
+      [ modrm ~md:0 ~reg:reg_field ~rm:4; sib ~scale:scale_bits ~index:(reg_num idx land 7) ~base:5 ] @ le32 addr
 
 let arith_ext = function ADD -> 0 | SUB -> 5 | XOR -> 6 | AND -> 4 | OR -> 1
 (* claude: the reg-reg ("Zr_m") opcode -- confirmed against goken's own
@@ -339,10 +449,28 @@ let imm_group_opcode (width : width) : int = match width with B_ -> 0x80 | Q_ | 
  * needed widening, no encoding logic). *)
 let fits_yi32 (v : int) : bool = v >= -0x8000_0000 && v <= 0xFFFF_FFFF
 
+(* claude: L_/W_ get the same `oclass()`-style widened range as
+ * `fits_yi32` above (accepting a value like 0xFFFFFFFB, written as a
+ * positive decimal, that doesn't fit the narrower sign-extendable
+ * `Ys32`/`Ys16` range) -- confirmed against real 6a/6l stress-testing
+ * lib_core/libc's own "ANDL $4294967291,76(BP)" (port/frexp.c's real
+ * clear-the-sign-bit idiom). Safe *unlike* Move's own Q_ case (which
+ * needs `move_q_wide_reg_opcode`'s own no-REX.W downgrade to avoid
+ * silently sign-extending a value the source never meant as negative)
+ * because L_/W_'s own destination IS exactly the immediate's own
+ * width already -- opcode 0x81 never sign-extends an Yi32 into a wider
+ * L_/W_ register the way it does for Q_'s genuine 32-into-64 REX.W
+ * extension, so accepting the raw zero-extended pattern changes
+ * nothing about the emitted bytes' *meaning*, just widens which values
+ * this port accepts. Q_ stays at the narrower true-Ys32 range -- no
+ * real closure stress-tested so far needs a wider Q_ immediate here,
+ * and doing so safely would need the same kind of opcode-downgrade
+ * `move_q_wide_reg_opcode` uses, not just a wider range check. *)
 let fits_wide_imm (width : width) (v : int) : bool =
   match width with
-  | W_ -> v >= -0x8000 && v <= 0x7fff
-  | Q_ | L_ -> v >= -0x8000_0000 && v <= 0x7fff_ffff
+  | W_ -> (v >= -0x8000 && v <= 0x7fff) || (v >= 0 && v <= 0xffff)
+  | L_ -> (v >= -0x8000_0000 && v <= 0x7fff_ffff) || (v >= 0 && v <= 0xffff_ffff)
+  | Q_ -> v >= -0x8000_0000 && v <= 0x7fff_ffff
   | B_ -> raise (Impossible "B_ has no wide-immediate arith form")
 let wide_imm_bytes (width : width) (v : int) : int list =
   match width with
@@ -416,9 +544,15 @@ let extend_rex ~(need_w : bool) ~(byte_source : bool) ~(reg_field : int)
     ~(rm : resolved_gen) : int list =
   let w = if need_w then 8 else 0 in
   let r = if reg_field >= 8 then 4 else 0 in
+  let x = rex_x_of_resolved_gen rm lsl 1 in
   let b = rex_b_of_resolved_gen rm in
-  let forced = byte_source && (match rm with RReg (A.R n) -> regrex_forces_rex n | RMem _ | RAbs _ -> false) in
-  if w <> 0 || r <> 0 || b <> 0 || forced then [ 0x40 lor w lor r lor b ] else []
+  let forced =
+    byte_source &&
+    (match rm with
+     | RReg (A.R n) -> regrex_forces_rex n
+     | RMem _ | RAbs _ | RMemIndexed _ | RAbsIndexed _ -> false)
+  in
+  if w <> 0 || r <> 0 || x <> 0 || b <> 0 || forced then [ 0x40 lor w lor r lor x lor b ] else []
 
 (* claude: goken's own yincb/yincl/yincw/yscond tables (optab.c) --
  * NEG/NOT share the same B_-is-one-less opcode pair as every other
@@ -454,6 +588,20 @@ let gen_of_xgen : xgen -> gen = function
   | XReg (X n) -> GReg (A.R n)
   | XIndirect (r, off) -> Indirect (r, off)
   | XEntity e -> Entity e
+  | XIndirectScaled (r, off, idx, scale) -> IndirectScaled (r, off, idx, scale)
+  | XEntityScaled (e, idx, scale) -> EntityScaled (e, idx, scale)
+  | XLocalSP off -> LocalSP off
+  | XLocalSPScaled (off, idx, scale) -> LocalSPScaled (off, idx, scale)
+  | XFloatImm _ ->
+      raise (Impossible "XFloatImm must be eliminated by Rewrite6.rewrite \
+                          before Codegen6.gen ever runs -- see Ast_asm6.ml's own comment")
+
+(* claude: every call site below resolves a `gen_of_xgen` result with
+ * `resolve_gen_full`, not `resolve_gen` -- an XMM instruction's memory
+ * operand can equally well name a SData2 (DATA-segment) global (real
+ * fmt/fltfmt.c's own "MOVSD pows10<>+0(SB)(AX*8),X0", a table of double
+ * constants), which `resolve_gen`'s own narrower version can't resolve
+ * (see its own SData2 comment). *)
 
 (* claude: goken's own `yxm` table (optab.c) is shared verbatim across
  * ADDSD/SUBSD/MULSD/DIVSD (and their SS-suffixed siblings, see
@@ -516,27 +664,17 @@ let resolve_gen_full (env : Codegen.env) (init_data : T.addr option)
     (node : 'a T.node) (g : gen) : resolved_gen =
   match g with
   | Entity (A.Global (glob, off)) -> RAbs (resolve_global_addr env init_data glob off)
+  (* claude: EntityScaled's own SData2-capable sibling -- e.g. real
+   * port_ctype.c's own "_ctype+0(SB)(CX*1)" (a DATA-segment table, not
+   * a TEXT symbol), which `resolve_gen`'s own EntityScaled case can't
+   * handle (see `resolve_global_text_addr`'s SText2-only comment). *)
+  | EntityScaled (A.Global (glob, off), idx, scale) ->
+      RAbsIndexed (resolve_global_addr env init_data glob off, idx, scale)
   | _ -> resolve_gen env node g
 
-let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
-    : action =
-  match node.T.instr with
-  | T.Virt _ ->
-      raise (Impossible "rewrite should have transformed virtual instrs")
-  | T.TEXT (_, _, _) ->
-      { size = 0; binary = (fun () -> []) }
-  | T.WORD _ ->
-      (* claude: no literal pool on this arch (see Ast_asm6.ml's
-       * prelude) -- WORD is never emitted by Rewrite6.ml/Layout6.ml,
-       * so this is unreachable for this checkpoint. *)
-      raise Todo
-  | T.I instr ->
-    (match instr with
-
-    (* --------------------------------------------------------------------- *)
-    (* Arithmetic *)
-    (* --------------------------------------------------------------------- *)
-
+let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
+    (instr : instr) : action =
+  match instr with
     (* claude: case Zib_ -- goken's own yxorb table has its
      * "Yi32,Yal,Zib_,1" row (opcode alone + imm8, no ModRM at all --
      * real x86's dedicated
@@ -565,7 +703,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
          * whole destination width, so (unlike Q_/L_/W_'s Yi8-vs-Yi32
          * split below) there's no larger form to fall back to; the
          * full unsigned byte range (not just -128..127) is accepted. *)
-        let rm = resolve_gen env node dest in
+        let rm = resolve_gen_full env init_data node dest in
         let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:(arith_ext op) ~rm
                     @ [imm_group_opcode B_] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -573,7 +711,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * shape as B_'s own case above (which never reaches here, see
      * that clause), just L_/Q_/W_'s wider sign-extended-imm8 form. *)
     | Arith (width, op, Imm v, dest) when v >= -128 && v < 128 ->
-        let rm = resolve_gen env node dest in
+        let rm = resolve_gen_full env init_data node dest in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(arith_ext op) ~rm
                     @ [imm_group_opcode width] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -602,7 +740,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * doesn't fit imm8. Same imm16-for-W_/imm32-for-Q_/L_ split as the
      * Zil_ case above. *)
     | Arith (width, op, Imm v, dest) when fits_wide_imm width v ->
-        let rm = resolve_gen env node dest in
+        let rm = resolve_gen_full env init_data node dest in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(arith_ext op) ~rm
                     @ [0x81] @ encode_rm (arith_ext op) rm @ wide_imm_bytes width v in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -612,10 +750,33 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * row (register source, `encode_rm`'s own "reg-reg or reg-mem"
      * dest). *)
     | Arith (width, op, Reg r, dest) ->
-        let rm = resolve_gen env node dest in
+        let rm = resolve_gen_full env init_data node dest in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
                     @ [arith_rr_opcode width op] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
+
+    (* claude: case Zm_r -- "op mem,reg" (e.g. real "SUBQ s+0(FP),AX"),
+     * goken's yaddl own Yml,Yrl row -- same reg-field/rm split as
+     * Move's own Zm_r load (mov_load_opcode), just arith_rr_opcode+2
+     * (confirmed against 6l/optab.c: every yaddl row's Zm_r opcode is
+     * its own Zr_m opcode plus 2, e.g. ADD 0x01->0x03, SUB 0x29->0x2b,
+     * same for the B_-width 0x00->0x02/0x28->0x2a pairs). Only a
+     * register destination is reached here -- goken's own row has no
+     * mem-to-mem form, and the grammar never produces `Mem (GReg _)`
+     * (see Ast_asm6.ml's `imr` comment), so a `Mem` source with a
+     * non-register dest can't arise from real input. *)
+    | Arith (width, op, Mem src, GReg r) ->
+        let rm = resolve_gen_full env init_data node src in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+                    @ [arith_rr_opcode width op + 2] @ encode_rm (reg_num r) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    | Arith (_, _, Mem _, (Indirect _ | Entity _ | IndirectScaled _ | EntityScaled _)) ->
+        raise Todo (* goken's own yaddl has no mem-to-mem Zm_r row *)
+    | Arith (_, _, Addr _, _) ->
+        raise Todo (* an address-of-global immediate as an Arith source
+                     * (see Ast_asm6.ml's `imr`/Addr comment) -- not
+                     * wired, no real closure needs ADD/SUB/etc. against
+                     * one yet, only CMP's own Zm_ilo case does *)
 
     (* claude: case Zm_ibo -- "CMPQ gen,$imm", opcode 0x83 /7, `gen` in
      * ModRM r/m (see Ast_asm6.ml's Cmp comment: the ModRM operand is
@@ -635,13 +796,13 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * byte IS the whole value" reasoning as Arith's own B_ clause
      * above. *)
     | Cmp (B_, g, Imm v) when v >= -128 && v <= 255 ->
-        let rm = resolve_gen env node g in
+        let rm = resolve_gen_full env init_data node g in
         let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:7 ~rm
                     @ [imm_group_opcode B_] @ encode_rm 7 rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Zm_ibo (Q_/L_/W_). *)
     | Cmp (width, g, Imm v) when v >= -128 && v < 128 ->
-        let rm = resolve_gen env node g in
+        let rm = resolve_gen_full env init_data node g in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:7 ~rm
                     @ [imm_group_opcode width] @ encode_rm 7 rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -658,12 +819,79 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * reached whenever `g` isn't AX or the immediate doesn't fit imm8.
      * Confirmed: "CMPL CX,$0x100000" -> `81 f9 00 00 10 00`. *)
     | Cmp (width, g, Imm v) when fits_wide_imm width v ->
-        let rm = resolve_gen env node g in
+        let rm = resolve_gen_full env init_data node g in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:7 ~rm
                     @ [0x81] @ encode_rm 7 rm @ wide_imm_bytes width v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Cmp (_, _g, Imm _) ->
         raise Todo (* immediate too big even for Zm_ilo's own imm32/imm16 -- see prelude *)
+    (* claude: case Zm_ilo -- same general ModRM form as the `Imm` clause
+     * just above, just with an address-of-global immediate (see
+     * Ast_asm6.ml's `imr`/Addr comment) instead of a literal constant --
+     * real fmt/fmt.c's own "CMPQ DX,$fmtalloc<>+1032(SB)" (comparing a
+     * moving pointer against the end of a static allocation pool). The
+     * address itself is resolved lazily in `binary`'s own thunk, same
+     * forward-reference-safety reasoning as `Lea`'s own Global case --
+     * `fmtalloc<>` happens to be a DATA (SData2) global here, not a
+     * forward-referenced TEXT one, but there's no way to tell which
+     * case a given global is without the same lookup that would fail
+     * for a forward TEXT reference, so this is unconditionally
+     * deferred too, same as `Lea`. A Local/Param address (not
+     * meaningful for CMP) isn't wired -- no real closure needs it. *)
+    (* claude: case Z_il -- same AX-special-case as the `Imm` clause
+     * above (opcode 0x3d, the `(7<<3)|0x05` family), just with a
+     * lazily-resolved address value instead of a literal -- confirmed
+     * against real 6a/6l: "CMPQ AX,$tab<>+8(SB)" -> "48 3d <imm32>",
+     * not the general Zm_ilo ModRM form the clause below falls back
+     * to for any other destination. Always the imm32 form (never the
+     * imm8 one `Imm`'s own Z_il case can also take) -- same "every
+     * address here fits 32 bits by construction" reasoning as MOVQ's
+     * own address-immediate case above. *)
+    | Cmp (width, GReg r, Addr (A.Global (glob, off))) when reg_num r = 0 ->
+        let bytes_placeholder =
+          prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:0 ~rm:(RReg r)
+          @ [(7 lsl 3) lor 0x05] @ wide_imm_bytes width 0 in
+        { size = List.length bytes_placeholder; binary = (fun () ->
+            let addr = resolve_global_addr env init_data glob off in
+            prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:0 ~rm:(RReg r)
+            @ [(7 lsl 3) lor 0x05] @ wide_imm_bytes width addr
+          )
+        }
+    | Cmp (width, g, Addr (A.Global (glob, off))) ->
+        let rm = resolve_gen_full env init_data node g in
+        let rm_placeholder = rm in
+        let bytes_placeholder =
+          prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:7 ~rm:rm_placeholder
+          @ [0x81] @ encode_rm 7 rm_placeholder @ wide_imm_bytes width 0 in
+        { size = List.length bytes_placeholder; binary = (fun () ->
+            let addr = resolve_global_addr env init_data glob off in
+            prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:7 ~rm
+            @ [0x81] @ encode_rm 7 rm @ wide_imm_bytes width addr
+          )
+        }
+    | Cmp (_, _, Addr _) ->
+        raise Todo (* a Local/Param address -- not meaningful for CMP,
+                     * not wired, see the clause above *)
+    (* claude: case Zr_m -- the *reverse*-direction "CMPQ Rs,mem" row
+     * (goken's own ycmpl "Yrl,Yml,Zr_m,1" row, opcode 0x3b/0x3a --
+     * `cmp_rm_opcode`'s own Zm_r opcode plus 2, same +2 convention as
+     * Arith's own Zm_r->Zm_r+2 and Move's own store->load pair) --
+     * genuinely the OPPOSITE role order from the `Cmp (width, g, Reg
+     * r)` clause just below (there, `g` -- possibly memory -- is
+     * ModRM.rm and `imr`'s register is ModRM.reg; here `g` is *always*
+     * a plain register, in ModRM.reg, and `imr`'s own `Mem` is
+     * ModRM.rm) -- both are real, distinct goken y-table rows, not one
+     * generalizing the other. Confirmed against real fmt/dofmt.c's own
+     * "CMPL DX,n+8(FP)"/"CMPQ AX,rs+-16(SP)" (comparing a register
+     * against a named local). *)
+    | Cmp (width, GReg r, Mem m) ->
+        let rm = resolve_gen_full env init_data node m in
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+                    @ [cmp_rm_opcode width + 2] @ encode_rm (reg_num r) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+    | Cmp (_, _g, Mem _) ->
+        raise Todo (* "CMPQ mem,mem" -- not real x86, no real closure
+                     * needs this combination *)
     (* claude: case Zm_r -- "CMPQ gen,Rs", opcode 0x39 (0x38 for B_, see
      * `cmp_rm_opcode`), `gen` in ModRM r/m, Rs in ModRM reg (asmand
      * (from=gen,to=Rs), matching Ast_asm6.ml's Cmp comment). The
@@ -671,7 +899,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * `gen` should land in ModRM reg instead) is a separate goken
      * y-table row this port doesn't need yet -- not wired. *)
     | Cmp (width, g, Reg r) ->
-        let rm = resolve_gen env node g in
+        let rm = resolve_gen_full env init_data node g in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
                     @ [cmp_rm_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -681,7 +909,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * distinct from both Arith's and Cmp's own, see Ast_asm6.ml's Test
      * comment), rm=gen. *)
     | Test (width, r, g) ->
-        let rm = resolve_gen env node g in
+        let rm = resolve_gen_full env init_data node g in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
                     @ [test_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -690,7 +918,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * 0xb0 for B_), same role order as Arith's own Reg-source case and
      * Move's own store clause (reg_field=Rs, rm=gen). *)
     | CmpXchg (width, r, dest) ->
-        let rm = resolve_gen env node dest in
+        let rm = resolve_gen_full env init_data node dest in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
                     @ [0x0f; cmpxchg_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -705,7 +933,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * mandatory, not width-selected -- there's no 32-bit "MOVQ" to
      * confuse it with, since this whole shape is MOVQ-only). *)
     | MovQToXmm (src, dst) ->
-        let rm = resolve_gen env node src in
+        let rm = resolve_gen_full env init_data node src in
         let bytes = [0x66] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(xreg_num dst) ~rm
                     @ [0x0f; 0x6e] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -735,13 +963,13 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * from any other constant, not just "1" happening to fit some
      * narrower range the way Arith's own imm8-vs-imm32 split works. *)
     | Shift (width, op, ShiftImm 1, dest) ->
-        let rm = resolve_gen env node dest in
+        let rm = resolve_gen_full env init_data node dest in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(shift_ext op) ~rm
                     @ [shift_by1_opcode width] @ encode_rm (shift_ext op) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Zibo_m (shift-by-immediate-N). *)
     | Shift (width, op, ShiftImm v, dest) ->
-        let rm = resolve_gen env node dest in
+        let rm = resolve_gen_full env init_data node dest in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(shift_ext op) ~rm
                     @ [shift_byimm_opcode width] @ encode_rm (shift_ext op) rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -750,7 +978,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * ever shift by CL), confirmed: any other register fails at `6l`
      * with "notfound" -- guarded here the same way. *)
     | Shift (width, op, ShiftReg r, dest) when reg_num r = 1 (* CX *) ->
-        let rm = resolve_gen env node dest in
+        let rm = resolve_gen_full env init_data node dest in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(shift_ext op) ~rm
                     @ [shift_bycl_opcode width] @ encode_rm (shift_ext op) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -762,7 +990,13 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * comment for the per-mnemonic opcode/REX story. *)
     | Extend (op, src, dst) ->
         let (need_w, byte_source, opcode_bytes) = extend_shape op in
-        let rm = resolve_gen env node src in
+        (* claude: resolve_gen_full, not resolve_gen -- real port_ctype.c's
+         * own "_ctype" is a DATA-segment (SData2) global, not a TEXT
+         * one, reachable here via a scaled-index source
+         * ("MOVBLZX _ctype+0(SB)(CX*1),AX", fmt/strtod.c) -- see
+         * `resolve_gen`'s own SData2 comment for why the plain version
+         * can't handle it. *)
+        let rm = resolve_gen_full env init_data node src in
         let bytes = extend_rex ~need_w ~byte_source ~reg_field:(reg_num dst) ~rm
                     @ opcode_bytes @ encode_rm (reg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -771,7 +1005,11 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * group operand, no immediate at all (the same Z-code `Shift`'s
      * own shift-by-1/shift-by-CL cases already use). *)
     | Unary (width, op, dest) ->
-        let rm = resolve_gen env node dest in
+        (* claude: resolve_gen_full, not resolve_gen -- real fmt/fmt.c's
+         * own "INCL fmtalloc<>+0(SB)" (a DATA-segment/SData2 allocation-
+         * pool cursor, incremented in place) needs it, see `Extend`'s
+         * own analogous comment above. *)
+        let rm = resolve_gen_full env init_data node dest in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(unary_ext op) ~rm
                     @ [unary_opcode width op] @ encode_rm (unary_ext op) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -781,7 +1019,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * operand plays goken's own `from` role, but `encode_rm`/`gen`
      * resolution doesn't care which AST field it came from). *)
     | MulDiv (width, op, src) ->
-        let rm = resolve_gen env node src in
+        let rm = resolve_gen_full env init_data node src in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(muldiv_ext op) ~rm
                     @ [muldiv_opcode width] @ encode_rm (muldiv_ext op) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -790,7 +1028,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * 0xaf` (ModRM.reg=dst, ModRM.rm=src -- the same load-shaped role
      * assignment `Move`'s own load clause uses). *)
     | Imul2 (width, src, dst) ->
-        let rm = resolve_gen env node src in
+        let rm = resolve_gen_full env init_data node src in
         let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num dst) ~rm
                     @ [0x0f; 0xaf] @ encode_rm (reg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -800,11 +1038,11 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
     | Cwd -> { size = 2; binary = (fun () -> [0x66; 0x99]) }
     | Cdq -> { size = 1; binary = (fun () -> [0x99]) }
     | Cqo -> { size = 2; binary = (fun () -> [0x48; 0x99]) }
+  | _ -> raise (Impossible "arith_rules: not an arithmetic instruction")
 
-    (* --------------------------------------------------------------------- *)
-    (* Memory / Move *)
-    (* --------------------------------------------------------------------- *)
-
+let move_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
+    (instr : instr) : action =
+  match instr with
     | Move (width, Either.Left (GReg r), dest) ->
         (* claude: case Zr_m -- store: reg -> mem/reg, goken's Zr_m
          * (0x89, or 0x88 for B_ -- see `mov_store_opcode`) -- same
@@ -821,7 +1059,8 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
                     @ [mov_load_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
-    | Move (_, Either.Left (Indirect _ | Entity _), (Indirect _ | Entity _)) ->
+    | Move (_, Either.Left (Indirect _ | Entity _ | IndirectScaled _ | EntityScaled _),
+               (Indirect _ | Entity _ | IndirectScaled _ | EntityScaled _)) ->
         raise (Impossible "real amd64 MOV never has both operands in memory")
     (* claude: case Zclr -- "MOVQ/MOVL/MOVW $0,Rd" -- goken's Zclr
      * optimization (ymovq/ymovl/ymovw each have their own
@@ -891,10 +1130,37 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         let bytes = rex_opt ~reg_is_register:false ~width:Q_ ~reg_field:0 ~rm:(RReg r)
                     @ [0xb8 lor (reg_num r land 7)] @ le64 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
+    (* claude: case Zil_rp -- a lazily-resolved address-of-global value
+     * (see Ast_asm6.ml's `imr`/Addr comment for the analogous CMP
+     * case) as MOVQ's own immediate source -- real fmt/fmt.c's own
+     * "MOVQ $fmtalloc<>+8(SB),DX". Confirmed against real 6a/6l: this
+     * takes the *short* 32-bit form ("b8 <imm32>", no REX.W, the same
+     * MOVL's own Zil_rp case below uses -- writing a 32-bit register
+     * already zero-extends to 64 bits), not the full imm64 Ziq_rp form
+     * `A.Int`'s own case above uses -- safe unconditionally (not just
+     * "when it happens to fit," the way `A.Int`'s own value-dependent
+     * range check works) because every address this port's whole non-
+     * PIE addressing scheme ever produces already fits in 32 bits by
+     * construction (see `encode_rm`'s own `RAbs` case: its disp32 is
+     * `le32 addr`, unconditionally, no range check either -- the same
+     * assumption, just applied here too). Eager size (5 bytes, always,
+     * regardless of the resolved address's actual value) / lazy value
+     * split, same as Lea's own Global case -- the size can't depend on
+     * a value not known until `binary`'s own thunk runs. *)
+    | Move (Q_, Either.Right (A.Address (A.Global (glob, off))), GReg r) ->
+        let bytes_placeholder =
+          rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm:(RReg r)
+          @ [0xb8 lor (reg_num r land 7)] @ le32 0 in
+        { size = List.length bytes_placeholder; binary = (fun () ->
+            let addr = resolve_global_addr env init_data glob off in
+            rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm:(RReg r)
+            @ [0xb8 lor (reg_num r land 7)] @ le32 addr
+          )
+        }
     | Move (Q_, Either.Right _, _) ->
-        raise Todo (* string/float src, or a too-big-for-imm64
-                     * immediate to a *memory* destination (impossible
-                     * in real amd64 anyway) -- not wired, see prelude *)
+        raise Todo (* string/float src, an address to a *memory*
+                     * destination, or an address to a Local/Param
+                     * entity -- not wired, see prelude *)
     (* claude: case Zil_rp / Zilo_m -- MOVL's own immediate form is a
      * genuinely different shape from MOVQ's -- goken's ymovl table
      * puts "Yi32,Yrl,Zil_rp" (op+reg,
@@ -972,7 +1238,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         raise Todo (* string/float src, or an immediate that doesn't
                      * fit 8 bits -- not wired, see prelude *)
 
-    | Lea (glob, off, r) ->
+    | Lea (Entity (A.Global (glob, off)), r) ->
         (* claude: case Zaut_r -- real address resolved lazily in `binary`'s own
          * thunk, not here -- a forward reference to a *TEXT* global
          * (e.g. "LEAQ later_proc(SB),R" naming a procedure declared
@@ -1001,11 +1267,40 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
             @ [0x8d] @ encode_rm (reg_num r) (RAbs addr)
           )
         }
+    | Lea (EntityScaled (A.Global (glob, off), idx, scale), r) ->
+        (* claude: same lazy-resolution case as the plain (no-index)
+         * global LEA just above, plus a scaled index -- real
+         * fmt/strtod.c's own "LEAQ tab1<>+0(SB)(CX*1),AX". *)
+        let rm_placeholder = RAbsIndexed (0, idx, scale) in
+        let bytes_placeholder =
+          rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(reg_num r) ~rm:rm_placeholder
+          @ [0x8d] @ encode_rm (reg_num r) rm_placeholder in
+        { size = List.length bytes_placeholder; binary = (fun () ->
+            let addr = resolve_global_addr env init_data glob off in
+            let rm = RAbsIndexed (addr, idx, scale) in
+            rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(reg_num r) ~rm
+            @ [0x8d] @ encode_rm (reg_num r) rm
+          )
+        }
+    | Lea ((GReg _ | Entity (A.Param _) | EntityScaled (A.Param _, _, _)), _) ->
+        raise (Impossible "amd64 grammar never constructs LEA of a bare \
+                            register or Entity(Param) -- see Ast_asm6.ml's Lea comment")
+    | Lea (g, r) ->
+        (* claude: case Zaut_r, every other `gen` shape -- register-
+         * indirect, scaled-index, or FP-relative local. None of these
+         * need the global case's own lazy resolution (the address is
+         * already fully known: either a real register, or `env.autosize`
+         * for a local, both available during Layout6.ml's sizing pass
+         * too), so this is a plain eager encode, same shape as every
+         * other `resolve_gen_full`-based instruction in this file. *)
+        let rm = resolve_gen_full env init_data node g in
+        let bytes = rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(reg_num r) ~rm
+                    @ [0x8d] @ encode_rm (reg_num r) rm in
+        { size = List.length bytes; binary = (fun () -> bytes) }
+  | _ -> raise (Impossible "move_rules: not a move/lea instruction")
 
-    (* --------------------------------------------------------------------- *)
-    (* Control flow *)
-    (* --------------------------------------------------------------------- *)
-
+let control_flow_rules (node : 'a T.node) (instr : instr) : action =
+  match instr with
     | Call { contents = A.IndirectJump r } ->
         (* claude: case Zo_m64 -- opcode 0xff /2, goken's ycall's
          * indirect form -- plain ModRM, no REX needed for a low register (confirmed
@@ -1045,76 +1340,89 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
         }
     (* claude: goken's yjmp/yjcond both real-relax between a 2-byte
      * short (rel8) and a 5/6-byte near (rel32) form based on the
-     * actual distance (span.c's Zjmp/Zbr cases) -- genuinely a
-     * multi-pass sizing problem (this instruction's own SIZE depends
-     * on a distance only known once every node's real_pc is assigned,
-     * which itself depends on every instruction's size -- the same
-     * kind of chicken-and-egg problem ARM32/MIPS/RISC-V's own branch-
-     * range stories needed real relaxation passes for). Only the short
-     * form is wired here: a real, if surprising, *second* obstacle
-     * to a naive "always emit the near form and let goken match it"
-     * plan (which would have sufficed for sizing alone) is that
-     * goken's own linker deletes any code that's unreachable except by
-     * falling through an unconditional jump that skips it entirely,
-     * *and* deletes the now-redundant jump itself once its target
-     * becomes the next real instruction (confirmed empirically: a
-     * "JMP L; <dead code>; L:" fixture assembles to nothing at all
-     * for the JMP or the dead code) -- so artificially padding a
-     * fixture's jump distances past 127 bytes to force goken's own
-     * near form doesn't actually work either, unless the "dead" code
-     * is made genuinely reachable some other way. Short form only is
-     * therefore both simpler *and* the only form actually exercised by
-     * realistic small fixtures; guarded (raise Todo) rather than
-     * silently emitting a wrong rel8 if a future fixture's distance
-     * doesn't fit -- checked lazily inside `binary`'s own thunk, since
-     * real_pc isn't resolved yet during Layout6.ml's sizing pass (same
-     * "eager size / lazy check" split RISC-V's own far-branch guard
-     * uses). *)
-    (* claude: case Zo_m64 -- opcode 0xff /4, goken's yjmp indirect form
-     * -- same shape and same "width:L_ just for REX.W=0" caveat as
-     * Call's own indirect case above. Confirmed against real 6a: "JMP
-     * BX" -> "ff e3". *)
-    | Jmp { contents = A.IndirectJump r } ->
-        let rm = RReg r in
-        let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm @ [0xff] @ encode_rm 4 rm in
-        { size = List.length bytes; binary = (fun () -> bytes) }
-    (* claude: case Zjmp -- direct JMP, short (rel8) form only, see the
-     * long prelude comment above for why. *)
-    | Jmp _ ->
-        { size = 2; binary = (fun () ->
-            match node.T.branch with
-            | None -> raise (Impossible "resolving should have set the branch field")
-            | Some ndst ->
-                let rel = ndst.T.real_pc - (node.T.real_pc + 2) in
-                if rel < -128 || rel > 127
-                then raise Todo (* target too far for the short form -- see prelude *);
-                [0xeb; rel land 0xff]
-          )
-        }
-    (* claude: case Zbr -- Jcc, short (rel8) form only, same story as
-     * Zjmp above (yjcond's own near-form row isn't wired). *)
-    | Jcc (cond, _) ->
-        { size = 2; binary = (fun () ->
-            match node.T.branch with
-            | None -> raise (Impossible "resolving should have set the branch field")
-            | Some ndst ->
-                let rel = ndst.T.real_pc - (node.T.real_pc + 2) in
-                if rel < -128 || rel > 127
-                then raise Todo (* target too far for the short form -- see prelude *);
-                [jcc_short_opcode cond; rel land 0xff]
-          )
-        }
+     * actual distance -- see Ast_asm6.ml's own Jmp/Jcc comment and
+     * Layout6.ml's own `relax` comment for the fixed-point that
+     * decides this ahead of time. Dispatches on the extracted `bool`
+     * (`is_long`), not a nested `{contents = ...}` pattern directly on
+     * the `bool ref` -- pattern-matching that ref's shape inline
+     * inside this same giant `instr` match reproducibly SIGSEGV'd on
+     * this aarch64 host stress-testing a real 35-file closure (never
+     * root-caused beyond that; reading the ref's value through an
+     * ordinary `!` dereference first, before branching on the plain
+     * `bool`, made the crash disappear). *)
+    | Jmp (opd, is_long_ref) ->
+        let is_long = !is_long_ref in
+        (match !opd with
+        | A.IndirectJump r ->
+            let rm = RReg r in
+            let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm @ [0xff] @ encode_rm 4 rm in
+            { size = List.length bytes; binary = (fun () -> bytes) }
+        | _ when not is_long ->
+            (* claude: case Zjmp -- direct JMP, short (rel8) form. *)
+            { size = 2; binary = (fun () ->
+                match node.T.branch with
+                | None -> raise (Impossible "resolving should have set the branch field")
+                | Some ndst ->
+                    let rel = ndst.T.real_pc - (node.T.real_pc + 2) in
+                    if rel < -128 || rel > 127
+                    then raise (Impossible "Layout6.ml's relaxation should have forced the near form");
+                    [0xeb; rel land 0xff]
+              )
+            }
+        | _ ->
+            (* claude: case Zjmpi -- direct JMP, near (rel32) form --
+             * confirmed against real 6a/6l: "JMP <far>" -> "e9
+             * <rel32>". *)
+            { size = 5; binary = (fun () ->
+                match node.T.branch with
+                | None -> raise (Impossible "resolving should have set the branch field")
+                | Some ndst ->
+                    let rel = ndst.T.real_pc - (node.T.real_pc + 5) in
+                    [0xe9] @ le32 rel
+              )
+            }
+        )
+    | Jcc (cond, _, is_long_ref) ->
+        let is_long = !is_long_ref in
+        if not is_long
+        then
+          (* claude: case Zbr -- Jcc, short (rel8) form. *)
+          { size = 2; binary = (fun () ->
+              match node.T.branch with
+              | None -> raise (Impossible "resolving should have set the branch field")
+              | Some ndst ->
+                  let rel = ndst.T.real_pc - (node.T.real_pc + 2) in
+                  if rel < -128 || rel > 127
+                  then raise (Impossible "Layout6.ml's relaxation should have forced the near form");
+                  [jcc_short_opcode cond; rel land 0xff]
+            )
+          }
+        else
+          (* claude: case Zbri -- Jcc, near (rel32) form -- 0x0f-
+           * escaped, confirmed against real 6a/6l: "JEQ <far>" -> "0f
+           * 84 <rel32>" (`jcc_short_opcode`'s own 0x74 plus 0x10,
+           * matching goken's own optab.c AJEQ row "0x74,0x84" -- every
+           * condition's near opcode is its own short opcode plus
+           * 0x10, confirmed for the full AJxx family). *)
+          { size = 6; binary = (fun () ->
+              match node.T.branch with
+              | None -> raise (Impossible "resolving should have set the branch field")
+              | Some ndst ->
+                  let rel = ndst.T.real_pc - (node.T.real_pc + 6) in
+                  [0x0f; jcc_short_opcode cond + 0x10] @ le32 rel
+            )
+          }
     (* claude: case Zlit (ynone's own row -- RET is a single fixed
      * opcode byte, no operand) -- RET is control flow too (goken's own
      * case shape puts it right after CALL) -- kept in this section
      * rather than its own, matching Codegen7.ml's own RET placement
      * right after B/BL/Bxx. *)
     | Ret -> { size = 1; binary = (fun () -> [0xc3]) }
+  | _ -> raise (Impossible "control_flow_rules: not a control-flow instruction")
 
-    (* --------------------------------------------------------------------- *)
-    (* Floating point *)
-    (* --------------------------------------------------------------------- *)
-
+let float_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
+    (instr : instr) : action =
+  match instr with
     (* claude: case Zm_r_xm (load direction) -- goken's yxmov-shaped
      * MOVSD/MOVSS -- the *load* form (`Zm_r_xm`, opcode 0x10) is tried
      * first in goken's own table, so it wins even for a plain
@@ -1123,7 +1431,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * clause order from `Move`'s own store-first split above, see
      * Ast_asm6.ml's `MovF` comment. No REX.W either precision. *)
     | MovF (prec, src, XReg r) ->
-        let rm = resolve_gen env node (gen_of_xgen src) in
+        let rm = resolve_gen_full env init_data node (gen_of_xgen src) in
         let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm
                     @ [0x0f; 0x10] @ encode_rm (xreg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -1131,12 +1439,16 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * destination isn't a register (the load clause above already
      * claims every `XReg` destination, reg-reg included). *)
     | MovF (prec, XReg r, dest) ->
-        let rm = resolve_gen env node (gen_of_xgen dest) in
+        let rm = resolve_gen_full env init_data node (gen_of_xgen dest) in
         let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm
                     @ [0x0f; 0x11] @ encode_rm (xreg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
-    | MovF (_, (XIndirect _ | XEntity _), (XIndirect _ | XEntity _)) ->
+    | MovF (_, (XIndirect _ | XEntity _ | XIndirectScaled _ | XEntityScaled _),
+               (XIndirect _ | XEntity _ | XIndirectScaled _ | XEntityScaled _)) ->
         raise (Impossible "real amd64 MOVSD/MOVSS never has both operands in memory")
+    | MovF (_, XFloatImm _, _) | MovF (_, _, XFloatImm _) ->
+        raise (Impossible "XFloatImm must be eliminated by Rewrite6.rewrite \
+                            before Codegen6.gen ever runs -- see Ast_asm6.ml's own comment")
 
     (* claude: case Zm_r_xm -- goken's yxm-shaped dyadic SSE arithmetic
      * -- real x86's own in-place 2-operand shape ("dst := dst op
@@ -1144,7 +1456,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * (confirmed: "ADDSD X1,X0" -> `f2 0f 58 c1`, reg=X0, rm=X1). No
      * REX.W either precision. *)
     | ArithF (op, prec, src, dst) ->
-        let rm = resolve_gen env node (gen_of_xgen src) in
+        let rm = resolve_gen_full env init_data node (gen_of_xgen src) in
         let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm
                     @ [0x0f; arithf_opcode_byte op] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -1156,7 +1468,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * CMP does -- see Ast_asm6.ml's `CmpF` comment for why this port
      * reuses the existing unsigned `Jcc` conditions as-is afterward. *)
     | CmpF (prec, src, dst) ->
-        let rm = resolve_gen env node (gen_of_xgen src) in
+        let rm = resolve_gen_full env init_data node (gen_of_xgen src) in
         let bytes = ucomis_prefix prec @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm
                     @ [0x0f; 0x2e] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -1170,7 +1482,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * regardless of `width`). `int_width` is always `Q_` or `L_`
      * here, never `W_`/`B_` -- grammar/parser never construct those. *)
     | CvtIntToF (int_width, prec, src, dst) ->
-        let rm = resolve_gen env node src in
+        let rm = resolve_gen_full env init_data node src in
         let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:int_width ~reg_field:(xreg_num dst) ~rm
                     @ [0x0f; 0x2a] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -1179,7 +1491,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * int-width-tracks-REX.W story. Confirmed: "CVTTSD2SQ X3,BX" ->
      * `f2 48 0f 2c db` vs "CVTTSD2SL X0,BX" -> `f2 0f 2c d8`. *)
     | CvtFToInt (int_width, prec, src, dst) ->
-        let rm = resolve_gen env node (gen_of_xgen src) in
+        let rm = resolve_gen_full env init_data node (gen_of_xgen src) in
         let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:int_width ~reg_field:(reg_num dst) ~rm
                     @ [0x0f; 0x2c] @ encode_rm (reg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -1189,7 +1501,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
      * argument here is the *source* precision (see Ast_asm6.ml's
      * CvtFPrec comment), no REX.W either direction. *)
     | CvtFPrec (src_prec, src, dst) ->
-        let rm = resolve_gen env node (gen_of_xgen src) in
+        let rm = resolve_gen_full env init_data node (gen_of_xgen src) in
         let bytes = [sse_prefix src_prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm
                     @ [0x0f; 0x5a] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
@@ -1211,6 +1523,53 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
 
     (* claude: case Zlit (ynone's own row, same as RET above). *)
     | Syscall -> { size = 2; binary = (fun () -> [0x0f; 0x05]) }
+  | _ -> raise (Impossible "float_rules: not a floating point/syscall instruction")
+
+let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node)
+    : action =
+  (* claude: split into per-section helper functions (arith_rules/
+   * move_rules/control_flow_rules/float_rules) rather than one giant
+   * match here -- found the hard way stress-testing real lib_core/libc:
+   * a single ~850-line `rules` match (this port's own real optab.c-
+   * sized dispatch, after every arch-specific addressing mode this
+   * session's hello_libc closure needed) reproducibly SIGSEGV'd on
+   * this aarch64 host partway through Layout6.ml's very first sizing
+   * pass over a real 35-file closure -- never inside any specific
+   * case's own logic (confirmed: adding a print statement inside the
+   * suspect Jmp arms never even printed before the crash), consistent
+   * with the *dispatch* itself, not any instruction's encoding, being
+   * the actual problem. Splitting the giant match into four smaller
+   * ones (this dispatch, then each section's own self-contained match)
+   * made the crash disappear -- never fully root-caused beyond that
+   * (a plausible culprit: OCaml 4.14's non-flambda aarch64 backend
+   * apparently doesn't always account for its own decision-tree's
+   * total reach when choosing between a short and long conditional
+   * branch encoding for a match this large, silently emitting an
+   * out-of-range branch -- but this is inference from the empirical
+   * fix, not a confirmed compiler bug reference). *)
+  match node.T.instr with
+  | T.Virt _ ->
+      raise (Impossible "rewrite should have transformed virtual instrs")
+  | T.TEXT (_, _, _) ->
+      { size = 0; binary = (fun () -> []) }
+  | T.WORD _ ->
+      (* claude: no literal pool on this arch (see Ast_asm6.ml's
+       * prelude) -- WORD is never emitted by Rewrite6.ml/Layout6.ml,
+       * so this is unreachable for this checkpoint. *)
+      raise Todo
+  | T.I instr ->
+    (match instr with
+     | Arith _ | Cmp _ | Test _ | CmpXchg _ | Lock
+     | MovQToXmm _ | MovQFromXmm _ | PsllQXmm _
+     | Shift _ | Extend _ | Unary _ | MulDiv _ | Imul2 _ | Cwd | Cdq | Cqo ->
+         arith_rules env init_data node instr
+     | Move _ | Lea _ ->
+         move_rules env init_data node instr
+     | Call _ | Jmp _ | Jcc _ | Ret ->
+         control_flow_rules node instr
+     | MovF _ | ArithF _ | CmpF _ | CvtIntToF _ | CvtFToInt _ | CvtFPrec _
+     | XorClearF _ | Syscall ->
+         float_rules env init_data node instr
     )
 
 let size_of_instruction (env : Codegen.env) (node : 'a T.node) : int =

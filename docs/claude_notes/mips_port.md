@@ -5,6 +5,11 @@ Status: **complete**. Every `linkers/vl/asm.c` case (0-48, non-contiguous:
 32,33,34,35,36,37,38,39,40,41,42,45,46,47,48) is either ported, confirmed
 to need no new code, or confirmed dead/unreachable in goken itself. See
 "Open issues" at the end for the one thing still genuinely unresolved.
+The real, full `hello.c`+`lib_core/libc` closure additionally links and
+runs correctly under `qemu-mips`, matching real goken's own reference
+build byte-for-byte on stdout and exit code -- see "hello_libc
+integration test" below for the ~20 further gaps (and 2 confirmed real
+bugs) only that scale of test could find.
 
 ## Goal
 
@@ -685,6 +690,168 @@ Case numbers refer to `linkers/vl/asm.c`'s `switch(o->type)`.
   this, so no way to test a port. Documented in `Codegenv.ml`, right
   before the "System" section; no CASE/BCASE constructor added to
   `Ast_asmv.ml`. This closed out the MIPS backlog.
+
+## hello_libc integration test
+
+Status: **complete**. Same idea as `arm_port.md`'s/`arm64_port.md`'s
+own equivalent sections (read `arm_port.md`'s first -- this is the
+MIPS sibling, same methodology, run in a later session): beyond the
+hand-written `tests/linker/mips_diff/` fixtures above (each one
+object file, one `TEXT`, no real linking), `tests/linker/
+hello_libc_mips/` stress-tests the whole pipeline against goken's own
+real `hello.c` (which calls into a real, reusable `lib_core/libc/
+libc.a`), compiled via real `vc -S` for its full transitive libc
+dependency closure (36 files), assembled with `ova`, linked with
+`ovl`, and run under `qemu-mips`. The fixture is self-contained
+(`hello.c`, `closure.tgz`, `test.sh`, `Makefile`, mirroring
+`hello_libc_arm/`'s exact structure) and needs no goken checkout to
+run day-to-day.
+
+This was the largest single-session gap-closing effort of the whole
+hello_libc series -- roughly 20 distinct real gaps closed (vs ARM64's
+~9), because `Codegenv.ml`/`Ast_asmv.ml` had much thinner
+pre-existing coverage going in: `Move1`'s own byte/halfword forms had
+*zero* memory-access codegen at all before this session, only
+register-to-register sign/zero-extend, for instance.
+
+**The goken-side assembler bug, found first, same shape as 5c/7c's
+already-fixed one.** goken's own `vc -S` (MIPS's C compiler) has the
+identical comma-padding `Pconv` artifact `compilers/5c/list.c`/
+`compilers/7c/list.c` already needed fixing earlier in this same
+session series -- `compilers/vc/list.c`'s own `Pconv` prints a stray
+leading/trailing comma next to a `D_NONE` operand (`"RET\t,"`,
+`"JAL\t,foo+0(SB)"`), which isn't valid `va` input either. Same fix
+applied: strip the dangling comma inside `Pconv` itself, right before
+`fmtstrcpy`. Rebuilt cleanly via `mk objtype=boot-gcc install`.
+
+**A second, genuinely new goken `-S`-printing quirk (not
+comma-related).** goken's real `Pconv` prints a *negative* "N(PC)"
+relative branch offset as its raw 32-bit-*unsigned-wraparound*
+decimal value instead of a signed one -- e.g. `"4294967291(PC)"` for
+what's really `-5(PC)` (a backward loop branch). This round-trips
+fine through real goken's own `va` (its C `int32` arithmetic wraps
+the same way), but xix's OCaml `int` is 63-bit, so `!pc + i` without
+truncation lands billions of instructions out of range instead of 5
+instructions back. Fixed in the **shared**
+`assembler/Resolve_labels.ml` (not MIPS-specific -- `Relative i ->
+Absolute (!pc + i)` now goes through `Int32.of_int i |>
+Int32.to_int` first, unconditionally, since it's a no-op for every
+realistic small relative offset), verified zero-regression across
+every arch. This is a *third* instance of the "goken's own -S/print
+output isn't valid re-assembleable input to itself" family, after the
+comma-padding bug and ARM64's `R31`-register-name bug (see
+`arm64_port.md`) -- worth specifically checking for on any *future*
+arch's own hello_libc effort too.
+
+**~20 real gaps closed getting the 36-file closure to assemble+link**
+(none exercised by any `mips_diff/*.s` fixture, all found by feeding
+the real closure through `ova`/`ovl` and reading the resulting
+error): a real "JAL 0(Rn)" (a call through a function pointer --
+confirmed real `va` grammar via `assemblers/va/a.y`'s own `nireg: ireg
+| con ireg`, genuinely more permissive than ARM's own `nireg: name |
+ireg`; goken's real optab.c row `{ AJAL, C_NONE, C_NONE, C_ZOREG, 18,
+4, REGLINK }` gives R31 as the implicit link-register destination);
+"$off(Rbase)" as a plain address-of-register-indirect (goken's real
+case 3, "mov $soreg,r ==> or/add $i,o,r" -- bypasses `Move2` entirely
+since the AST's shared `Ast_asm.ximm`'s own `Address` only wraps
+Param/Local/Global, never an arbitrary register+offset); byte/
+halfword memory access (`Move1`'s own B_/H_ forms, both the
+zero-offset fast path and the REGTMP-materialize expansion for a
+nonzero one); the plain 2-operand "NOR $imm,Rd" idiom (MIPS's own way
+to spell bitwise NOT when imm=0, confirmed directly against goken:
+"NOR $0,R1" on R1=5 gives R1=~5=250 as an exit code); AND/OR/XOR/SGT
+with an immediate (both the direct 16-bit-range case, whose own
+`opirr_arith_opcode` rows already existed with nothing dispatching to
+them, and a REGTMP-materialize fallback for anything bigger -- real
+`va`'s own fallback there is a genuine literal pool this port doesn't
+implement, so this deliberately diverges, matching goken's own
+computed *value* exactly without matching its bytes); real hardware
+DIV/DIVU (same "no destination register field, result lands in
+HI/LO" shape as the already-wired MUL); the word&harr;float&harr;double
+conversion family (MOVWD/MOVDW/MOVWF/MOVFW/MOVDF/MOVFD, a new
+`Ast_asmv.fcvt_dir`/`FCvt` constructor -- goken's own real case 33,
+sharing ABS_/NEG_'s exact encoding shape via its `span.c` `buildrep()`
+mechanism); plain float/double register-to-register moves (also real
+case 33, `AMOVF`/`AMOVD`'s own optab rows, reachable through the
+*already-existing* `Move2`/`vgen` grammar with no new AST or grammar
+needed at all, just a missing dispatch arm); double-precision memory
+access (MIPS32 has no native 64-bit FPU load/store at all -- goken's
+own real case 27/28 C code splits a double access into two
+F__-sized (LWC1/SWC1) halves against a register pair, confirmed
+directly: the low address word loads into Fn+1, address+4 into Fn);
+and a double float *literal* load (splitting the constant's own raw
+IEEE754 bit pattern into two 32-bit halves, MTC1'd separately into
+the register pair).
+
+**Two real, confirmed bugs found and fixed along the way** (not new
+gaps -- genuine bugs in behavior this port already claimed to
+support):
+
+1. **`CMPEQ_`/`CMPGE_`/`CMPGT_`'s first implementation silently
+   computed the wrong comparison result.** Reasoned from goken's own
+   C source alone (`OP_FRRR(oprrr(p->as), p->from.reg, p->to.reg,
+   p->to.reg)`, the exact same shape as every other case-32 op) it
+   looked correct -- but a real MIPS FP *compare* instruction has no
+   third 5-bit register field at all in that bit position (bits
+   [10:6] are the condition-code selector, not `fd`), so reusing the
+   generic 3-register `op_frrr` helper unmodified set an extra, wrong
+   bit. Caught only by manually decoding real goken's own linked
+   instruction words for a hand-written `"CMPEQD F2,F4"` probe and
+   finding the raw bytes differed from the naive derivation by
+   exactly bit 8 -- reading the C source alone was not enough this
+   time, the same durable "verify against the real reference binary"
+   lesson `arm64_port.md` already documents, but for a case where the
+   derivation *looked* airtight going in.
+2. **`"MOVW $sym+N(SB),Rt"` (address-of-global-plus-offset) silently
+   computed `sym+0` for any nonzero N.** The *exact same bug shape*
+   ARM32's own port already found and fixed (see `arm_port.md`'s own
+   hello_libc section) -- the offset parameter was even still named
+   `_offsetTODO` in `Codegenv.ml`, OCaml's own "acknowledged but
+   unused" marker, just never actually wired up for MIPS. This
+   construct never arises from hand-written assembly (you'd just give
+   each datum its own zero-offset symbol) -- it only comes from a
+   real compiler packing multiple string literals into one shared
+   `.string<>`-style blob per C file. Broke `hello.c`'s own real
+   `"%d"` formatting (`fmt/dofmt.c`'s shared digit-table string) --
+   the closure *linked and ran* with this bug present, printing
+   plausible-but-wrong ASCII (`"hello from libc.a: i + i = >"`
+   instead of `"...2 + 2 = 4"`) rather than crashing, which is
+   exactly why it took a real end-to-end run (not just a link success
+   check) to catch.
+
+**A real encoding-mechanics gotcha in this port's own `Bits.t` sanity
+checker**, hit fixing BFPT/BFPF ("branch if the FP condition flag is
+true/false" -- confirmed *real* `va` grammar, `LTYPEG` in
+`assemblers/va/a.y`, no register operand at all, set by a preceding
+CMPEQ_/CMPGE_/CMPGT_): goken's own base opcode is one flat literal
+(`SP(2,1)|(257<<16)` for BFPT), but placing that as a single
+`[(257,16)]` `Bits.t` entry passed OCaml type-checking yet failed at
+*link time* ("value 257 overflow outside its space (21-16)") --
+`Bits.sanity_check_32` infers each field's own bit-width from the gap
+to its *nearest neighboring declared position* in the list, not from
+real bit 32, and a neighboring caller (`op_irr_no_r3`) always places
+its own field at bit 21, boxing in bit 16's own inferred width to
+just 5 bits. Took two attempts to get the re-split right (first tried
+a `bcond`-style two-field split at bit19/bit16, which just moved the
+overflow one field over) -- the working fix decomposes 257/256's own
+actual *set bits* (bit 24 and bit 16) into two genuinely
+non-overlapping fields rather than guessing at a generic split.
+
+**Fixture discipline**: `mips_diff/global_offset_case19.s`
+(byte-identical, the address-of-global bug above) plus three
+`_check.s` fixtures (functional-only, matching this port's own
+already-established `_check` naming convention -- see
+`tests/linker/README.md`) for JAL-indirect
+(`indirect_jump_case18_check.s`), address-of-indirect
+(`addr_of_indirect_case3_check.s`), and BFPT/BFPF+CMPxx together
+(`bfpt_bfpf_case6_check.s`, the compare bug above, found via this
+exact probe). A first BFPT/BFPF fixture attempt used a bare `"MOVD
+$2.0,Fn"` float literal and hit a *separate*, unexplained goken
+behavior (its own linked binary balloons to 4104 bytes, suggesting
+some of its 8 "chipfloat" values route through a genuine literal pool
+this port doesn't replicate) -- sidestepped by building the two equal
+doubles via `MOVWD` (int-to-double conversion) instead, which is what
+actually isolated the real compare bug.
 
 ## Open issues
 

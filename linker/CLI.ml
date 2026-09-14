@@ -195,9 +195,20 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config)
   let graph = Rewrite5.rewrite graph in
   (* TODO? Optimize5.rewrite ? like ADD -N => SUB N *)
 
-  let symbols2, (data_size, bss_size) = 
+  let symbols2, (data_size, bss_size) =
     Layout.layout_data symbols data in
-  Layout.xdefine symbols2 symbols ("setR12" , T.Public) (T.SData2 (0, T.Data));
+  (* claude: setR12 must sit Codegen5.big (goken's BIG = 4092) bytes
+   * into the data segment, not at offset 0 -- goken's own layout.c:
+   * "xdefine(setR12, SDATA, 0L+BIG)". R12 is loaded with this address
+   * at process startup (rt0.s's "MOVW $setR12(SB), R12") and every
+   * later sym(SB) access through R12 is encoded by Codegen5's
+   * offset_to_R12 (x - big) assuming that bias -- offset 0 here was
+   * silently wrong by exactly `big` bytes for every SB-relative data
+   * access, undetected until a real multi-object closure (hello_libc)
+   * exercised any sym(SB) reference outside a single small test
+   * fixture's own object: found as a SIGSEGV writing 4092 bytes
+   * before _mainargv, see docs/claude_notes/plan_hello_libc_linking.md. *)
+  Layout.xdefine symbols2 symbols ("setR12" , T.Public) (T.SData2 (Codegen5.big, T.Data));
 
   (* can only check for undefined symbols after layout_data which 
    * can xdefine new symbols (e.g., etext)

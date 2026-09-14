@@ -15,25 +15,38 @@ let fill_bytes_for_int (global : A.global) (arr : T.byte array) (base : int)
 
   let array_16, array_32, array_64 = Endian.array_functions_of_endian endian in
 
-   (* TODO: if negative still need check range and convert to
-    * corresponding unsigned value with sign bits on?
-    *)
+   (* claude: a negative `n` here isn't necessarily a real negative
+    * *number* -- e.g. real 5c -S output for fmt/nan64.c's own
+    * "uvneginf<>" (a raw IEEE754 -Inf bit pattern, sign bit set) uses
+    * this same Int DATA path for what's really just a 32/64-bit
+    * pattern, not a signed magnitude. Convert to the size's own
+    * unsigned bit pattern via `land` (which, being a pure bitwise op,
+    * is correct for any OCaml int regardless of sign -- unlike
+    * split_16/split_32's `mod`, which follows the *dividend*'s sign
+    * in OCaml, i.e. is wrong for negative input; masking to a
+    * guaranteed-non-negative value first sidesteps that) before
+    * handing off to array_16/array_32, rather than rejecting negative
+    * input outright as before. Found stress-testing against real
+    * lib_core/libc -- see
+    * docs/claude_notes/plan_hello_libc_linking.md. *)
    match bits with
-   | Arch.Arch8 when n >= 0 && n <= 0xff ->
-      arr.(base) <- (Char.chr n)
-   | Arch.Arch16 when n >= 0 && n <= 0xffff ->
-      array_16 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
-   | Arch.Arch32 when n >= 0 && n <= 0xffffffff ->
-      array_32 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
+   | Arch.Arch8 when n >= -0x80 && n <= 0xff ->
+      arr.(base) <- Char.chr (n land 0xff)
+   | Arch.Arch16 when n >= -0x8000 && n <= 0xffff ->
+      array_16 (n land 0xffff) |> Array.iteri (fun i el -> arr.(base + i) <- el)
+   | Arch.Arch32 when n >= -0x80000000 && n <= 0xffffffff ->
+      array_32 (n land 0xffffffff) |> Array.iteri (fun i el -> arr.(base + i) <- el)
    (* claude: needed for ARM64 (and any other 64-bit arch) DATA
     * statements with an 8-byte int slice, e.g. a plain integer global
     * -- OCaml's native int is only 63 bits, so the upper bound this
     * project's other size cases check (e.g. Arch32's 0xffffffff)
     * isn't meaningfully expressible here; any `n` representable as an
-    * OCaml int at all already fits within 8 bytes, so only the
-    * existing "not negative" concern (see the TODO above, pre-
-    * existing and not specific to this case) applies. *)
-   | Arch.Arch64 when n >= 0 ->
+    * OCaml int at all already fits within 8 bytes. split_64 (unlike
+    * split_16/split_32) uses `land`/`lsr` exclusively, no `mod`, so
+    * it's already correct for a negative `n` as-is -- no masking
+    * needed here (and no *positive* 64-bit mask is expressible as a
+    * native OCaml int anyway). *)
+   | Arch.Arch64 ->
       array_64 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
    | _ ->
       failwith (spf "int for %s < 0 or too big for its size"
@@ -76,7 +89,38 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr)
                             (A.s_of_global global));
             )
 
-        | A.Float _ -> failwith "TODO: Datagen.gen for Float"
+        (* claude: a real float/double constant in the DATA segment,
+         * e.g. real 5c -S output for fmt/fltfmt.c's "pows10<>" table
+         * (goken's own precomputed powers-of-ten table for %e/%g
+         * float formatting): "DATA pows10<>+8(SB)/8,$1.0e+01" etc.
+         * Just the raw IEEE754 bit pattern, same byte-splitting as
+         * the Int case above (Int64.bits_of_float/Int32.bits_of_float
+         * give the bit pattern as an integer, which array_64/array_32
+         * then split into bytes the same way regardless of what the
+         * bits actually mean). Found stress-testing against real
+         * lib_core/libc -- see
+         * docs/claude_notes/plan_hello_libc_linking.md.
+         * NOTE: inherits fill_bytes_for_int's own Arch64 caveat above
+         * for the 8-byte case -- OCaml's native int is only 63 bits,
+         * so Int64.to_int silently drops a double's sign bit (bit
+         * 63), meaning a *negative* double here would be encoded
+         * wrong. Not an issue for pows10<>'s all-positive values;
+         * a real fix needs threading raw Int64/Int32 through
+         * (Endian's array_64 takes a plain int) instead. *)
+        | A.Float f ->
+            let (_array_16, array_32, array_64) =
+              Endian.array_functions_of_endian endian in
+            (match size_slice with
+            | 4 ->
+                let n = Int32.to_int (Int32.bits_of_float f) land 0xffffffff in
+                array_32 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
+            | 8 ->
+                let n = Int64.to_int (Int64.bits_of_float f) in
+                array_64 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
+            | _ ->
+                failwith (spf "float size for %s not in {4,8}"
+                            (A.s_of_global global))
+            )
 
         | A.String s ->
             if size_slice > 8 
@@ -87,16 +131,23 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr)
             done
 
         | A.Address (A.Global (global2, offset_global)) ->
-            (* TODO? always true? *)
-            assert (offset_global = 0);
             let info2 = Hashtbl.find symbols2 (T.symbol_of_global global2) in
-            let n = 
+            let n =
               match info2 with
               | T.SText2 real_pc -> real_pc
               | T.SData2 (offset, _kind) -> init_data + offset
             in
+            (* claude: a real "DATA sym+N(SB)/4,$other_sym+M(SB)"
+             * (address of a global *plus an offset*, e.g. a pointer
+             * into the middle of an array/struct rather than its
+             * start), found stress-testing against real
+             * lib_core/libc -- see
+             * docs/claude_notes/plan_hello_libc_linking.md. Was
+             * asserted always 0 before; just add it to the resolved
+             * base address like any other address computation. *)
+            let n = n + offset_global in
             (* TODO: what about 64 bits arch? *)
-            fill_bytes_for_int global (* not global2*) arr base n 
+            fill_bytes_for_int global (* not global2*) arr base n
                   Arch.Arch32 endian
 
         | (A.Address (A.Local _ | A.Param _)) ->

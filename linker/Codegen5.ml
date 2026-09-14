@@ -1232,19 +1232,37 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | String _ -> 
             (* stricter? what does 5l do with that? confusing I think *)
             error node "string not allowed in MOVW; use DATA"
-        | Address (Global (global, _offsetTODO)) ->
+        | Address (Global (global, offset_from_sym)) ->
             let from_part_when_small_offset_to_R12 =
-              try 
+              try
                 let v = Hashtbl.find env.syms (T.symbol_of_global global) in
                 match v with
                 | T.SData2 (offset, _kind) ->
-                    let final_offset = offset_to_R12 offset in
+                    (* claude: this used to ignore offset_from_sym
+                     * entirely (it was even named `_offsetTODO`,
+                     * OCaml's own "acknowledged unused" convention),
+                     * so any "MOVW $sym+N(SB),RT" with a nonzero N
+                     * silently computed the address of sym+0 instead
+                     * -- confirmed via a minimal 2-DATA-statement
+                     * single-file fixture (".string<>+8(SB)" resolved
+                     * to ".string<>+0(SB)"'s content) and, in the
+                     * wild, via a real hello_libc closure's dofmt.c
+                     * ("conv = "0123456789abcdef";", stored at some
+                     * .string<>+N(SB) with N != 0) landing on an
+                     * unrelated "<nil>" string 12 bytes earlier
+                     * instead. See
+                     * docs/claude_notes/plan_hello_libc_linking.md.
+                     * The `if final_offset =|= 0` bootstrap check
+                     * just below (for `MOVW $setR12(SB), R12`) still
+                     * works unchanged: setR12 is never referenced
+                     * with a nonzero offset_from_sym. *)
+                    let final_offset = offset_to_R12 (offset + offset_from_sym) in
                     (* super important condition! for bootstrapping
                      * setR12 in MOVW $setR12(SB), R12 and not
                      * transform it in ADD offset_set_R12, R12, R12.
                      *)
 
-                    if final_offset =|= 0 
+                    if final_offset =|= 0
                     then None
                     else immrot final_offset
                 | T.SText2 _ -> None

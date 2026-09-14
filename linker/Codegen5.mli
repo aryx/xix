@@ -26,4 +26,9 @@ val gen:
 (* internals *)
 val rules: Codegen.env -> Types.addr option -> Types5.node -> pool Codegen.action
 
+(* goken's BIG: the SB (R12/setR12) bias -- CLI.ml's link5 must define
+ * the setR12 symbol at exactly this offset into the data segment for
+ * offset_to_R12's own (x - big) to be correct. *)
+val big: int
+
 (*e: Codegen5.mli *)

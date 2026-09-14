@@ -487,10 +487,54 @@ let shstrtab_declared_size = 14
  *)
 let write_sections (config : Exec_file.linker_config)
  (sizes : Exec_file.sections_size) (chan : out_channel) : unit =
-  let shoff = config.header_size + sizes.text_size + sizes.data_size in
-  seek_out chan shoff;
   let endian = Arch.endian_of_arch config.arch in
   let bits = Arch.bits_of_arch config.arch in
+  let section_header_size =
+    match bits with
+    | Arch.Arch32 -> section_header_32_size
+    | Arch.Arch64 -> section_header_64_size
+    | Arch.Arch8 | Arch.Arch16 ->
+        failwith "8 and 16 bits arch not supported by ELF"
+  in
+  (* claude: goken's own liblk/elf.c computes this seek position as a
+   * flat "HEADR+textsize+datsize+symsize", with no rounding at all --
+   * confirmed directly against a real goken build (readelf -S on a
+   * real, `5l -s`-stripped `addr.s` binary): its 3 section headers sit
+   * at file offset 0xc0, *before* .data's own real, page-rounded file
+   * offset (0x1000) -- i.e. goken tucks this small (~134-byte) table
+   * into the leftover gap between the unrounded "as if densely
+   * packed" layout and .data's real, rounded position, relying on
+   * that gap being at least ~134 bytes. On real (non-`-s`) goken
+   * builds this gap question never comes up: symsize is always the
+   * real, sizeable symbol table goken always emits, so the flat
+   * formula already lands past the rounded position on its own, gap
+   * or no gap (see the `-s`-vs-real-build contrast in
+   * docs/claude_notes/plan_hello_libc_linking.md). o5l never writes a
+   * symbol table at all (symsize is always 0 here, same situation as
+   * every `-s` build), so o5l depends on that same gap every time --
+   * and unlike goken's own small hand-written test fixtures, a real
+   * multi-object closure (hello_libc) has a large enough .text to
+   * shrink the gap below 134 bytes, so the flat formula corrupts a
+   * window of real, already-written .data content instead (found via
+   * a "hello\n" string landing exactly in that window and printing
+   * garbage). Reproducing goken's flat formula when the gap is big
+   * enough keeps this byte-identical with every existing fixture
+   * (none of which are large enough to hit the shortfall); falling
+   * back to a safe post-data placement only when it would not fit
+   * keeps larger real-world links correct, at the cost of no longer
+   * being byte-identical to a real `-s` goken build in that case --
+   * unavoidable, since goken's own `-s` layout has no safe spot left
+   * to put this table in either. *)
+  let shoff_flat = config.header_size + sizes.text_size + sizes.data_size in
+  let data_off = Int_.rnd (config.header_size + sizes.text_size) config.init_round in
+  let section_table_size =
+    nb_section_headers * section_header_size + shstrtab_declared_size in
+  let shoff =
+    if shoff_flat + section_table_size <= data_off
+    then shoff_flat
+    else data_off + sizes.data_size
+  in
+  seek_out chan shoff;
   let (_, output_32, output_64) = Endian.output_functions_of_endian endian in
   let section_header_32 name_idx typ flags addr offset size align =
     output_32 chan name_idx;
@@ -527,15 +571,7 @@ let write_sections (config : Exec_file.linker_config)
     | Arch.Arch8 | Arch.Arch16 ->
         failwith "8 and 16 bits arch not supported by ELF"
   in
-  let section_header_size =
-    match bits with
-    | Arch.Arch32 -> section_header_32_size
-    | Arch.Arch64 -> section_header_64_size
-    | Arch.Arch8 | Arch.Arch16 ->
-        failwith "8 and 16 bits arch not supported by ELF"
-  in
   let text_off = config.header_size in
-  let data_off = Int_.rnd (config.header_size + sizes.text_size) config.init_round in
   let init_data =
     match config.init_data with
     | None -> raise (Impossible "init_data should be set by now after layout_text")

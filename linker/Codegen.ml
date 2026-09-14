@@ -65,14 +65,23 @@ let default_rules (env : env) (init_data : Types.addr option)
             (* error node ... *)
             failwith "string not allowed with WORD; use DATA"
 
-        | Ast_asm.Address (Ast_asm.Global (global, _offsetTODO)) -> 
+        (* claude: offset_from_sym used to be discarded here too (same
+         * `_offsetTODO` naming as Codegen5.ml's own copy of this bug
+         * -- both silently computed sym+0 for any "MOVW $sym+N(SB),RT"
+         * that overflows into a literal-pool WORD instead of the fast
+         * ADD-based path). This is the one actually exercised by a
+         * real "$.string<>+N(SB)" reference with N large enough that
+         * offset_to_R12 doesn't fit an immediate rotate -- see
+         * Codegen5.ml's own fix and
+         * docs/claude_notes/plan_hello_libc_linking.md. *)
+        | Ast_asm.Address (Ast_asm.Global (global, offset_from_sym)) ->
             let v = Hashtbl.find env.syms (Types.symbol_of_global global) in
             (match v with
-             | Types.SText2 real_pc -> [ [(real_pc, 0)] ]
-             | Types.SData2 (offset, _kind) -> 
+             | Types.SText2 real_pc -> [ [(real_pc + offset_from_sym, 0)] ]
+             | Types.SData2 (offset, _kind) ->
                  (match init_data with
                  | None -> raise (Impossible "init_data should be set by now")
-                 | Some init_data -> [ [(init_data + offset, 0)] ]
+                 | Some init_data -> [ [(init_data + offset + offset_from_sym, 0)] ]
                  )
             )
 

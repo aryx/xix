@@ -55,6 +55,9 @@ CASES=(
     "tests/linker/arm_diff/movs_case.s"
     "tests/linker/arm_diff/shift_operand.s"
     "tests/linker/arm_diff/movf_const.s"
+    "tests/linker/arm_diff/data_float.s"
+    "tests/linker/arm_diff/data_addr_offset.s"
+    "tests/linker/arm_diff/data_neg_int.s"
 )
 
 FAIL=0

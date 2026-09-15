@@ -7,6 +7,8 @@ SRC=Ast_asm.ml \
   Ast_asm5.ml Meta_ast_asm5.ml \
   Ast_asmv.ml \
   Ast_asmi.ml \
+  Ast_asm7.ml \
+  Ast_asm6.ml \
   Object_file.ml \
   Arch_linker.ml
 

@@ -11,6 +11,8 @@ SRC= Token_asm.ml Lexer_asm.ml \
  Parser_asm5.ml Parse_asm5.ml \
  Parser_asmv.ml Parse_asmv.ml \
  Parser_asmi.ml Parse_asmi.ml \
+ Parser_asm7.ml Parse_asm7.ml \
+ Parser_asm6.ml Parse_asm6.ml \
  Check_asm5.ml \
  Resolve_labels.ml \
  CLI.ml Main.ml
@@ -33,6 +35,8 @@ AUTOGEN=Lexer_asm.ml \
   Parser_asm5.ml Parser_asm5.mli \
   Parser_asmv.ml Parser_asmv.mli \
   Parser_asmi.ml Parser_asmi.mli \
+  Parser_asm7.ml Parser_asm7.mli \
+  Parser_asm6.ml Parser_asm6.mli \
 
 beforedepend:V: $AUTOGEN
 depend:V: beforedepend
@@ -44,6 +48,10 @@ Parser_asm5.ml Parser_asm5.mli: Parser_asm5.mly
 Parser_asmv.ml Parser_asmv.mli: Parser_asmv.mly
 	$OCAMLYACC $prereq
 Parser_asmi.ml Parser_asmi.mli: Parser_asmi.mly
+	$OCAMLYACC $prereq
+Parser_asm7.ml Parser_asm7.mli: Parser_asm7.mly
+	$OCAMLYACC $prereq
+Parser_asm6.ml Parser_asm6.mli: Parser_asm6.mly
 	$OCAMLYACC $prereq
 
 NUKEFILES=$AUTOGEN

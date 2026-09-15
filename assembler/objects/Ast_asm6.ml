@@ -686,7 +686,16 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
       );
       gen_operand gen2
   | Lea (g, _) -> gen_operand g
-  | Call b | Jmp (b, _) | Jcc (_, b, _) -> A.visit_globals_branch_operand f b
+  (* claude: ocaml-light's own pattern-matcher rejects an or-pattern
+   * that binds the same variable in more than one alternative
+   * ("This variable is bound several times in this matching") --
+   * modern OCaml allows it, but this project must also compile under
+   * ocaml-light (see the top-level CLAUDE.md), so split into 3 arms
+   * instead of the single "Call b | Jmp (b,_) | Jcc (_,b,_)" this
+   * used to be. *)
+  | Call b -> A.visit_globals_branch_operand f b
+  | Jmp (b, _) -> A.visit_globals_branch_operand f b
+  | Jcc (_, b, _) -> A.visit_globals_branch_operand f b
   | Arith (_, _, imr1, gen1) -> imr_operand imr1; gen_operand gen1
   | Cmp (_, gen1, imr1) -> gen_operand gen1; imr_operand imr1
   | Test (_, _, gen1) -> gen_operand gen1

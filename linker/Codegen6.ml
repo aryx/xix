@@ -131,8 +131,16 @@ type resolved_gen =
  * "01 d8", no prefix at all), the whole byte is omitted when R/B are
  * also both 0. Returns a 0-or-1-element list so callers can just `@`
  * it in either case. *)
+(* claude: split into 3 arms (rather than one shared "Ctor1 (A.R n)
+ * | Ctor2 (A.R n, _) | Ctor3 (A.R n, _, _, _) -> ..." or-pattern) --
+ * ocaml-light's own pattern-matcher rejects a variable bound in more
+ * than one or-pattern alternative ("This variable is bound several
+ * times in this matching"), unlike modern OCaml which allows it (see
+ * the top-level CLAUDE.md's ocaml-light compatibility constraint). *)
 let rex_b_of_resolved_gen = function
-  | RReg (A.R n) | RMem (A.R n, _) | RMemIndexed (A.R n, _, _, _) -> if n >= 8 then 1 else 0
+  | RReg (A.R n) -> if n >= 8 then 1 else 0
+  | RMem (A.R n, _) -> if n >= 8 then 1 else 0
+  | RMemIndexed (A.R n, _, _, _) -> if n >= 8 then 1 else 0
   | RAbs _ | RAbsIndexed _ -> 0
 
 (* claude: REX.X (SIB.index's own high bit) -- the scaled-index sibling
@@ -143,7 +151,8 @@ let rex_b_of_resolved_gen = function
  * correctness rather than left as a silent gap, same as B/R above. *)
 let rex_x_of_resolved_gen = function
   | RReg _ | RMem _ | RAbs _ -> 0
-  | RMemIndexed (_, _, A.R n, _) | RAbsIndexed (_, A.R n, _) -> if n >= 8 then 1 else 0
+  | RMemIndexed (_, _, A.R n, _) -> if n >= 8 then 1 else 0
+  | RAbsIndexed (_, A.R n, _) -> if n >= 8 then 1 else 0
 
 (* claude: goken's own regrex[D_SPB..D_DIB] = 0x40 quirk (obj.c) --
  * real amd64 ModRM/opcode-embedded register field values 4-7, when

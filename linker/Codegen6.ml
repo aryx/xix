@@ -79,8 +79,16 @@ let reg_num (A.R i) = i
  * the underlying encoding. *)
 let xreg_num (X i) = i
 
-let modrm ~md ~reg ~rm = ((md land 3) lsl 6) lor ((reg land 7) lsl 3) lor (rm land 7)
-let sib ~scale ~index ~base = ((scale land 3) lsl 6) lor ((index land 7) lsl 3) lor (base land 7)
+(* claude: recent OCaml accepts the punned binder `~md` (short for
+ * `~md:md`) in a function definition -- ocaml-light's parser only
+ * accepts the older, fully-spelled-out `~label:pattern` form (and
+ * even then only checks the label syntactically, not the actual
+ * argument order/names against call sites -- see its own "use of
+ * label ~x: (skipping it)" warning), so every call site here already
+ * passes labels in this same md/reg/rm resp. scale/index/base order
+ * regardless. *)
+let modrm ~md:md ~reg:reg ~rm:rm = ((md land 3) lsl 6) lor ((reg land 7) lsl 3) lor (rm land 7)
+let sib ~scale:scale ~index:index ~base:base = ((scale land 3) lsl 6) lor ((index land 7) lsl 3) lor (base land 7)
 
 let le16 (v : int) : int list =
   [ v land 0xff; (v asr 8) land 0xff ]
@@ -187,8 +195,18 @@ let rex_x_of_resolved_gen = function
  * clauses, where `reg_field` is always a fixed ext digit) opt out. *)
 let regrex_forces_rex (n : int) : bool = n >= 4 && n <= 7
 
-let rex_opt ~(reg_is_register : bool) ~(width : width) ~(reg_field : int)
-    ~(rm : resolved_gen) : int list =
+(* claude: recent OCaml accepts the punned+typed binders below (e.g.
+ * `~(reg_is_register : bool)`, short for
+ * `~reg_is_register:(reg_is_register : bool)`) -- ocaml-light's
+ * parser only accepts the older, fully-spelled-out `~label:pattern`
+ * form. Every call site below (e.g. `rex_opt ~reg_is_register:false
+ * ~width ~reg_field:... ~rm`) needed the same treatment on its own
+ * punned arguments (`~width`, `~rm`, ...) -- ocaml-light parses
+ * those, but as `Unbound value ~` (it doesn't know the `~name` sugar
+ * means "pass `name` under this label" at all), so every one is
+ * spelled out as `~width:width`/`~rm:rm`/etc. throughout this file. *)
+let rex_opt ~reg_is_register:(reg_is_register : bool) ~width:(width : width)
+    ~reg_field:(reg_field : int) ~rm:(rm : resolved_gen) : int list =
   let w = match width with Q_ -> 8 | L_ | W_ | B_ -> 0 in
   let r = if reg_field >= 8 then 4 (* Rxr *) else 0 in
   let x = rex_x_of_resolved_gen rm lsl 1 in
@@ -456,7 +474,13 @@ let imm_group_opcode (width : width) : int = match width with B_ -> 0x80 | Q_ | 
  * own `land`-based truncation already produces the correct bytes for
  * any of these regardless of magnitude, so only the *range guard*
  * needed widening, no encoding logic). *)
-let fits_yi32 (v : int) : bool = v >= -0x8000_0000 && v <= 0xFFFF_FFFF
+(* claude: recent OCaml accepts "_" digit-group separators in numeric
+ * literals (e.g. 0x8000_0000) -- ocaml-light's lexer doesn't, and
+ * silently mis-tokenizes "0x8000_0000" as "0x8000" followed by a
+ * separate "_0000" identifier (then fails to typecheck the bogus
+ * resulting application). Separators stripped throughout this file's
+ * real code (comments left as-is). *)
+let fits_yi32 (v : int) : bool = v >= -0x80000000 && v <= 0xFFFFFFFF
 
 (* claude: L_/W_ get the same `oclass()`-style widened range as
  * `fits_yi32` above (accepting a value like 0xFFFFFFFB, written as a
@@ -478,8 +502,8 @@ let fits_yi32 (v : int) : bool = v >= -0x8000_0000 && v <= 0xFFFF_FFFF
 let fits_wide_imm (width : width) (v : int) : bool =
   match width with
   | W_ -> (v >= -0x8000 && v <= 0x7fff) || (v >= 0 && v <= 0xffff)
-  | L_ -> (v >= -0x8000_0000 && v <= 0x7fff_ffff) || (v >= 0 && v <= 0xffff_ffff)
-  | Q_ -> v >= -0x8000_0000 && v <= 0x7fff_ffff
+  | L_ -> (v >= -0x80000000 && v <= 0x7fffffff) || (v >= 0 && v <= 0xffffffff)
+  | Q_ -> v >= -0x80000000 && v <= 0x7fffffff
   | B_ -> raise (Impossible "B_ has no wide-immediate arith form")
 let wide_imm_bytes (width : width) (v : int) : int list =
   match width with
@@ -549,8 +573,10 @@ let extend_shape = function
  * already fully determines both the source and destination width by
  * its own name), so the REX.W and byte-source-forcing concerns are
  * threaded independently instead. *)
-let extend_rex ~(need_w : bool) ~(byte_source : bool) ~(reg_field : int)
-    ~(rm : resolved_gen) : int list =
+(* claude: see rex_opt's own comment above -- same punned+typed-binder
+ * vs. ocaml-light issue. *)
+let extend_rex ~need_w:(need_w : bool) ~byte_source:(byte_source : bool)
+    ~reg_field:(reg_field : int) ~rm:(rm : resolved_gen) : int list =
   let w = if need_w then 8 else 0 in
   let r = if reg_field >= 8 then 4 else 0 in
   let x = rex_x_of_resolved_gen rm lsl 1 in
@@ -713,7 +739,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
          * split below) there's no larger form to fall back to; the
          * full unsigned byte range (not just -128..127) is accepted. *)
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:(arith_ext op) ~rm
+        let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:(arith_ext op) ~rm:rm
                     @ [imm_group_opcode B_] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Zibo_m -- goken's yxorl/yaddl's own Yi8 row, same
@@ -721,7 +747,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * that clause), just L_/Q_/W_'s wider sign-extended-imm8 form. *)
     | Arith (width, op, Imm v, dest) when v >= -128 && v < 128 ->
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(arith_ext op) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:(arith_ext op) ~rm:rm
                     @ [imm_group_opcode width] @ encode_rm (arith_ext op) rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Zil_ -- goken's own "Yi32,Yax,Zil_,1" row, the
@@ -741,7 +767,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * here -- `rm:(RReg r)` (AX, index 0) never itself contributes,
      * but `rex_opt`'s own `width` parameter does. *)
     | Arith (width, op, Imm v, GReg r) when reg_num r = 0 && fits_wide_imm width v ->
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:0 ~rm:(RReg r)
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:0 ~rm:(RReg r)
                     @ [(arith_ext op lsl 3) lor 0x05] @ wide_imm_bytes width v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Zilo_m -- the general ModRM form (opcode 0x81),
@@ -750,7 +776,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * Zil_ case above. *)
     | Arith (width, op, Imm v, dest) when fits_wide_imm width v ->
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(arith_ext op) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:(arith_ext op) ~rm:rm
                     @ [0x81] @ encode_rm (arith_ext op) rm @ wide_imm_bytes width v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Arith (_, _op, Imm _, _dest) ->
@@ -760,7 +786,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * dest). *)
     | Arith (width, op, Reg r, dest) ->
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width:width ~reg_field:(reg_num r) ~rm:rm
                     @ [arith_rr_opcode width op] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -776,7 +802,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * non-register dest can't arise from real input. *)
     | Arith (width, op, Mem src, GReg r) ->
         let rm = resolve_gen_full env init_data node src in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width:width ~reg_field:(reg_num r) ~rm:rm
                     @ [arith_rr_opcode width op + 2] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Arith (_, _, Mem _, (Indirect _ | Entity _ | IndirectScaled _ | EntityScaled _)) ->
@@ -806,13 +832,13 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * above. *)
     | Cmp (B_, g, Imm v) when v >= -128 && v <= 255 ->
         let rm = resolve_gen_full env init_data node g in
-        let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:7 ~rm
+        let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:7 ~rm:rm
                     @ [imm_group_opcode B_] @ encode_rm 7 rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Zm_ibo (Q_/L_/W_). *)
     | Cmp (width, g, Imm v) when v >= -128 && v < 128 ->
         let rm = resolve_gen_full env init_data node g in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:7 ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:7 ~rm:rm
                     @ [imm_group_opcode width] @ encode_rm 7 rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Z_il -- ycmpl's own "Yax,Yi32,Z_il,1" row, Cmp's own
@@ -821,7 +847,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * exactly AX and the immediate doesn't fit imm8. Confirmed against
      * real 6a/6l: "CMPQ AX,$-1000" -> `48 3d 18 fc ff ff`. *)
     | Cmp (width, GReg r, Imm v) when reg_num r = 0 && fits_wide_imm width v ->
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:0 ~rm:(RReg r)
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:0 ~rm:(RReg r)
                     @ [(7 lsl 3) lor 0x05] @ wide_imm_bytes width v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Zm_ilo -- the general ModRM form (opcode 0x81 /7),
@@ -829,7 +855,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * Confirmed: "CMPL CX,$0x100000" -> `81 f9 00 00 10 00`. *)
     | Cmp (width, g, Imm v) when fits_wide_imm width v ->
         let rm = resolve_gen_full env init_data node g in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:7 ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:7 ~rm:rm
                     @ [0x81] @ encode_rm 7 rm @ wide_imm_bytes width v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Cmp (_, _g, Imm _) ->
@@ -858,11 +884,11 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * own address-immediate case above. *)
     | Cmp (width, GReg r, Addr (A.Global (glob, off))) when reg_num r = 0 ->
         let bytes_placeholder =
-          prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:0 ~rm:(RReg r)
+          prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:0 ~rm:(RReg r)
           @ [(7 lsl 3) lor 0x05] @ wide_imm_bytes width 0 in
         { size = List.length bytes_placeholder; binary = (fun () ->
             let addr = resolve_global_addr env init_data glob off in
-            prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:0 ~rm:(RReg r)
+            prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:0 ~rm:(RReg r)
             @ [(7 lsl 3) lor 0x05] @ wide_imm_bytes width addr
           )
         }
@@ -870,11 +896,11 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
         let rm = resolve_gen_full env init_data node g in
         let rm_placeholder = rm in
         let bytes_placeholder =
-          prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:7 ~rm:rm_placeholder
+          prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:7 ~rm:rm_placeholder
           @ [0x81] @ encode_rm 7 rm_placeholder @ wide_imm_bytes width 0 in
         { size = List.length bytes_placeholder; binary = (fun () ->
             let addr = resolve_global_addr env init_data glob off in
-            prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:7 ~rm
+            prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:7 ~rm:rm
             @ [0x81] @ encode_rm 7 rm @ wide_imm_bytes width addr
           )
         }
@@ -895,7 +921,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * against a named local). *)
     | Cmp (width, GReg r, Mem m) ->
         let rm = resolve_gen_full env init_data node m in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width:width ~reg_field:(reg_num r) ~rm:rm
                     @ [cmp_rm_opcode width + 2] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Cmp (_, _g, Mem _) ->
@@ -909,7 +935,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * y-table row this port doesn't need yet -- not wired. *)
     | Cmp (width, g, Reg r) ->
         let rm = resolve_gen_full env init_data node g in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width:width ~reg_field:(reg_num r) ~rm:rm
                     @ [cmp_rm_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -919,7 +945,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * comment), rm=gen. *)
     | Test (width, r, g) ->
         let rm = resolve_gen_full env init_data node g in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width:width ~reg_field:(reg_num r) ~rm:rm
                     @ [test_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -928,7 +954,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * Move's own store clause (reg_field=Rs, rm=gen). *)
     | CmpXchg (width, r, dest) ->
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width:width ~reg_field:(reg_num r) ~rm:rm
                     @ [0x0f; cmpxchg_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -943,14 +969,14 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * confuse it with, since this whole shape is MOVQ-only). *)
     | MovQToXmm (src, dst) ->
         let rm = resolve_gen_full env init_data node src in
-        let bytes = [0x66] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(xreg_num dst) ~rm
+        let bytes = [0x66] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(xreg_num dst) ~rm:rm
                     @ [0x0f; 0x6e] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Zr_m_xm -- the reverse direction, "MOVQ r/m64,xmm",
      * opcode `0x66 REX.W 0F 7E`. *)
     | MovQFromXmm (src, dst) ->
         let rm = resolve_gen_full env init_data node dst in
-        let bytes = [0x66] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(xreg_num src) ~rm
+        let bytes = [0x66] @ rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(xreg_num src) ~rm:rm
                     @ [0x0f; 0x7e] @ encode_rm (xreg_num src) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -962,7 +988,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * from `prefix66`/`width`). *)
     | PsllQXmm (r, imm) ->
         let rm = RReg (A.R (xreg_num r)) in
-        let bytes = [0x66] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:6 ~rm
+        let bytes = [0x66] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:6 ~rm:rm
                     @ [0x0f; 0x73] @ encode_rm 6 rm @ [imm land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -973,13 +999,13 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * narrower range the way Arith's own imm8-vs-imm32 split works. *)
     | Shift (width, op, ShiftImm 1, dest) ->
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(shift_ext op) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:(shift_ext op) ~rm:rm
                     @ [shift_by1_opcode width] @ encode_rm (shift_ext op) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Zibo_m (shift-by-immediate-N). *)
     | Shift (width, op, ShiftImm v, dest) ->
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(shift_ext op) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:(shift_ext op) ~rm:rm
                     @ [shift_byimm_opcode width] @ encode_rm (shift_ext op) rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Zo_m (shift-by-CL/CX) -- goken's own y-table only
@@ -988,7 +1014,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * with "notfound" -- guarded here the same way. *)
     | Shift (width, op, ShiftReg r, dest) when reg_num r = 1 (* CX *) ->
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(shift_ext op) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:(shift_ext op) ~rm:rm
                     @ [shift_bycl_opcode width] @ encode_rm (shift_ext op) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Shift (_, _, ShiftReg _, _) ->
@@ -1006,7 +1032,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
          * `resolve_gen`'s own SData2 comment for why the plain version
          * can't handle it. *)
         let rm = resolve_gen_full env init_data node src in
-        let bytes = extend_rex ~need_w ~byte_source ~reg_field:(reg_num dst) ~rm
+        let bytes = extend_rex ~need_w:need_w ~byte_source:byte_source ~reg_field:(reg_num dst) ~rm:rm
                     @ opcode_bytes @ encode_rm (reg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -1019,7 +1045,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
          * pool cursor, incremented in place) needs it, see `Extend`'s
          * own analogous comment above. *)
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(unary_ext op) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:(unary_ext op) ~rm:rm
                     @ [unary_opcode width op] @ encode_rm (unary_ext op) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -1029,7 +1055,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * resolution doesn't care which AST field it came from). *)
     | MulDiv (width, op, src) ->
         let rm = resolve_gen_full env init_data node src in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width ~reg_field:(muldiv_ext op) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:false ~width:width ~reg_field:(muldiv_ext op) ~rm:rm
                     @ [muldiv_opcode width] @ encode_rm (muldiv_ext op) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -1038,7 +1064,7 @@ let arith_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * assignment `Move`'s own load clause uses). *)
     | Imul2 (width, src, dst) ->
         let rm = resolve_gen_full env init_data node src in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num dst) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width:width ~reg_field:(reg_num dst) ~rm:rm
                     @ [0x0f; 0xaf] @ encode_rm (reg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -1057,7 +1083,7 @@ let move_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node
          * (0x89, or 0x88 for B_ -- see `mov_store_opcode`) -- same
          * shape for MOVQ/MOVL/MOVW/MOVB alike. *)
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width:width ~reg_field:(reg_num r) ~rm:rm
                     @ [mov_store_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (width, Either.Left src, GReg r) ->
@@ -1065,7 +1091,7 @@ let move_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node
          * (0x8b, or 0x8a for B_ -- see `mov_load_opcode`) -- same for
          * all. *)
         let rm = resolve_gen_full env init_data node src in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width:width ~reg_field:(reg_num r) ~rm:rm
                     @ [mov_load_opcode width] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (_, Either.Left (Indirect _ | Entity _ | IndirectScaled _ | EntityScaled _),
@@ -1088,17 +1114,17 @@ let move_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node
      * ("MOVB $0,AL" -> "b0 00", not a self-XOR). *)
     | Move ((Q_ | L_ | W_) as width, Either.Right (A.Int 0), GReg r) ->
         let rm = RReg r in
-        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width ~reg_field:(reg_num r) ~rm
+        let bytes = prefix66 width @ rex_opt ~reg_is_register:true ~width:width ~reg_field:(reg_num r) ~rm:rm
                     @ [0x31] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
-    | Move (Q_, Either.Right (A.Int v), dest) when v >= -0x8000_0000 && v <= 0x7fff_ffff ->
+    | Move (Q_, Either.Right (A.Int v), dest) when v >= -0x80000000 && v <= 0x7fffffff ->
         (* claude: case Zilo_m -- immediate (sign-extends to 64-bit) ->
          * mem/reg, goken's Zilo_m (0xc7 /0) -- Ys32's own range only;
          * see the wider `Yi32` clause below for a value like
          * "$0xFFFFFFF6" that doesn't sign-extend correctly but still
          * fits 32 bits unsigned. *)
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = rex_opt ~reg_is_register:false ~width:Q_ ~reg_field:0 ~rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
+        let bytes = rex_opt ~reg_is_register:false ~width:Q_ ~reg_field:0 ~rm:rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Ziq_rp (register, `l==0` downgrade) -- goken's own
      * Ziq_rp case body (span.c) checks `l = v>>32; if(l==0){ clear
@@ -1124,7 +1150,7 @@ let move_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node
      * `48 c7 44 24 f8 f6 ff ff ff`. *)
     | Move (Q_, Either.Right (A.Int v), dest) when fits_yi32 v ->
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = rex_opt ~reg_is_register:false ~width:Q_ ~reg_field:0 ~rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
+        let bytes = rex_opt ~reg_is_register:false ~width:Q_ ~reg_field:0 ~rm:rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Ziq_rp (true 64-bit immediate) -- only reached now
      * when the immediate fits neither `Ys32` nor the wider `Yi32`
@@ -1193,7 +1219,7 @@ let move_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (L_, Either.Right (A.Int v), dest) when fits_yi32 v ->
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
+        let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm:rm @ [0xc7] @ encode_rm 0 rm @ le32 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (L_, Either.Right _, _) ->
         raise Todo (* string/float src, or an immediate that doesn't
@@ -1216,7 +1242,7 @@ let move_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (W_, Either.Right (A.Int v), dest) when fits_yi32 v ->
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = prefix66 W_ @ rex_opt ~reg_is_register:false ~width:W_ ~reg_field:0 ~rm
+        let bytes = prefix66 W_ @ rex_opt ~reg_is_register:false ~width:W_ ~reg_field:0 ~rm:rm
                     @ [0xc7] @ encode_rm 0 rm @ le16 v in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (W_, Either.Right _, _) ->
@@ -1240,7 +1266,7 @@ let move_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (B_, Either.Right (A.Int v), dest) when v >= -128 && v <= 255 ->
         let rm = resolve_gen_full env init_data node dest in
-        let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:0 ~rm
+        let bytes = rex_opt ~reg_is_register:false ~width:B_ ~reg_field:0 ~rm:rm
                     @ [0xc6] @ encode_rm 0 rm @ [v land 0xff] in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Move (B_, Either.Right _, _) ->
@@ -1287,7 +1313,7 @@ let move_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node
         { size = List.length bytes_placeholder; binary = (fun () ->
             let addr = resolve_global_addr env init_data glob off in
             let rm = RAbsIndexed (addr, idx, scale) in
-            rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(reg_num r) ~rm
+            rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(reg_num r) ~rm:rm
             @ [0x8d] @ encode_rm (reg_num r) rm
           )
         }
@@ -1303,7 +1329,7 @@ let move_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node
          * too), so this is a plain eager encode, same shape as every
          * other `resolve_gen_full`-based instruction in this file. *)
         let rm = resolve_gen_full env init_data node g in
-        let bytes = rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(reg_num r) ~rm
+        let bytes = rex_opt ~reg_is_register:true ~width:Q_ ~reg_field:(reg_num r) ~rm:rm
                     @ [0x8d] @ encode_rm (reg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
   | _ -> raise (Impossible "move_rules: not a move/lea instruction")
@@ -1326,7 +1352,7 @@ let control_flow_rules (node : 'a T.node) (instr : instr) : action =
          * simply never needed (confirmed: no REX at all for a plain
          * low register). Not an actual 32-bit operation. *)
         let rm = RReg r in
-        let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm @ [0xff] @ encode_rm 2 rm in
+        let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm:rm @ [0xff] @ encode_rm 2 rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | Call _ ->
         (* claude: case Zcall -- opcode 0xe8 + rel32; goken's ycall's direct form. rel32 is
@@ -1364,7 +1390,7 @@ let control_flow_rules (node : 'a T.node) (instr : instr) : action =
         (match !opd with
         | A.IndirectJump r ->
             let rm = RReg r in
-            let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm @ [0xff] @ encode_rm 4 rm in
+            let bytes = rex_opt ~reg_is_register:false ~width:L_ ~reg_field:0 ~rm:rm @ [0xff] @ encode_rm 4 rm in
             { size = List.length bytes; binary = (fun () -> bytes) }
         | _ when not is_long ->
             (* claude: case Zjmp -- direct JMP, short (rel8) form. *)
@@ -1441,7 +1467,7 @@ let float_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * Ast_asm6.ml's `MovF` comment. No REX.W either precision. *)
     | MovF (prec, src, XReg r) ->
         let rm = resolve_gen_full env init_data node (gen_of_xgen src) in
-        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm
+        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm:rm
                     @ [0x0f; 0x10] @ encode_rm (xreg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Zr_m_xm (store direction) -- only reached when the
@@ -1449,7 +1475,7 @@ let float_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * claims every `XReg` destination, reg-reg included). *)
     | MovF (prec, XReg r, dest) ->
         let rm = resolve_gen_full env init_data node (gen_of_xgen dest) in
-        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm
+        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm:rm
                     @ [0x0f; 0x11] @ encode_rm (xreg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     | MovF (_, (XIndirect _ | XEntity _ | XIndirectScaled _ | XEntityScaled _),
@@ -1466,7 +1492,7 @@ let float_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * REX.W either precision. *)
     | ArithF (op, prec, src, dst) ->
         let rm = resolve_gen_full env init_data node (gen_of_xgen src) in
-        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm
+        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm:rm
                     @ [0x0f; arithf_opcode_byte op] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -1478,7 +1504,7 @@ let float_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * reuses the existing unsigned `Jcc` conditions as-is afterward. *)
     | CmpF (prec, src, dst) ->
         let rm = resolve_gen_full env init_data node (gen_of_xgen src) in
-        let bytes = ucomis_prefix prec @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm
+        let bytes = ucomis_prefix prec @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm:rm
                     @ [0x0f; 0x2e] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -1492,7 +1518,7 @@ let float_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * here, never `W_`/`B_` -- grammar/parser never construct those. *)
     | CvtIntToF (int_width, prec, src, dst) ->
         let rm = resolve_gen_full env init_data node src in
-        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:int_width ~reg_field:(xreg_num dst) ~rm
+        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:int_width ~reg_field:(xreg_num dst) ~rm:rm
                     @ [0x0f; 0x2a] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
     (* claude: case Zm_r_xm -- goken's yxcvfq/yxcvfl-shaped
@@ -1501,7 +1527,7 @@ let float_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * `f2 48 0f 2c db` vs "CVTTSD2SL X0,BX" -> `f2 0f 2c d8`. *)
     | CvtFToInt (int_width, prec, src, dst) ->
         let rm = resolve_gen_full env init_data node (gen_of_xgen src) in
-        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:int_width ~reg_field:(reg_num dst) ~rm
+        let bytes = [sse_prefix prec] @ rex_opt ~reg_is_register:true ~width:int_width ~reg_field:(reg_num dst) ~rm:rm
                     @ [0x0f; 0x2c] @ encode_rm (reg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -1511,7 +1537,7 @@ let float_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
      * CvtFPrec comment), no REX.W either direction. *)
     | CvtFPrec (src_prec, src, dst) ->
         let rm = resolve_gen_full env init_data node (gen_of_xgen src) in
-        let bytes = [sse_prefix src_prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm
+        let bytes = [sse_prefix src_prec] @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num dst) ~rm:rm
                     @ [0x0f; 0x5a] @ encode_rm (xreg_num dst) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -1522,7 +1548,7 @@ let float_rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.nod
     | XorClearF (prec, r) ->
         let rm = RReg (A.R (xreg_num r)) in
         let opt_prefix = match prec with A.D -> [0x66] | A.F -> [] in
-        let bytes = opt_prefix @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm
+        let bytes = opt_prefix @ rex_opt ~reg_is_register:true ~width:L_ ~reg_field:(xreg_num r) ~rm:rm
                     @ [0x0f; 0x57] @ encode_rm (xreg_num r) rm in
         { size = List.length bytes; binary = (fun () -> bytes) }
 
@@ -1607,7 +1633,12 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
      | T.TEXT (_, _, size) -> autosize := size
      | _ -> ());
 
-    res := List.rev_append bytes !res;
+    (* claude: recent OCaml would just do:
+     *   res := List.rev_append bytes !res;
+     *   ...
+     *   !res |> List.rev_map Char.chr |> Array.of_list
+     * -- List.rev_append/rev_map are unavailable in ocaml-light's List. *)
+    res := List.rev bytes @ !res;
     pc := !pc + size;
   );
-  !res |> List.rev_map Char.chr |> Array.of_list
+  !res |> List.rev |> List.map Char.chr |> Array.of_list

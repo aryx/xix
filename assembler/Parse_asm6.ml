@@ -32,7 +32,14 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm6.token =
   | T.TRET -> TRET
   | T.TNOP -> TNOP
   | T.TEND -> TEND
-  | T.TR -> TR
+  (* claude: recent OCaml's type-directed disambiguation would resolve
+   * a bare "TR" here to Parser_asm6.TR (the token type this match
+   * returns) even with Ast_asm6 also `open`ed above and also
+   * defining its own "TR of int" (trregister) -- ocaml-light's
+   * ocamlc doesn't do that disambiguation, picks the last-opened
+   * module's TR instead, and fails to typecheck ("TR expects 1
+   * argument"). Qualified explicitly. *)
+  | T.TR -> Parser_asm6.TR
   | T.TF -> TF
   | T.TPC -> TPC
   | T.TSB -> TSB

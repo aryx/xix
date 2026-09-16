@@ -72,26 +72,33 @@ let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register)
            * so maybe we should run a peephole optimizer in Rewrite6.ml for
            * those sequences of virtual instructions?
            *)
-          let rec n1 = T.{
-           instr = T.Virt (A.Load (A.Global (mcount, !count * 4 + 4), rTMP));
-           next = Some n2;
+          (* claude: recent OCaml accepts a `let rec n1 = {...; next =
+           * Some n2; ...} and n2 = {...; next = Some n3; ...} and n3
+           * = {...}` here (a purely forward n1 -> n2 -> n3 chain, none
+           * of them refer back, so it's not really cyclic) --
+           * ocaml-light's ocamlc rejects any record literal as a
+           * `let rec` right-hand side ("not allowed as right-hand
+           * side of `let rec'"), so build the chain tail-first with
+           * plain `let`s instead. *)
+          let n3 = T.{
+           instr = T.Virt (A.Store (rTMP, A.Global (mcount, !count * 4 + 4)));
+           next = n.next;
            branch = None; n_loc = n.n_loc; real_pc = - 1;
-          }
-          and n2 = T.{
+          } in
+          let n2 = T.{
            (* less: in vl they use ADDU but in 5l regular ADD but matter?
-            * should be same machine opcode in the end no because of 
+            * should be same machine opcode in the end no because of
             * 2-complement arch?
             *)
            instr = T.Virt (A.AddI (A.U, 1, rTMP));
            next = Some n3;
            branch = None; n_loc = n.n_loc; real_pc = - 1;
-          }
-          and n3 = T.{
-           instr = T.Virt (A.Store (rTMP, A.Global (mcount, !count * 4 + 4)));
-           next = n.next;
+          } in
+          let n1 = T.{
+           instr = T.Virt (A.Load (A.Global (mcount, !count * 4 + 4), rTMP));
+           next = Some n2;
            branch = None; n_loc = n.n_loc; real_pc = - 1;
-          }
-          in
+          } in
           n.next <- Some n1;
 
           count := !count + 2;

@@ -122,8 +122,21 @@ let add_prologue_epilogue (cg : A6.instr T.code_graph) : unit =
   ) (None, false)
   |> ignore
 
-let synthetic_global_name (f : float) : string =
-  Printf.sprintf "$f64.%Lx" (Int64.bits_of_float f)
+(* claude: recent OCaml would just do:
+ *   let synthetic_global_name (f : float) : string =
+ *     Printf.sprintf "$f64.%Lx" (Int64.bits_of_float f)
+ * -- ocaml-light's Int64 module has no bits_of_float (nor does its
+ * Printf support "%Lx"), so this can't reproduce goken's own
+ * IEEE754-bit-pattern symbol name. Per float_literal.s's own comment,
+ * this port doesn't try to replicate goken's literal-pool naming/
+ * ordering anyway -- only each constant's value and the program's
+ * observable behavior -- so a plain per-value counter is enough to
+ * keep names unique. *)
+let synthetic_global_name : unit -> string =
+  let counter = ref 0 in
+  fun () ->
+    incr counter;
+    Printf.sprintf "$f64.%d" !counter
 
 let rewrite (syms : T.symbol_table) (cg : A6.instr T.code_graph) : A6.instr T.code_graph * T.data list =
   add_prologue_epilogue cg;
@@ -133,7 +146,16 @@ let rewrite (syms : T.symbol_table) (cg : A6.instr T.code_graph) : A6.instr T.co
     match Hashtbl.find_opt globals f with
     | Some g -> g
     | None ->
-        let g : A.global = { A.name = synthetic_global_name f; priv = None; signature = None } in
+        (* claude: recent OCaml would infer every field's record type
+         * from just the first qualified one (or even from the
+         * "A.global" type annotation on `g` alone) and accept
+         *   { A.name = ...; priv = None; signature = None }
+         * even though Ast_asm (aliased A here) is only aliased, never
+         * `open`ed. ocaml-light's ocamlc has no such disambiguation:
+         * an unqualified field label is simply not in scope unless
+         * its defining module is `open`ed, so "priv"/"signature"
+         * alone are "Unbound label" -- every field is qualified. *)
+        let g : A.global = { A.name = synthetic_global_name (); A.priv = None; A.signature = None } in
         Hashtbl.add globals f g;
         let v : T.value = T.lookup_global g syms in
         (match v.T.section with

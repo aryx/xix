@@ -233,7 +233,12 @@ let op_stype opcode funct3 (R rs1) (R rs2) (imm : int) : Bits.t =
  * plain `OP_ADD`, no funct7/funct3 needed beyond the implicit ADD
  * opcode), then stores/loads through REGTMP with the low 12 bits
  * folded into the instruction's own immediate field. *)
-let gen_store ?(opcode = 0x23) (_node : 'a T.node) (funct3 : int) (rbase : reg) (rf : reg) (offset : int) =
+(* claude: recent OCaml accepts an optional argument with a default
+ * (`?(opcode = 0x23)`) here -- ocaml-light's parser has no support
+ * for optional arguments at all, so `opcode` is a plain, required
+ * parameter instead; every call site below now passes 0x23 explicitly
+ * where it used to rely on the default. *)
+let gen_store (opcode : int) (_node : 'a T.node) (funct3 : int) (rbase : reg) (rf : reg) (offset : int) =
   if fits_addi_imm offset
   then { size = 4; x = None; binary = (fun () -> [ op_stype opcode funct3 rbase rf offset ]) }
   else
@@ -241,7 +246,9 @@ let gen_store ?(opcode = 0x23) (_node : 'a T.node) (funct3 : int) (rbase : reg) 
       let (lui_bits, low12) = gen_upper_and_low_via op_lui rTMP offset in
       [ lui_bits; op_rtype op_op 0 0 rbase rTMP rTMP; op_stype opcode funct3 rTMP rf low12 ]
     )}
-let gen_load ?(opcode = 0x03) (_node : 'a T.node) (funct3 : int) (rbase : reg) (rt : reg) (offset : int) =
+(* claude: see gen_store's own comment above -- same optional-argument
+ * vs. ocaml-light issue. *)
+let gen_load (opcode : int) (_node : 'a T.node) (funct3 : int) (rbase : reg) (rt : reg) (offset : int) =
   if fits_addi_imm offset
   then { size = 4; x = None; binary = (fun () -> [ op_itype opcode funct3 rbase rt offset ]) }
   else
@@ -712,9 +719,12 @@ let rec rules (is_64 : bool)
      * replaces genuinely dead-code float literals with 0.5 so they
      * assemble/link at all, never executed for real). *)
     | Move2 (D__, Right (Float f), GFReg (FR fd)) ->
-        let bits = Int64.bits_of_float f in
-        let lo = Int64.to_int (Int64.logand bits 0xFFFFFFFFL) in
-        let hi = Int64.to_int (Int64.shift_right_logical bits 32) in
+        (* claude: recent OCaml would just do:
+         *   let bits = Int64.bits_of_float f in
+         *   let lo = Int64.to_int (Int64.logand bits 0xFFFFFFFFL) in
+         *   let hi = Int64.to_int (Int64.shift_right_logical bits 32) in
+         * -- see Bits_of_float.ml's own comment for why not here. *)
+        let (hi, lo) = Bits_of_float.hi_lo_of_float64 f in
         let materialize (rd : reg) (v : int) : int * (unit -> Bits.t list) =
           if fits_addi_imm v
           then 4, (fun () -> [ op_itype op_opimm 0 rZERO rd v ])
@@ -771,8 +781,16 @@ let rec rules (is_64 : bool)
      * unlike every other gap this session, which was always verified
      * against real encoded output before being trusted. *)
     | ArithF ((op, prec), (FR fs1), None, (FR fd)) ->
+        (* claude: recent OCaml infers `{ node with instr = ... }`'s
+         * record type from `node` itself (or from the "T.node"
+         * annotation on similar bindings elsewhere) and accepts the
+         * unqualified field `instr` -- ocaml-light's ocamlc has no
+         * such disambiguation: an unqualified field label is simply
+         * not in scope unless its defining module is `open`ed (see
+         * Rewrite6.ml's own "Unbound label priv" comment for the
+         * same issue on record construction), so it's qualified here. *)
         rules is_64 env init_data
-          { node with instr = T.I (ArithF ((op, prec), (FR fs1), Some (FR fd), (FR fd))) }
+          { node with T.instr = T.I (ArithF ((op, prec), (FR fs1), Some (FR fd), (FR fd))) }
 
     | ArithF ((op, prec), (FR fs1), Some (FR fs2), (FR fd)) ->
         let funct7 = (match op, prec with
@@ -1173,9 +1191,9 @@ let rec rules (is_64 : bool)
      * was a real, confirmed bug (silently truncating RLINK's save on
      * riscv64), caught while porting case 15/16. *)
     | Move2 (W__, Left (Gen (GReg rf)), Gen (Indirect (rbase, offset))) ->
-        gen_store node 2 (* SW, always *) rbase rf offset
+        gen_store 0x23 node 2 (* SW, always *) rbase rf offset
     | Move2 (V__, Left (Gen (GReg rf)), Gen (Indirect (rbase, offset))) ->
-        gen_store node (if is_64 then 3 (* SD *) else 2 (* SW *)) rbase rf offset
+        gen_store 0x23 node (if is_64 then 3 (* SD *) else 2 (* SW *)) rbase rf offset
 
     (* claude: "MOVW $0,off(Rbase)" -- storing a bare immediate
      * directly to memory. Real RISC-V's S-type store has no immediate
@@ -1203,7 +1221,7 @@ let rec rules (is_64 : bool)
      * register first (an `ADD $imm,RZERO,RTMP` ahead of the store),
      * not yet implemented since no real closure needs it. *)
     | Move2 (W__, Right (Int 0), Gen (Indirect (rbase, offset))) ->
-        gen_store node 2 (* SW, always *) rbase rZERO offset
+        gen_store 0x23 node 2 (* SW, always *) rbase rZERO offset
     (* claude: V__ ("MOV $0,off(R)") added alongside W__ -- same
      * "immediate zero store" artifact, is_64-branching like every
      * other V__ store (SD on riscv64, SW on riscv32). Found
@@ -1211,7 +1229,7 @@ let rec rules (is_64 : bool)
      * own real "MOV $0,16(R2)", zero-initializing a pointer-width
      * struct field). *)
     | Move2 (V__, Right (Int 0), Gen (Indirect (rbase, offset))) ->
-        gen_store node (if is_64 then 3 (* SD *) else 2 (* SW *)) rbase rZERO offset
+        gen_store 0x23 node (if is_64 then 3 (* SD *) else 2 (* SW *)) rbase rZERO offset
 
     (* claude: plain register-to-register move -- real RISC-V has no
      * dedicated MOV opcode, spelled as the "ADD rd,x0,rs" idiom (the
@@ -1235,9 +1253,9 @@ let rec rules (is_64 : bool)
         { size = 4; x = None; binary = (fun () -> [ op_rtype op_op 0 0 rZERO rf rt ]) }
 
     | Move1 (B_ _, Left (GReg rf), Indirect (rbase, offset)) ->
-        gen_store node 0 (* SB *) rbase rf offset
+        gen_store 0x23 node 0 (* SB *) rbase rf offset
     | Move1 (H_ _, Left (GReg rf), Indirect (rbase, offset)) ->
-        gen_store node 1 (* SH *) rbase rf offset
+        gen_store 0x23 node 1 (* SH *) rbase rf offset
 
     (* claude: "MOVB $0,off(Rbase)" -- same "immediate zero store"
      * -S-print artifact as the MOVW $0 case above (goken's own
@@ -1248,9 +1266,9 @@ let rec rules (is_64 : bool)
      * stress-testing real lib_core/libc (fmt/dofmt.c's own real
      * "MOVB $0,0(R8)"). *)
     | Move1 (B_ _, Right (Int 0), Indirect (rbase, offset)) ->
-        gen_store node 0 (* SB *) rbase rZERO offset
+        gen_store 0x23 node 0 (* SB *) rbase rZERO offset
     | Move1 (H_ _, Right (Int 0), Indirect (rbase, offset)) ->
-        gen_store node 1 (* SH *) rbase rZERO offset
+        gen_store 0x23 node 1 (* SH *) rbase rZERO offset
 
     (* claude: FSW/FSD -- same S-type shape as SW/SD above (goken's
      * own optab.c: "fsw"/"fsd", C_FREG,C_SOREG -> OSTORE, same funct3
@@ -1263,9 +1281,9 @@ let rec rules (is_64 : bool)
      * stress-testing real lib_core/libc (fmt/strtod.c's own real
      * "MOVD F0,x-8(SP)"). *)
     | Move2 (F__, Left (GFReg (FR rf)), Gen (Indirect (rbase, offset))) ->
-        gen_store ~opcode:0x27 node 2 (* FSW *) rbase (R rf) offset
+        gen_store 0x27 node 2 (* FSW *) rbase (R rf) offset
     | Move2 (D__, Left (GFReg (FR rf)), Gen (Indirect (rbase, offset))) ->
-        gen_store ~opcode:0x27 node 3 (* FSD *) rbase (R rf) offset
+        gen_store 0x27 node 3 (* FSD *) rbase (R rf) offset
 
     (* case 7:		/* lb I(S),D */
      * claude: same generalization as case 6 -- goken picks the
@@ -1273,25 +1291,25 @@ let rec rules (is_64 : bool)
      * mnemonic was used, the encoding itself (OP_I) is identical.
      * W__/V__ split matches the store side's own comment above. *)
     | Move2 (W__, Left (Gen (Indirect (rbase, offset))), Gen (GReg rt)) ->
-        gen_load node 2 (* LW, always *) rbase rt offset
+        gen_load 0x03 node 2 (* LW, always *) rbase rt offset
     | Move2 (V__, Left (Gen (Indirect (rbase, offset))), Gen (GReg rt)) ->
-        gen_load node (if is_64 then 3 (* LD *) else 2 (* LW *)) rbase rt offset
+        gen_load 0x03 node (if is_64 then 3 (* LD *) else 2 (* LW *)) rbase rt offset
 
     (* claude: FLW/FLD -- mirror of FSW/FSD above, LOAD-FP's own major
      * opcode 0x07 (vs the integer LOAD opcode 0x03). *)
     | Move2 (F__, Left (Gen (Indirect (rbase, offset))), GFReg (FR rt)) ->
-        gen_load ~opcode:0x07 node 2 (* FLW *) rbase (R rt) offset
+        gen_load 0x07 node 2 (* FLW *) rbase (R rt) offset
     | Move2 (D__, Left (Gen (Indirect (rbase, offset))), GFReg (FR rt)) ->
-        gen_load ~opcode:0x07 node 3 (* FLD *) rbase (R rt) offset
+        gen_load 0x07 node 3 (* FLD *) rbase (R rt) offset
 
     | Move1 (B_ A.S, Left (Indirect (rbase, offset)), GReg rt) ->
-        gen_load node 0 (* LB *) rbase rt offset
+        gen_load 0x03 node 0 (* LB *) rbase rt offset
     | Move1 (B_ A.U, Left (Indirect (rbase, offset)), GReg rt) ->
-        gen_load node 4 (* LBU *) rbase rt offset
+        gen_load 0x03 node 4 (* LBU *) rbase rt offset
     | Move1 (H_ A.S, Left (Indirect (rbase, offset)), GReg rt) ->
-        gen_load node 1 (* LH *) rbase rt offset
+        gen_load 0x03 node 1 (* LH *) rbase rt offset
     | Move1 (H_ A.U, Left (Indirect (rbase, offset)), GReg rt) ->
-        gen_load node 5 (* LHU *) rbase rt offset
+        gen_load 0x03 node 5 (* LHU *) rbase rt offset
 
     (* case 6 (SB-relative fast path, reusing case 6/11's shared
      * "fits addi" test) / case 12 (SB-relative slow path, "mov
@@ -1337,7 +1355,7 @@ let rec rules (is_64 : bool)
              * address computation), which doesn't apply to an
              * ordinary store/load memory access. *)
             if fits_addi_imm final_offset
-            then gen_store node funct3 rSB rf final_offset
+            then gen_store 0x23 node funct3 rSB rf final_offset
             else
               { size = 8; x = None; binary = (fun () ->
                 match init_data with
@@ -1374,7 +1392,7 @@ let rec rules (is_64 : bool)
               | F__ | D__ -> raise (Impossible "sz restricted to W__|V__ above")
             ) in
             if fits_addi_imm final_offset
-            then gen_load node funct3 rSB rt final_offset
+            then gen_load 0x03 node funct3 rSB rt final_offset
             else
               { size = 8; x = None; binary = (fun () ->
                 match init_data with
@@ -1406,7 +1424,7 @@ let rec rules (is_64 : bool)
             let funct3 = (match sz with F__ -> 2 (* FLW *) | D__ -> 3 (* FLD *)
                           | W__ | V__ -> raise (Impossible "sz restricted to F__|D__ above")) in
             if fits_addi_imm final_offset
-            then gen_load ~opcode:0x07 node funct3 rSB (R rt) final_offset
+            then gen_load 0x07 node funct3 rSB (R rt) final_offset
             else
               { size = 8; x = None; binary = (fun () ->
                 match init_data with

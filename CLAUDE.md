@@ -99,8 +99,51 @@ let foo (caps : < Cap.stdout; Cap.open_in; ..>) = ...
 
 ### OCaml Compatibility Constraints
 
-- Must stay compatible with OCaml ≥ 4.09.1 and with `ocaml-light` (minimal stdlib)
+- Must stay compatible with OCaml ≥ 4.09.1 and with `ocaml-light` (minimal stdlib) — see
+  "ocaml-light Compatibility" below for the details
 - External dependencies are intentionally minimal: only `stdcompat`, `ocamlfind`, `ppx_deriving`
 - Warnings `-33` (unused open) and `-6` (label omission) are suppressed for ocaml-light compatibility
 - `open Xix_*` module opens are stripped by `scripts/remove_xix_open.sh` for ocaml-light builds
 - `dune-project` uses lang 2.7 (not 3.0) to avoid `.pp.ml` file issues with codegraph indexing
+
+## ocaml-light Compatibility
+
+`dune build` passing is **not** sufficient proof the mk/`omk` build works — ocaml-light's
+`ocamlc` is a much older/stricter compiler than whatever dune uses, and only
+`make build-docker-light` (or `omk depend && omk all` inside a `padator/ocaml-light` container)
+actually exercises it. It isn't run routinely, so don't assume it's currently green — check
+before relying on it.
+
+ocaml-light has only **partial** support for labeled/optional arguments, and none for
+functors; avoid all three in new code:
+
+- Labeled arguments: only the old, fully-spelled-out `~label:pattern` form parses (at both
+  definition and call sites) — no punning sugar (`~label`, `~(label : ty)`; `~label:label`
+  is fine but `~label` alone is not). Labels are also purely positional: ocaml-light warns
+  "use of label ~x: (skipping it)" and does not check the name, so a call site with
+  swapped label order silently binds wrong.
+- Optional arguments (`?label`) don't parse at all, in any form — use a plain, explicit
+  `... option` parameter instead.
+- Avoid `open`ing two modules that both define a same-named constructor/record field and
+  relying on type-directed disambiguation to pick the right one from context (e.g. an outer
+  type annotation, or `Module.field = ...` on just the first field of a record literal) —
+  ocaml-light doesn't do that inference; it resolves a bare constructor/label to whichever
+  open module defined it last (or "Unbound" if none currently open it), so qualify explicitly
+  (`Module.Constructor`, every field of a record literal) whenever there's any ambiguity.
+- `_` digit-group separators in numeric literals (`0x8000_0000`) don't lex — ocaml-light
+  silently mis-tokenizes them into two separate tokens.
+- `let rec x = {...; f = y; ...} and y = {...}` (building a record graph via mutual `let
+  rec`) only parses when at least one side is a function; a record literal as a `let rec`
+  RHS is always rejected ("not allowed as right-hand side of `let rec'"), even when the
+  "cycle" isn't a real cycle (e.g. `x` merely references `y`, `y` never references `x`).
+  Build such chains tail-first with plain sequential `let`s instead.
+- Its `Int64`/`Int32` have no `bits_of_float`/`float_of_bits` (and `Printf` has no `%L`), and
+  `List` has no `find_opt`/`rev_map`/`rev_append`. See `lib_core/commons/Bits_of_float.ml` for
+  a pure-arithmetic (frexp/ldexp-based) replacement for the float one; the others need simple
+  inline workarounds at their call sites. (`Hashtbl.find_opt` and `List.concat_map` used to be
+  missing too, but got added upstream in `ocaml-light` — don't route around those two anymore.)
+- Objects are supported (used throughout for the capability system, `Cap.*`) but avoid them
+  for anything else — same for functors, which ocaml-light doesn't support at all.
+- When working around one of these, leave the recent-OCaml original in a comment alongside
+  the workaround (see any of the above files for the established comment style), so the
+  "real" way isn't lost.

@@ -172,7 +172,14 @@ label_def: TIDENT TCOLON    { (LabelDef $1, !L.line) }
 virtual_instr:
  /*(* claude: goken's compiler-facing "RETURN" pseudo-op -- see TRETURN's
     * own comment. *)*/
- | TRETURN                  { RET }
+ /*(* claude: recent OCaml's type-directed disambiguation would resolve
+    * a bare "RET" here to Ast_asm.RET (the type expected at this
+    * production) even with Ast_asm7 also `open`ed above and also
+    * defining its own RET of reg option -- ocaml-light's ocamlyacc/
+    * ocamlc combo doesn't do that disambiguation from context here,
+    * picks the last-opened module's RET instead, and fails to
+    * typecheck ("RET expects 1 argument"). Qualified explicitly. *)*/
+ | TRETURN                  { Ast_asm.RET }
 
 /*(*************************************************************************)*/
 /*(*1 Pseudo instructions (arch independent) *)*/

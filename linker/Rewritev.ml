@@ -175,19 +175,26 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
                            Either.Left (Gen (Indirect (rSP, 0))),
                            Gen (GReg r2TMP)));
 
-            let rec n1 = T.{
+            (* claude: recent OCaml accepts a `let rec n1 = {...; next
+             * = Some n2; ...} and n2 = {...}` here (n1 -> n2 is the
+             * only link, n2 doesn't refer back to n1, so it's not
+             * really cyclic) -- ocaml-light's ocamlc rejects any
+             * record literal as a `let rec` right-hand side ("not
+             * allowed as right-hand side of `let rec'"), so build n2
+             * first and have n1's `next` field just reference the
+             * plain value. *)
+            let n2 = T.{
+              instr = T.I (JMP (ref (A.IndirectJump (r2TMP)))) ;
+              next = n.next;
+              branch = None; n_loc = n.n_loc; real_pc = -1;
+            } in
+            let n1 = T.{
               instr = T.I (Arith (ADD (W, A.S),
                          Imm (autosize), None, rSP));
               next = Some n2;
               branch = None; n_loc = n.n_loc; real_pc = -1;
-             }
-            and n2 = T.{
-              instr = T.I (JMP (ref (A.IndirectJump (r2TMP)))) ;
-              next = n.next;
-              branch = None; n_loc = n.n_loc; real_pc = -1;
-          }
-          in
-          n.next <- Some n1;
+            } in
+            n.next <- Some n1;
         );
 
         | A.NOP -> raise (Impossible "NOP was removed in step1")

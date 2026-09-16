@@ -203,12 +203,14 @@ let rewrite (is_64 : bool) (cg : instr T.code_graph) : instr T.code_graph =
           (* ADD $-autosize, SP
            * [MOVW RLINK, 0(SP)]   -- only for case 3
            *)
-          let rec n1 = T.{
-            instr = T.I (Arith (ADD None, Imm (- autosize), None, rSP));
-            next = (if needs_link_save then Some n2 else n.next);
-            branch = None; n_loc = n.n_loc; real_pc = -1;
-          }
-          and n2 = T.{
+          (* claude: recent OCaml accepts a `let rec n1 = {...; next =
+           * Some n2; ...} and n2 = {...}` here (n1 -> n2 is the only
+           * link, n2 doesn't refer back to n1, so it's not really
+           * cyclic) -- ocaml-light's ocamlc rejects any record literal
+           * as a `let rec` right-hand side ("not allowed as
+           * right-hand side of `let rec'"), so build n2 first and
+           * have n1's `next` field just reference the plain value. *)
+          let n2 = T.{
             (* claude: pointer-width save (V__ = 64-bit "vlong" on
              * riscv64, W__ = 32-bit "word" on riscv32) -- NOT always
              * W__: unlike a real user-written "MOVW" (always 32-bit
@@ -227,8 +229,12 @@ let rewrite (is_64 : bool) (cg : instr T.code_graph) : instr T.code_graph =
                               Gen (Indirect (rSP, 0))));
             next = n.next;
             branch = None; n_loc = n.n_loc; real_pc = -1;
-          }
-          in
+          } in
+          let n1 = T.{
+            instr = T.I (Arith (ADD None, Imm (- autosize), None, rSP));
+            next = (if needs_link_save then Some n2 else n.next);
+            branch = None; n_loc = n.n_loc; real_pc = -1;
+          } in
           n.next <- Some n1;
         );
         frame
@@ -273,18 +279,20 @@ let rewrite (is_64 : bool) (cg : instr T.code_graph) : instr T.code_graph =
                            Either.Left (Gen (Indirect (rSP, 0))),
                            Gen (GReg rLINK)));
 
-            let rec n1 = T.{
-              instr = T.I (Arith (ADD None, Imm autosize, None, rSP));
-              next = Some n2;
-              branch = None; n_loc = n.n_loc; real_pc = -1;
-             }
-            and n2 = T.{
+            (* claude: see the matching save's own comment above for
+             * why this isn't a `let rec ... and ...` -- same reason,
+             * ocaml-light rejects a record literal there. *)
+            let n2 = T.{
               instr = T.I (JMP (ref (A.IndirectJump rLINK)));
               next = n.next;
               branch = None; n_loc = n.n_loc; real_pc = -1;
-          }
-          in
-          n.next <- Some n1;
+            } in
+            let n1 = T.{
+              instr = T.I (Arith (ADD None, Imm autosize, None, rSP));
+              next = Some n2;
+              branch = None; n_loc = n.n_loc; real_pc = -1;
+            } in
+            n.next <- Some n1;
         );
 
         | A.NOP -> raise (Impossible "NOP was removed in step1")

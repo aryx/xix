@@ -86,8 +86,11 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc)
              * just emitted -- must match exactly, or a double literal
              * round-trips as a different value. *)
             | Ast_asm.Float f ->
-                let bits = Int64.bits_of_float f in
-                Int64.to_int (Int64.shift_right_logical bits 32) land 0xffffffff
+                (* claude: recent OCaml would just do:
+                 *   let bits = Int64.bits_of_float f in
+                 *   Int64.to_int (Int64.shift_right_logical bits 32) land 0xffffffff
+                 * -- see Bits_of_float.ml's own comment for why not here. *)
+                fst (Bits_of_float.hi_lo_of_float64 f)
             | Ast_asm.String _ -> 0
           ) in
           let high_node = Types.{ instr = T.WORD (Ast_asm.Int high_value);

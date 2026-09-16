@@ -67,8 +67,11 @@ let default_rules (env : env) (init_data : Types.addr option)
          * strtod.c's real "FMOVD $4.29496729500000000e+09,F3" and
          * siblings), see docs/claude_notes/plan_hello_libc_linking.md. *)
         | Ast_asm.Float f ->
-            let bits = Int64.bits_of_float f in
-            [ [(Int64.to_int (Int64.logand bits 0xFFFFFFFFL), 0)] ]
+            (* claude: recent OCaml would just do:
+             *   let bits = Int64.bits_of_float f in
+             *   [ [(Int64.to_int (Int64.logand bits 0xFFFFFFFFL), 0)] ]
+             * -- see Bits_of_float.ml's own comment for why not here. *)
+            [ [(snd (Bits_of_float.hi_lo_of_float64 f), 0)] ]
 
         | Ast_asm.String _s -> 
             (* stricter? what does 5l do with that? confusing I think *)

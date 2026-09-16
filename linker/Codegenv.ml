@@ -1045,9 +1045,12 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * here, not routed through any int-reload path). *)
     | Move2 (D__, Right (Float f), GFReg (FR rt)) ->
         { size = 24; x = None; binary = (fun () ->
-            let bits = Int64.bits_of_float f in
-            let lo = Int64.to_int (Int64.logand bits 0xFFFFFFFFL) in
-            let hi = Int64.to_int (Int64.shift_right_logical bits 32) in
+            (* claude: recent OCaml would just do:
+             *   let bits = Int64.bits_of_float f in
+             *   let lo = Int64.to_int (Int64.logand bits 0xFFFFFFFFL) in
+             *   let hi = Int64.to_int (Int64.shift_right_logical bits 32) in
+             * -- see Bits_of_float.ml's own comment for why not here. *)
+            let (hi, lo) = Bits_of_float.hi_lo_of_float64 f in
             let (R rtmp) = rTMP in
             [ op_irr op_last (lo asr 16) rZERO rTMP;
               op_irr (opirr_arith_opcode OR) (lo land 0xffff) rTMP rTMP;

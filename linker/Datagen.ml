@@ -110,12 +110,16 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr)
         | A.Float f ->
             let (_array_16, array_32, array_64) =
               Endian.array_functions_of_endian endian in
+            (* claude: recent OCaml would just do:
+             *   let n = Int32.to_int (Int32.bits_of_float f) land 0xffffffff in  (* 4 *)
+             *   let n = Int64.to_int (Int64.bits_of_float f) in                  (* 8 *)
+             * -- see Bits_of_float.ml's own comment for why not here. *)
             (match size_slice with
             | 4 ->
-                let n = Int32.to_int (Int32.bits_of_float f) land 0xffffffff in
+                let n = Bits_of_float.bits_of_float32 f in
                 array_32 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
             | 8 ->
-                let n = Int64.to_int (Int64.bits_of_float f) in
+                let n = Bits_of_float.bits_of_float64 f in
                 array_64 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
             | _ ->
                 failwith (spf "float size for %s not in {4,8}"

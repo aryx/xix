@@ -51,7 +51,14 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : 'a T.
    * below for when one is/isn't needed); either way, the very last
    * spliced node's `.next` is reconnected to `n`'s *original*
    * `.next`, so the rest of the program is never lost. *)
-  let flush_pool ?guard (n : Ast_asm5.instr_with_cond Types.node) =
+  (* claude: recent OCaml accepts the optional-argument binder
+   * `?guard` in a function definition -- ocaml-light's parser has no
+   * support for optional arguments at all (`?label`/`?label:pattern`
+   * both fail to parse), so `guard` is a plain, explicit
+   * `... option` parameter instead; every call site below now passes
+   * None/Some explicitly rather than omitting the argument. *)
+  let flush_pool (guard : Ast_asm5.instr_with_cond Types.node option)
+      (n : Ast_asm5.instr_with_cond Types.node) =
     let tail = n.next in
     let rec aux (prev : Ast_asm5.instr_with_cond Types.node) xs =
       match xs with
@@ -161,7 +168,7 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : 'a T.
        * end-of-program flush in that case, not here). *)
       Logs.debug (fun m -> m "flushing %d pooled literal(s) at an unconditional branch (pc=%d)"
         (List.length !literal_pools) !pc);
-      flush_pool n
+      flush_pool None n
     end else if !literal_pools <> [] &&
                 (n.next = None || !pc - !pool_start_pc >= 4000)
     then begin
@@ -210,7 +217,7 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : 'a T.
         (List.length !literal_pools)
         (if n.next = None then "at end of program" else "proactively (pool getting too far)")
         !pc);
-      flush_pool ~guard:skip_branch n
+      flush_pool (Some skip_branch) n
     end;
 
   );

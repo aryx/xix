@@ -170,10 +170,23 @@ let base_and_offset_of_indirect node symbols2 autosize x =
  * TODO: return directly a Bits.t
  *)
 let immrot x =
-  let mask8 = 0xffL in
+  (* claude: recent OCaml accepts the "L" suffix on an integer literal
+   * to write it directly as an Int64.t (e.g. `0xffL`, `0L`) --
+   * ocaml-light's lexer doesn't recognize that suffix at all
+   * ("This expression is not a function, it cannot be applied", from
+   * mis-tokenizing "0xffL" as "0xff" applied to "L"), so every
+   * Int64 constant here goes through Int64.of_int instead. *)
+  let mask8 = Int64.of_int 0xff in
   let rec search i v =
     if i > 15 then None
-    else if Int64.equal (Int64.logand v (Int64.lognot mask8)) 0L
+    (* claude: recent OCaml would just do:
+     *   Int64.equal (Int64.logand v (Int64.lognot mask8)) 0L
+     * -- Int64.equal is unavailable in ocaml-light's Int64 (and, per
+     * immrot's own comment above, so is the "0L" literal suffix), so
+     * `=*=` (this project's escape hatch for polymorphic equality,
+     * see Eq.mli -- plain `=` here is restricted to strings) and
+     * Int64.of_int stand in for both. *)
+    else if Int64.logand v (Int64.lognot mask8) =*= Int64.of_int 0
     then Some (i, Int64.to_int (Int64.logand v mask8))
     else
       let v' = Int64.logor (Int64.shift_left v 2) (Int64.shift_right_logical v 30) in
@@ -361,8 +374,14 @@ let fREGTMP = 15
  * directions (only the dir bit at bit20 and the D-precision bit at
  * bit7 vary); register placement differs by direction and is added
  * by the caller (case 55 below), not here. *)
-let gop_fixfloat (dir : [`ToFloat | `ToInt]) (prec : A.floatp_precision) : Bits.t =
-  let dirbit = match dir with `ToFloat -> 0 | `ToInt -> 1 in
+(* claude: recent OCaml supports polymorphic variants
+ * (`` [`ToFloat | `ToInt] ``) -- ocaml-light's parser doesn't
+ * recognize the `` `Tag `` syntax at all ("Syntax error: ')'
+ * expected"), so this is a plain, ordinary variant type instead. *)
+type fixfloat_dir = ToFloat | ToInt
+
+let gop_fixfloat (dir : fixfloat_dir) (prec : A.floatp_precision) : Bits.t =
+  let dirbit = match dir with ToFloat -> 0 | ToInt -> 1 in
   [(0xe, 24); (dirbit, 20); (1, 8); (1, 4)] @
   (match prec with A.F -> [] | A.D -> [(1, 7)])
 
@@ -629,7 +648,11 @@ let gpsr_write_base (psr : psrreg) : Bits.t =
  * L bit at [20] distinguishing LDM (1, case 39) from STM (0, case
  * 38) -- ARM's standard block-data-transfer encoding
  * (cond|100|P|U|S|W|L|Rn|register_list). *)
-let gmovm_opcode (mode : movm_addr_mode) ~(is_load : bool) : Bits.t =
+(* claude: recent OCaml accepts the punned+typed binder
+ * `~(is_load : bool)` (short for `~is_load:(is_load : bool)`) in a
+ * function definition -- ocaml-light's parser only accepts the
+ * older, fully-spelled-out `~label:pattern` form. *)
+let gmovm_opcode (mode : movm_addr_mode) ~is_load:(is_load : bool) : Bits.t =
   [(0x4, 25)]
   @ (if mode.mm_pre then [(1, 24)] else [])
   @ (if mode.mm_up then [(1, 23)] else [])
@@ -766,7 +789,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           )}
         else
           { size = 4; x = None; binary = (fun () ->
-            [ [gcond cond] @ gop_fixfloat `ToFloat prec @ [(rt, 16); (rf, 12)] ]
+            [ [gcond cond] @ gop_fixfloat ToFloat prec @ [(rt, 16); (rf, 12)] ]
           )}
 
     (* case 55:	/* floating point fix and float */ *)
@@ -781,7 +804,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           )}
         else
           { size = 4; x = None; binary = (fun () ->
-            [ [gcond cond] @ gop_fixfloat `ToInt prec @ [(rf, 0); (rt, 12)] ]
+            [ [gcond cond] @ gop_fixfloat ToInt prec @ [(rf, 0); (rt, 12)] ]
           )}
 
     (* case 17: 64-bit long multiply, register-pair result -- see
@@ -1316,8 +1339,17 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                 (Entity entity) in
             let (R r) = rbase in
             let classification_offset =
+              (* claude: ocaml-light's own pattern-matcher rejects a
+               * variable bound in more than one or-pattern alternative
+               * ("This variable is bound several times in this
+               * matching") -- modern OCaml allows it (see the
+               * top-level CLAUDE.md's ocaml-light compatibility
+               * constraint), so split into 2 arms instead of the
+               * single "Local (_, off) | Param (_, off)" this used
+               * to be. *)
               let off = match entity with
-                | Local (_, off) | Param (_, off) -> off
+                | Local (_, off) -> off
+                | Param (_, off) -> off
                 | Global _ -> raise (Impossible "matched above")
               in
               env.autosize - 4 + off

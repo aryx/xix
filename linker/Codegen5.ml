@@ -57,9 +57,13 @@ let error (node : 'a T.node) (s : string) =
 (*e: function [[Codegen5.error]] *)
 
 (*s: function [[Codegen5.int_of_bits]] *)
+(* claude: `land 0xffffffff` recovers the unsigned int this function
+ * has always returned -- Int32.to_int alone sign-extends a word with
+ * its top bit set (routine for machine instructions) into a negative
+ * int. *)
 let int_of_bits (n : 'a T.node) (x : Bits.int32) : int =
   try
-    Bits.int_of_bits32 x
+    Int32.to_int (Bits.int_of_bits32 x) land 0xffffffff
   with Failure s -> error n s
 (*e: function [[Codegen5.int_of_bits]] *)
 

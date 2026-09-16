@@ -295,7 +295,8 @@ let write_ident (bo : byte_order) (class_ : ident_class) (chan: out_channel) : u
 (*s: function [[Elf.program_header_32]] *)
 let program_header_32 (endian: Endian.t) (ph: program_header_type)
   offset (vaddr, paddr) (filesz, memsz) prots align (chan : out_channel) =
-  let (_, output_32, _) = Endian.output_functions_of_endian endian in
+  let (_, output_32', _) = Endian.output_functions_of_endian endian in
+  let output_32 chan (w : int) = output_32' chan (Int32.of_int w) in
   output_32 chan (int_of_program_header_type ph);
   output_32 chan offset;
   output_32 chan vaddr;
@@ -312,7 +313,9 @@ let program_header_32 (endian: Endian.t) (ph: program_header_type)
  * goken's liblk/elf.c's elf64phdr. *)
 let program_header_64 (endian: Endian.t) (ph: program_header_type)
   offset (vaddr, paddr) (filesz, memsz) prots align (chan : out_channel) =
-  let (_, output_32, output_64) = Endian.output_functions_of_endian endian in
+  let (_, output_32', output_64') = Endian.output_functions_of_endian endian in
+  let output_32 chan (w : int) = output_32' chan (Int32.of_int w) in
+  let output_64 chan (w : int) = output_64' chan (Int64.of_int w) in
   output_32 chan (int_of_program_header_type ph);
   output_32 chan (int_of_prots prots);
   output_64 chan offset;
@@ -360,7 +363,9 @@ let write_headers (config : Exec_file.linker_config)
     | Arch.X86 -> MI386 (* what about MI486? *)
     | Arch.Amd64 -> MAmd64
   in
-  let output_16, output_32, output_64 = Endian.output_functions_of_endian endian in
+  let output_16, output_32', output_64' = Endian.output_functions_of_endian endian in
+  let output_32 chan (w : int) = output_32' chan (Int32.of_int w) in
+  let output_64 chan (w : int) = output_64' chan (Int64.of_int w) in
   output_16 chan (int_of_elf_type TExec);
   output_16 chan (int_of_machine mach);
   output_32 chan (int_of_version VCurrent); (* again? *)
@@ -535,7 +540,9 @@ let write_sections (config : Exec_file.linker_config)
     else data_off + sizes.data_size
   in
   seek_out chan shoff;
-  let (_, output_32, output_64) = Endian.output_functions_of_endian endian in
+  let (_, output_32', output_64') = Endian.output_functions_of_endian endian in
+  let output_32 chan (w : int) = output_32' chan (Int32.of_int w) in
+  let output_64 chan (w : int) = output_64' chan (Int64.of_int w) in
   let section_header_32 name_idx typ flags addr offset size align =
     output_32 chan name_idx;
     output_32 chan (int_of_section_header_type typ);

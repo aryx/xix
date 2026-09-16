@@ -1865,15 +1865,23 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
 
     let xs : Bits.int32 list = instrs |> List.map Assoc.sort_by_val_highfirst in
 
+    (* claude: `land 0xffffffff` recovers the unsigned int expected
+     * downstream (Types.word/`res`) -- Int32.to_int alone sign-extends
+     * a word with its top bit set (routine for machine instructions)
+     * into a negative int; ocaml-light's Printf also has no "%lx" to
+     * format an Int32.t directly for the debug dump below. *)
+    let int_of_bits32 (x : Bits.int32) : int =
+      Int32.to_int (Bits.int_of_bits32 x) land 0xffffffff in
+
     if !Flags.debug_gen
     then begin
       Logs.app (fun m -> m " %.8x: %s"
                  !pc
-                  (xs |> List.map (fun x -> spf "%.8x" (Bits.int_of_bits32 x))
+                  (xs |> List.map (fun x -> spf "%.8x" (int_of_bits32 x))
                       |> String.concat " "));
     end;
 
-    let xs = xs |> List.map Bits.int_of_bits32 in
+    let xs = xs |> List.map int_of_bits32 in
     res |> Stack_.push xs;
 
     pc := !pc + size;

@@ -45,7 +45,7 @@ let bytes_of_words (endian : Endian.t) (ws : word list) : byte array =
     | Endian.Little -> Endian.Little.array_32
     | Endian.Big -> Endian.Big.array_32
   in
-  ws |> List.concat_map (fun w -> array_32 w |> Array.to_list)
+  ws |> List.concat_map (fun w -> array_32 (Int32.of_int w) |> Array.to_list)
      |> Array.of_list
 
 (*s: type [[Types.addr]] *)

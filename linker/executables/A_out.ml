@@ -17,7 +17,7 @@ let header_size = 32
 let write_header (arch : Arch.t) (sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : unit =
 
   (* a.out uses big-endian integers even on low-endian architectures *)
-  let output_32 = Endian.Big.output_32 in
+  let output_32 chan (w : int) = Endian.Big.output_32 chan (Int32.of_int w) in
 
   let magic =
     match arch with

@@ -35,19 +35,16 @@ let fill_bytes_for_int (global : A.global) (arr : T.byte array) (base : int)
    | Arch.Arch16 when n >= -0x8000 && n <= 0xffff ->
       array_16 (n land 0xffff) |> Array.iteri (fun i el -> arr.(base + i) <- el)
    | Arch.Arch32 when n >= -0x80000000 && n <= 0xffffffff ->
-      array_32 (n land 0xffffffff) |> Array.iteri (fun i el -> arr.(base + i) <- el)
+      array_32 (Int32.of_int n) |> Array.iteri (fun i el -> arr.(base + i) <- el)
    (* claude: needed for ARM64 (and any other 64-bit arch) DATA
     * statements with an 8-byte int slice, e.g. a plain integer global
-    * -- OCaml's native int is only 63 bits, so the upper bound this
-    * project's other size cases check (e.g. Arch32's 0xffffffff)
-    * isn't meaningfully expressible here; any `n` representable as an
-    * OCaml int at all already fits within 8 bytes. split_64 (unlike
-    * split_16/split_32) uses `land`/`lsr` exclusively, no `mod`, so
-    * it's already correct for a negative `n` as-is -- no masking
-    * needed here (and no *positive* 64-bit mask is expressible as a
-    * native OCaml int anyway). *)
+    * -- the upper bound this project's other size cases check (e.g.
+    * Arch32's 0xffffffff) isn't meaningfully expressible here; any
+    * `n` representable as an OCaml native int at all (on whatever
+    * host this happens to be compiled for) already fits within 8
+    * bytes. *)
    | Arch.Arch64 ->
-      array_64 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
+      array_64 (Int64.of_int n) |> Array.iteri (fun i el -> arr.(base + i) <- el)
    | _ ->
       failwith (spf "int for %s < 0 or too big for its size"
                             (A.s_of_global global))
@@ -94,39 +91,27 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr)
          * (goken's own precomputed powers-of-ten table for %e/%g
          * float formatting): "DATA pows10<>+8(SB)/8,$1.0e+01" etc.
          * Just the raw IEEE754 bit pattern, same byte-splitting as
-         * the Int case above (Int64.bits_of_float/Int32.bits_of_float
-         * give the bit pattern as an integer, which array_64/array_32
-         * then split into bytes the same way regardless of what the
-         * bits actually mean). Found stress-testing against real
-         * lib_core/libc -- see
+         * the Int case above (Bits_of_float.bits_of_float{32,64} give
+         * the bit pattern as an Int32.t/Int64.t, which array_64/
+         * array_32 then split into bytes the same way regardless of
+         * what the bits actually mean). Found stress-testing against
+         * real lib_core/libc -- see
          * docs/claude_notes/plan_hello_libc_linking.md.
-         * NOTE: inherits fill_bytes_for_int's own Arch64 caveat above
-         * for the 8-byte case -- OCaml's native int is only 63 bits,
-         * so Int64.to_int silently drops a double's sign bit (bit
-         * 63), meaning a *negative* double here would be encoded
-         * wrong. Not an issue for pows10<>'s all-positive values;
-         * a real fix needs threading raw Int64/Int32 through
-         * (Endian's array_64 takes a plain int) instead. *)
+         * NOTE: a negative double's sign bit (bit 63) used to get
+         * silently dropped here (narrowing to a plain int lost it) --
+         * now that array_64 takes an Int64.t directly,
+         * bits_of_float64's own result flows straight through, no
+         * narrowing needed. *)
         | A.Float f ->
             let (_array_16, array_32, array_64) =
               Endian.array_functions_of_endian endian in
-            (* claude: recent OCaml would just do:
-             *   let n = Int32.to_int (Int32.bits_of_float f) land 0xffffffff in  (* 4 *)
-             *   let n = Int64.to_int (Int64.bits_of_float f) in                  (* 8 *)
-             * -- Bits_of_float.bits_of_float{32,64} are drop-in
-             * replacements for those two missing primitives (see its
-             * own comment), returning the same Int32.t/Int64.t, so the
-             * exact same narrowing to plain `int` is still needed
-             * here (this is the "a real fix needs threading raw
-             * Int64/Int32 through" spot the comment above refers to --
-             * still true, since array_32/array_64 take a plain int). *)
             (match size_slice with
             | 4 ->
-                let n = Int32.to_int (Bits_of_float.bits_of_float32 f) land 0xffffffff in
-                array_32 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
+                array_32 (Bits_of_float.bits_of_float32 f)
+                |> Array.iteri (fun i el -> arr.(base + i) <- el)
             | 8 ->
-                let n = Int64.to_int (Bits_of_float.bits_of_float64 f) in
-                array_64 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
+                array_64 (Bits_of_float.bits_of_float64 f)
+                |> Array.iteri (fun i el -> arr.(base + i) <- el)
             | _ ->
                 failwith (spf "float size for %s not in {4,8}"
                             (A.s_of_global global))

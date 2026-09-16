@@ -371,9 +371,8 @@ let operand_able (e0 : expr) : opd option =
       )
     (*e: [[operand_able()]] match [[e0.e]] cases *)
   in
-  match kind_opt with
-  | None -> None
-  | Some opd -> Some { opd; typ = e0.e_type; loc = e0.e_loc }
+  let* opd = kind_opt in
+  Some { opd; typ = e0.e_type; loc = e0.e_loc }
 (*e: function [[Codegen.operand_able]] *)
 
 (*s: constant [[Codegen.fn_complexity]] *)

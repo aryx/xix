@@ -655,13 +655,11 @@ let opirr_bitmask_logical (op : arith_opcode) : int =
       raise (Impossible "opirr_bitmask_logical: not a supported bitmask-immediate opcode")
 
 let bitmask_immediate_encoding (op : arith_opcode) (v : int) (r : int) (rt : int) : int option =
-  match bitcon64_params v with
-  | None -> None
-  | Some (n, k) ->
-      let imms = n - 1 in
-      let immr = (64 - k) mod 64 in
-      Some (opirr_bitmask_logical op lor (1 lsl 22) lor (immr lsl 16)
-            lor (imms lsl 10) lor (r lsl 5) lor rt)
+  let* (n, k) = bitcon64_params v in
+  let imms = n - 1 in
+  let immr = (64 - k) mod 64 in
+  Some (opirr_bitmask_logical op lor (1 lsl 22) lor (immr lsl 16)
+        lor (imms lsl 10) lor (r lsl 5) lor rt)
 
 let movcon (v : int) : int option =
   let rec aux s =

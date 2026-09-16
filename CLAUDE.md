@@ -139,9 +139,12 @@ functors; avoid all three in new code:
   Build such chains tail-first with plain sequential `let`s instead.
 - Its `Int64`/`Int32` have no `bits_of_float`/`float_of_bits` (and `Printf` has no `%L`), and
   `List` has no `find_opt`/`rev_map`/`rev_append`. See `lib_core/commons/Bits_of_float.ml` for
-  a pure-arithmetic (frexp/ldexp-based) replacement for the float one; the others need simple
-  inline workarounds at their call sites. (`Hashtbl.find_opt` and `List.concat_map` used to be
-  missing too, but got added upstream in `ocaml-light` — don't route around those two anymore.)
+  a pure-arithmetic (frexp/ldexp-based) replacement for the float one — built entirely from
+  `Int32.t`/`Int64.t` arithmetic (never a native-int shift/mask wide enough to depend on host
+  word size), so it works the same on a 32-bit host (i386, arm32, mips) as a 64-bit one; the
+  others need simple inline workarounds at their call sites. (`Hashtbl.find_opt` and
+  `List.concat_map` used to be missing too, but got added upstream in `ocaml-light` — don't
+  route around those two anymore.)
 - Objects are supported (used throughout for the capability system, `Cap.*`) but avoid them
   for anything else — same for functors, which ocaml-light doesn't support at all.
 - When working around one of these, leave the recent-OCaml original in a comment alongside

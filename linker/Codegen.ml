@@ -70,8 +70,12 @@ let default_rules (env : env) (init_data : Types.addr option)
             (* claude: recent OCaml would just do:
              *   let bits = Int64.bits_of_float f in
              *   [ [(Int64.to_int (Int64.logand bits 0xFFFFFFFFL), 0)] ]
-             * -- see Bits_of_float.ml's own comment for why not here. *)
-            [ [(snd (Bits_of_float.hi_lo_of_float64 f), 0)] ]
+             * -- Bits_of_float.hi_lo_of_float64 gives the same low
+             * 32-bit half as an Int32.t; `land 0xffffffff` recovers
+             * the same unsigned `int` Int64.logand/to_int used to
+             * (Int32.to_int alone would sign-extend a half with its
+             * top bit set into a negative int). *)
+            [ [(Int32.to_int (snd (Bits_of_float.hi_lo_of_float64 f)) land 0xffffffff, 0)] ]
 
         | Ast_asm.String _s -> 
             (* stricter? what does 5l do with that? confusing I think *)

@@ -723,8 +723,14 @@ let rec rules (is_64 : bool)
          *   let bits = Int64.bits_of_float f in
          *   let lo = Int64.to_int (Int64.logand bits 0xFFFFFFFFL) in
          *   let hi = Int64.to_int (Int64.shift_right_logical bits 32) in
-         * -- see Bits_of_float.ml's own comment for why not here. *)
-        let (hi, lo) = Bits_of_float.hi_lo_of_float64 f in
+         * -- Bits_of_float.hi_lo_of_float64 gives the same two 32-bit
+         * halves as (Int32.t * Int32.t); `land 0xffffffff` recovers
+         * the same unsigned `int` interpretation Int64.logand/to_int
+         * used to (Int32.to_int alone would sign-extend a half with
+         * its top bit set into a negative int). *)
+        let (hi32, lo32) = Bits_of_float.hi_lo_of_float64 f in
+        let hi = Int32.to_int hi32 land 0xffffffff in
+        let lo = Int32.to_int lo32 land 0xffffffff in
         let materialize (rd : reg) (v : int) : int * (unit -> Bits.t list) =
           if fits_addi_imm v
           then 4, (fun () -> [ op_itype op_opimm 0 rZERO rd v ])

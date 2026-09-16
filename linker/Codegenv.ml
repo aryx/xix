@@ -1049,8 +1049,15 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
              *   let bits = Int64.bits_of_float f in
              *   let lo = Int64.to_int (Int64.logand bits 0xFFFFFFFFL) in
              *   let hi = Int64.to_int (Int64.shift_right_logical bits 32) in
-             * -- see Bits_of_float.ml's own comment for why not here. *)
-            let (hi, lo) = Bits_of_float.hi_lo_of_float64 f in
+             * -- Bits_of_float.hi_lo_of_float64 gives the same two
+             * 32-bit halves as (Int32.t * Int32.t); `land 0xffffffff`
+             * recovers the same unsigned `int` interpretation
+             * Int64.logand/to_int used to (Int32.to_int alone would
+             * sign-extend a half with its top bit set into a negative
+             * int). *)
+            let (hi32, lo32) = Bits_of_float.hi_lo_of_float64 f in
+            let hi = Int32.to_int hi32 land 0xffffffff in
+            let lo = Int32.to_int lo32 land 0xffffffff in
             let (R rtmp) = rTMP in
             [ op_irr op_last (lo asr 16) rZERO rTMP;
               op_irr (opirr_arith_opcode OR) (lo land 0xffff) rTMP rTMP;

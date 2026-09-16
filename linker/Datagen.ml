@@ -113,13 +113,19 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr)
             (* claude: recent OCaml would just do:
              *   let n = Int32.to_int (Int32.bits_of_float f) land 0xffffffff in  (* 4 *)
              *   let n = Int64.to_int (Int64.bits_of_float f) in                  (* 8 *)
-             * -- see Bits_of_float.ml's own comment for why not here. *)
+             * -- Bits_of_float.bits_of_float{32,64} are drop-in
+             * replacements for those two missing primitives (see its
+             * own comment), returning the same Int32.t/Int64.t, so the
+             * exact same narrowing to plain `int` is still needed
+             * here (this is the "a real fix needs threading raw
+             * Int64/Int32 through" spot the comment above refers to --
+             * still true, since array_32/array_64 take a plain int). *)
             (match size_slice with
             | 4 ->
-                let n = Bits_of_float.bits_of_float32 f in
+                let n = Int32.to_int (Bits_of_float.bits_of_float32 f) land 0xffffffff in
                 array_32 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
             | 8 ->
-                let n = Bits_of_float.bits_of_float64 f in
+                let n = Int64.to_int (Bits_of_float.bits_of_float64 f) in
                 array_64 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
             | _ ->
                 failwith (spf "float size for %s not in {4,8}"

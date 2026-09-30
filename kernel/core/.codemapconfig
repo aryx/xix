@@ -1,0 +1,78 @@
+// kernel/core/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). The bottom of the OCaml kernel (dune library xix_kernel_core):
+// what 9's core/portdat_core.h, error.h and mem.h gave every C file.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "What every kernel module is written with: typed addresses and units, ARM constants, errors, print.",
+  files: {
+    'Types.ml': {
+      summary: "The kernel's basic types: addresses typed by space (user, kernel, physical), pids, time units.",
+      digest: 'a0e147787e09',
+      capitals: [
+        { at: 'type:user_addr', say: 'VU: a user address, never a kernel one' },
+        { at: 'type:pid', say: 'processes named by pid, not pointers' },
+        { at: 'type:t_ticks', say: 'the clock tick, HZ a second' },
+      ],
+      important: [
+        { at: 'type:phys_addr', say: "P: what C's PADDR returns, now a type", weight: 3 },
+        { at: 'type:virt_addr', say: 'either space, for Device_.t.read', weight: 1 },
+        { at: 'type:filename', say: 'a string; Fpath.t to come', weight: 1 },
+        { at: 'type:t_fastticks', say: 'the system timer: 62.5 MHz', weight: 1 },
+      ],
+    },
+    'Arch.ml': {
+      summary: "The ARM's constants and registers (C's mem.h and ureg.h): page size, KZERO, HZ; timers still Todo.",
+      digest: '5a0c0f776f90',
+      important: [
+        { at: 'type:ureg', say: "the saved user registers, as 5l's ARM names", weight: 1 },
+        { at: 'def:kzero', say: '0x40000000, not mem.h\'s 0x80000000: an int', weight: 3 },
+        { at: 'def:hz', say: 'HZ is 1, not 100: a tick a second', weight: 3 },
+        { at: 'def:aout_magic', say: '-1, a Todo: every exec is refused', weight: 1 },
+        { at: 'def:fastticks', say: 'raises Todo: no timer read from OCaml yet', weight: 1 },
+        { at: 'def:max_cpus', say: 'one CPU: ocaml light is not multicore', weight: 1 },
+      ],
+    },
+    'Conf.ml': {
+      summary: "The machine's configuration, 9's Conf: CPUs, memory banks, process and page counts.",
+      digest: 'd74fbcab10f4',
+      important: [
+        { at: 'type:t', say: "set by C's arch__confinit in 9; fake here", weight: 1 },
+      ],
+    },
+    'Error.ml': {
+      summary: "The system call errors, 9's Enovmem and all, as a variant raised as an exception; panic.",
+      digest: '0878b4763ec0',
+      important: [
+        { at: 'type:error', say: "9's error strings as constructors", weight: 3 },
+        { at: 'def:error', say: "an exception, not waserror's longjmp", weight: 1 },
+        { at: 'def:panic', say: 'Impossible, raised: no halt of the CPU', weight: 1 },
+      ],
+    },
+    'Print.ml': {
+      summary: "The kernel's print, through a hook Main.ml sets: there is no descriptor 1 in a kernel.",
+      digest: '4ba51fb4f91c',
+      important: [
+        { at: 'def:_print', say: 'assigned in Main.ml, to print_string', weight: 3 },
+      ],
+    },
+    'Print.mli': {
+      summary: 'print, and the hook behind it.',
+      digest: 'ecde093b525f',
+      capitals: [{ at: 'def:print', say: "the kernel's print" }],
+    },
+  },
+  skeletons: [
+    skeletons.parts('The bottom of the OCaml kernel', [
+      ['Arch.ml', 'the ARM: address width, page size, KZERO, HZ'],
+      ['Types.ml', 'addresses, pids, units: what all others name'],
+      ['Conf.ml', 'the machine counted'],
+      ['Error.ml', 'the errors a system call returns'],
+      ['Print.ml', 'output, through a hook'],
+    ], [
+      ['Types.ml', 'Arch.ml', 'addr, fastticks'],
+      ['Conf.ml', 'Types.ml', 'phys_addr'],
+    ]),
+  ],
+}

@@ -1,0 +1,194 @@
+// assembler/: what the code map says of it
+// Each architecture repeats one pattern: Parser_asmX.mly (the grammar)
+// over the shared Lexer_asm.mll, Parse_asmX.ml (the tokens translated,
+// the preprocessor hooked in), Ast_asmX.ml in objects/; X is 5 (ARM),
+// 6 (amd64), 7 (ARM64), v (MIPS), i (RISC-V, also j for 64 bits).
+local skeletons = import '../skeletons.libsonnet';
+
+// Parse_asmX.ml's own skeleton: the lexer's tokens translated, the
+// grammar called, under the preprocessor
+local parse_asm(x, arch, no_cpp=true) = {
+  name: 'Parsing ' + arch + ' assembly, under cpp',
+  bones: [
+    { at: 'Parse_asm' + x + '.ml:def:parse', role: 'the entry: cpp hooks, then the grammar' },
+    { at: 'Parse_asm' + x + '.ml:def:token', role: "Lexer_asm's tokens to this parser's" },
+    { at: 'Parser_asm' + x + '.mly:def:program', role: 'the grammar: lines of Ast_asm' + x },
+  ] + (if no_cpp then [{ at: 'Parse_asm' + x + '.ml:def:parse_no_cpp', role: 'no cpp: for tests' }] else []),
+  joints: [
+    { from: 'Parse_asm' + x + '.ml:def:parse', to: 'Parse_asm' + x + '.ml:def:token', say: 'the lexer hook' },
+    { from: 'Parse_asm' + x + '.ml:def:parse', to: 'Parser_asm' + x + '.mly:def:program', say: 'the parser hook' },
+  ] + (if no_cpp then [{ from: 'Parse_asm' + x + '.ml:def:parse_no_cpp', to: 'Parser_asm' + x + '.mly:def:program', say: 'directly' }] else []),
+};
+local parse_file(arch, digest) = {
+  summary: arch + ' assembly parsed: the shared tokens translated, the grammar run under the preprocessor.',
+  digest: digest,
+  important: [
+    { at: 'def:token', say: 'one token type per ocamlyacc grammar', weight: 3 },
+    { at: 'def:parse', say: 'cpp hooks: #include and #define in .s', weight: 3 },
+  ],
+};
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "oas, 5a's port: one assembler for ARM, amd64, ARM64, MIPS and RISC-V, assembly to an object file.",
+  files: {
+    'Main.ml': {
+      summary: "oas's entry: Cap.main hands the capabilities to CLI.main.",
+      digest: 'c1005fcf0d31',
+      important: [{ at: 'code:"Cap.main"', say: 'the only place all capabilities exist', weight: 3 }],
+    },
+    'CLI.ml': {
+      summary: "The command line, the architecture from argv[0] (o5a, o6a...), parse, resolve, save.",
+      digest: '519f8bad779a',
+      capitals: [{ at: 'def:assemble', say: 'the arch picks a parser; the AST saved' }],
+      important: [
+        { at: 'comment:"better than 5a/va/..."', say: 'what the port gained: shared AST, marshalling', weight: 3 },
+        { at: 'comment:"port remaining assembler: 7a, 8a, 6a"', say: 'stale: 7a and 6a are ported now', weight: 1 },
+        { at: 'def:assemble5', say: 'parse then resolve: all oas does', weight: 3 },
+        { at: 'code:"match Filename.basename argv.(0) with"', say: 'one binary, the arch from its name', weight: 1 },
+        { at: 'def:main', say: 'flags, cpp paths from INCLUDE, then assemble', weight: 1 },
+        { at: 'code:"removing %s because of error"', say: 'no half-written object left', weight: 1 },
+      ],
+    },
+    'CLI.mli': {
+      summary: "What oas needs: files in (and #include's), the object out, INCLUDE from the environment.",
+      digest: 'd13b62d9a9f3',
+      important: [{ at: 'type:caps', say: 'open_in for #include too: a macro assembler', weight: 3 }],
+    },
+    'Check_asm5.ml': {
+      summary: "An empty module: checks to come; its comment names resolve_labels5.ml, now Resolve_labels.ml.",
+      digest: 'aecc4f2878e6',
+      important: [{ at: 'comment:"are done in resolve_labels5.ml"', say: 'stale name: Resolve_labels.ml now', weight: 1 }],
+    },
+    'Lexer_asm.mll': {
+      summary: "The lexer every assembly shares (ocamllex): registers, numbers, strings, punctuation.",
+      digest: '6ff7fad65d33',
+      capitals: [{ at: 'def:token', say: "every arch's tokens, from one lexer" }],
+      important: [
+        { at: 'comment:"Limitations compared to 5a"', say: 'no =, no suffixes: cpp does constants', weight: 3 },
+        { at: 'def:error', say: 'used by every Parse_asmX', weight: 1 },
+        { at: 'def:string', say: 'strings for DATA, 8 bytes at most', weight: 1 },
+      ],
+    },
+    'Token_asm.ml': {
+      summary: "The tokens every assembly shares: pseudo-instructions, registers, numbers, punctuation.",
+      digest: '87f2d7cbfe31',
+      capitals: [{ at: 'type:t', say: 'the tokens, before each grammar' }],
+      important: [{ at: 'comment:"register-list"', say: "a token for one arch's syntax, shared anyway", weight: 1 }],
+    },
+    'Parser_asm.ml': {
+      summary: "Helpers the grammars share, and what they refuse that 5a took: NAME=expr, END.",
+      digest: 'c457a6c06935',
+      important: [
+        { at: 'comment:"constant definition, nor use of it"', say: 'no expressions: parse, then check', weight: 3 },
+        { at: 'def:attributes_of_int', say: "TEXT's flags: DUPOK, NOPROF", weight: 1 },
+      ],
+    },
+    'Parser_asm5.mly': {
+      summary: "5a's ARM grammar (ocamlyacc): conditions, shifts, MOVM's register lists.",
+      digest: 'd0c87ddc554b',
+      important: [{ at: 'def:program', say: 'lines of instr_with_cond', weight: 3 }],
+    },
+    'Parser_asm6.mly': {
+      summary: "6a's amd64 grammar: 64-bit arithmetic, moves, calls, jumps; no floats yet.",
+      digest: '872332464c2a',
+      important: [{ at: 'def:program', say: 'lines of Ast_asm6.instr', weight: 3 }],
+    },
+    'Parser_asm7.mly': {
+      summary: "7a's ARM64 grammar, a first version: SIMD, atomics and floats deferred.",
+      digest: '709ef80592b7',
+      important: [{ at: 'def:program', say: 'lines of Ast_asm7.instr', weight: 3 }],
+    },
+    'Parser_asmi.mly': {
+      summary: "ia's RISC-V grammar, the same for 32 and 64 bits.",
+      digest: '6b2e34fc5146',
+      important: [{ at: 'def:program', say: 'lines of Ast_asmi.instr', weight: 3 }],
+    },
+    'Parser_asmv.mly': {
+      summary: "va's MIPS grammar.",
+      digest: 'b89ec2fc7cc7',
+      important: [{ at: 'def:program', say: 'lines of Ast_asmv.instr', weight: 3 }],
+    },
+    'Parse_asm5.ml': parse_file('ARM', 'c54149c0cc0c'),
+    'Parse_asm5.mli': {
+      summary: "ARM's parser: with the preprocessor, or without for tests.",
+      digest: 'f57b38a4797c',
+    },
+    'Parse_asm6.ml': parse_file('amd64', 'c2dc7e54678c'),
+    'Parse_asm7.ml': parse_file('ARM64', '3a5bb8973c40'),
+    'Parse_asmi.ml': parse_file('RISC-V', 'a5770a736b47'),
+    'Parse_asmi.mli': {
+      summary: "RISC-V's parser: with the preprocessor, or without for tests.",
+      digest: '7fd465ea67c7',
+    },
+    'Parse_asmv.ml': parse_file('MIPS', 'fda0e72bd07d'),
+    'Resolve_labels.ml': {
+      summary: "Labels to absolute addresses in two passes: nearly all 5a does, the rest is the linker's.",
+      digest: '5688722f3d8a',
+      capitals: [{ at: 'def:resolve', say: "oas's one pass after parsing" }],
+      important: [
+        { at: 'comment:"the Plan 9 assembler does not do much"', say: 'the linker does the real work', weight: 3 },
+        { at: 'comment:"first pass, process the label definitions"', say: 'labels to pcs', weight: 1 },
+        { at: 'comment:"second pass, process the label uses"', say: 'uses to Absolute, labels dropped', weight: 1 },
+      ],
+    },
+    'Resolve_labels.mli': {
+      summary: "Labels and relative jumps turned absolute, by side effect on the program.",
+      digest: 'd594d089e5da',
+      important: [{ at: 'comment:"works by side effect"', say: 'branch_operand is a ref', weight: 3 }],
+    },
+  },
+  dirs: {
+    docs: { summary: "oas.nw, the assembler's literate book (Principia Softwarica's 5a), and its LaTeX." },
+  },
+  skeletons: [
+    skeletons.cli('oas: assembly to an object file', [
+      ['CLI.ml:def:assemble', 'the arch picks the parser', 'the file, the arch'],
+      ['CLI.ml:def:assemble5', 'ARM: parse, resolve (one per arch)', 'ARM'],
+      ['Parse_asm5.ml:def:parse', 'cpp, lexer, grammar: the AST', 'the file'],
+      ['Resolve_labels.ml:def:resolve', 'labels to absolute pcs', 'the AST'],
+      ['objects/Object_file.ml:def:save', 'the AST marshalled', 'the resolved AST'],
+    ]),
+    skeletons.calls('oas: one assembler per architecture', 'CLI.ml:def:assemble', 'argv[0] chose the arch', [
+      ['CLI.ml:def:assemble5', 'ARM (o5a)', 'Arm'],
+      ['CLI.ml:def:assemble6', 'amd64 (o6a)', 'Amd64'],
+      ['CLI.ml:def:assemble7', 'ARM64 (o7a)', 'Arm64'],
+      ['CLI.ml:def:assemblev', 'MIPS (ova)', 'Mips'],
+      ['CLI.ml:def:assemblei', 'RISC-V (oia, oja)', 'Riscv'],
+    ]),
+    skeletons.parts('The assembler: a pipeline per arch, one lexer, one AST core', [
+      ['Lexer_asm.mll', 'the tokens, shared'],
+      ['Parser_asm5.mly', 'a grammar per arch (5 here)'],
+      ['Parse_asm5.ml', 'the grammar under cpp (5 here)'],
+      ['../macroprocessor/', 'cpp: #include, #define'],
+      ['Resolve_labels.ml', 'labels resolved, for every arch'],
+      ['CLI.ml', 'the arch chosen, the steps run'],
+      ['objects/', 'the ASTs and the object file'],
+    ], [
+      ['Parse_asm5.ml', 'Lexer_asm.mll', 'tokens'],
+      ['Parse_asm5.ml', 'Parser_asm5.mly', 'the grammar'],
+      ['Parse_asm5.ml', '../macroprocessor/', 'runs under'],
+      ['CLI.ml', 'Parse_asm5.ml', 'parses'],
+      ['CLI.ml', 'Resolve_labels.ml', 'resolves'],
+      ['CLI.ml', 'objects/', 'saves'],
+    ]),
+    parse_asm('5', 'ARM'),
+    parse_asm('6', 'amd64'),
+    parse_asm('7', 'ARM64'),
+    parse_asm('i', 'RISC-V'),
+    parse_asm('v', 'MIPS', no_cpp=false),
+  ],
+  tours: [
+    {
+      name: 'An ARM .s assembled',
+      stops: [
+        { at: 'Main.ml:code:"Cap.main"', say: 'The capabilities handed out once, as in every xix program.' },
+        { at: 'CLI.ml:def:main', say: 'The architecture comes from the program name: o5a is ARM.' },
+        { at: 'CLI.ml:def:assemble5', say: 'Parse, then resolve labels: all the assembler does.' },
+        { at: 'Parse_asm5.ml:def:parse', say: 'The preprocessor drives the lexer and the grammar through hooks.' },
+        { at: 'Parser_asm5.mly:def:program', say: 'The grammar builds Ast_asm5 lines directly: no expressions.' },
+        { at: 'Resolve_labels.ml:def:resolve', say: 'Two passes turn labels and relative jumps into absolute pcs.' },
+        { at: 'objects/Object_file.ml:def:save', say: 'The object file is the AST, marshalled: no format written by hand.' },
+      ],
+    },
+  ],
+}

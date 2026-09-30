@@ -1,0 +1,30 @@
+// debugger/: what the code map says of it (tinybox codemap; the format:
+// ~/github/ocaml-elm-playground/docs/manual/codemap.md, section 12).
+// Not a port of Plan 9's acid or db (~/principia/debuggers/): one small
+// tool for the kernel's crashes, built by the mkfile only (ksym). It
+// predates the capabilities: Arg.parse and exit, no Cap.main.
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "ksym, a debugging aid: the procedure holding an address, found in a symbol list (nm's T lines).",
+  files: {
+    'ksym.ml': {
+      summary: 'ksym: -addr 0x80001000 syms.list prints the function whose text contains that address.',
+      digest: 'd6aecc217903',
+      capitals: [{ at: 'def:debug', say: 'the address between two sorted symbols' }],
+      important: [
+        { at: 'def:parse', say: 'T and t lines of nm: text symbols, sorted', weight: 2 },
+        { at: 'code:"if addr >= addr1 && addr < addr2"', say: 'a symbol ends where the next begins', weight: 3 },
+        { at: 'code:"Arg.parse options"', say: 'argv read without CapSys: no capabilities', weight: 1 },
+        { at: 'code:"exit (-1)"', say: 'exit, not Exit.exit: predates the caps', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.module('ksym.ml', 'ksym: symbols read, the address located', [
+      ['main', 'the flags: -addr and the symbol file', ''],
+      ['debug', 'walk the sorted symbols to the address', 'address, file'],
+      ['parse', 'the text symbols, sorted by address', 'the file'],
+    ]),
+  ],
+}

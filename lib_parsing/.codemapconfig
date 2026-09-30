@@ -1,0 +1,67 @@
+// lib_parsing/: what the code map says of it
+// Lexing_ and Parsing_: the stdlib's runtimes rewritten for xix's own
+// generators (generators/lex, generators/yacc), synced by syncweb from
+// generators/docs/CompilerGenerator.nw (the (*s: *) markers). The
+// underscore avoids a clash with the stdlib's (see the mkfile).
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The runtimes of xix's own ocamllex and ocamlyacc: an LR driver in OCaml, no C engine.",
+  files: {
+    'Lexing_.ml': {
+      summary: "The lexer buffer for the lex port's simple code: next char, start, backtrack to the last action.",
+      digest: '26291d546f99',
+      important: [
+        { at: 'def:get_next_char', say: 'the generated lexer walks chars itself', weight: 3 },
+        { at: 'def:backtrack', say: 'longest match: back to the last accept', weight: 3 },
+        { at: 'def:lex_refill', say: 'doubles the buffer when a token is long', weight: 1 },
+        { at: 'def:engine', say: 'the table engine, kept, still C', weight: 1 },
+      ],
+    },
+    'Lexing_.mli': {
+      summary: "The lexbuf of the lex port, with lex_last_action_simple for its generated code.",
+      digest: 'fbceac0273fb',
+      important: [{ at: 'type:lexbuf', say: 'a closure as the last action', weight: 1 }],
+    },
+    'Parsing_.ml': {
+      summary: 'LR parsing in OCaml: yyparse_simple shifts and reduces over the tables the yacc port made.',
+      digest: '31bc1ad6fe6e',
+      capitals: [{ at: 'def:yyparse_simple', say: 'shift, reduce, accept: an LR driver' }],
+      important: [
+        { at: 'type:action', say: 'Shift, Reduce, Accept', weight: 3 },
+        { at: 'def:parse_engine', say: 'the C engine refused: use the simple one', weight: 1 },
+        { at: 'def:peek_val_simple', say: 'bug: && should be ||, never fails', weight: 3 },
+        { at: 'def:debug', say: 'on by default: every step logged', weight: 1 },
+        { at: 'def:value_of_tok', say: "a token's argument, by Obj, as C does", weight: 1 },
+      ],
+    },
+    'Parsing_.mli': {
+      summary: "The parser runtime's interface: Parse_error, yyparse, and the simple LR tables and driver.",
+      digest: '2b5a66c90d0f',
+      important: [
+        { at: 'type:lr_tables', say: 'action and goto, as functions', weight: 3 },
+        { at: 'def:yyparse_simple', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts("The generators' runtime", [
+      ['Lexing_.ml', 'the lexbuf the generated lexer walks'],
+      ['Parsing_.ml', 'the LR driver over the generated tables'],
+    ], [
+      ['Lexing_.ml', 'Parsing_.ml', 'tokens, through lexfun'],
+    ]),
+    skeletons.module('Lexing_.ml', 'A token by the simple method', [
+      ['from_channel', 'a lexbuf over a channel', ''],
+      ['start_lexing', 'a token begins', 'the lexbuf'],
+      ['get_next_char', 'a char, refilling', 'each char'],
+      ['backtrack', 'back to the last accepting action', 'at a dead end'],
+    ]),
+    skeletons.chain('yyparse_simple: an LR parse', [
+      ['Parsing_.ml:type:lr_tables', 'the tables the yacc port made', ''],
+      ['Parsing_.ml:def:yyparse_simple', 'shift, reduce, accept', 'action and goto'],
+      ['Parsing_.ml:type:parser_env_simple', 'the states and values stacks', 'pushed and popped'],
+      ['Parsing_.ml:def:peek_val_simple', "a rule's i-th value, in actions", 'the values'],
+    ]),
+  ],
+}

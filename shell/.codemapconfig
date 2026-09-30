@@ -1,0 +1,398 @@
+// shell/: orc, the OCaml port of rc (Plan 9's shell), what the code map
+// says of it. From shell/docs/orc.nw's "Code organization" and
+// "Software architecture": rc is a compiler and a bytecode interpreter.
+// Input characters -> tokens (Lexer.mll) -> AST (Parser.mly, Parse.ml)
+// -> opcodes (Compile.ml) -> threads (Runtime.ml) -> processes
+// (Op_process.ml). It starts by interpreting: main runs the bootstrap
+// opcodes, whose '. rcmain' reaches the REPL opcode, which parses a
+// line, compiles it and pushes a new thread; its Return pops back to
+// the bootstrap, which reads again. The book's table still names
+// Op_REPL.ml, Interpret.ml and a Trap.ml: the files are Op_repl.ml,
+// Interpreter.ml, and no signals yet. Lexer.mll and Parser.mly are not
+// sources to the map. The C original is ~/principia/shells/rc/.
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: 'orc, rc ported to OCaml: a line lexed, parsed, compiled to opcodes, and run by a bytecode interpreter.',
+  files: {
+    'Main.ml': {
+      summary: "orc's entry: Cap.main hands out every capability, CLI.main gets them with argv.",
+      digest: '6366a5b9d5a3',
+    },
+    'CLI.ml': {
+      summary: "The flags, then the interpreter's loop: the bootstrap's opcodes run, which read and run commands.",
+      digest: 'ced07a9847b2',
+      capitals: [{ at: 'def:interpret_bootstrap', say: 'the interpreter loop: fetch, dispatch' }],
+      important: [
+        { at: 'comment:"Main limitations compared to rc"', say: 'no globbing, heredocs, env functions', weight: 2 },
+        { at: 'def:bootstrap', say: "*=(argv); . rcmain $*: rc's first program", weight: 3 },
+        { at: 'comment:"bugfix: need to fetch the current thread each time"', say: 'an opcode may push or pop a thread', weight: 2 },
+        { at: 'comment:"opcode dispatch !"', say: 'the pc advanced before the opcode runs', weight: 2 },
+        { at: 'code:"t.R.lexbuf <- Lexing.from_channel stdin"', say: 'stdin read without Cap.stdin', weight: 1 },
+        { at: 'code:"\"-p\", Arg.Unit (fun () -> ())"', say: '-p accepted, and ignored', weight: 1 },
+        { at: 'def:main', say: 'flags, $vars from the environment, then run', weight: 1 },
+      ],
+      links: [
+        { from: 'def:interpret_bootstrap', to: 'Interpreter.ml:def:interpret_operation' },
+        { from: 'def:main', to: 'Var.ml:def:init' },
+      ],
+    },
+    'CLI.mli': {
+      summary: 'Interface of orc: the capabilities a shell needs, each said why, and main.',
+      digest: 'dec47a1f9974',
+      important: [{ at: 'type:caps', say: 'fork, exec, chdir, exit, open_in', weight: 2 }],
+    },
+    'Ast.ml': {
+      summary: "A command line's AST: values (words, $vars, `{cmds}), commands, redirections (new: rc built its tree in yacc).",
+      digest: '7bd91b822621',
+      capitals: [
+        { at: 'type:cmd', say: 'a simple command, a pipe, if, for, fn...' },
+        { at: 'type:value', say: 'a word, $x, $#x, ^, `{...}' },
+      ],
+      important: [
+        { at: 'type:cmd_sequence', say: 'what one line holds', weight: 2 },
+        { at: 'type:redirection_kind', say: '>, >>, <, <>', weight: 1 },
+        { at: 'type:line', say: 'the parser returns this, or nothing at EOF', weight: 1 },
+      ],
+    },
+    'Opcode.ml': {
+      summary: "The virtual machine's instruction set: operations, and the words and ints inlined after them (code.c's).",
+      digest: '22a36a077c79',
+      capitals: [{ at: 'type:operation', say: "rc's opcodes: Mark, Word, Simple, Pipe..." }],
+      important: [
+        { at: 'type:t', say: 'F an operation, S a string, I an address', weight: 3 },
+        { at: 'type:codevec', say: 'a compiled line: an array of them', weight: 2 },
+      ],
+    },
+    'Runtime.ml': {
+      summary: "The interpreter's state: threads on a run queue, each with code, pc, argv stack, redirections.",
+      digest: '3d6b401dd267',
+      capitals: [{ at: 'type:thread', say: 'a codevec running: pc, argv, locals' }],
+      important: [
+        { at: 'def:runq', say: 'the threads; the head runs', weight: 3 },
+        { at: 'def:cur', say: 'the running thread', weight: 2 },
+        { at: 'def:push_list', say: 'Mark: a new argv on the stack', weight: 2 },
+        { at: 'def:push_word', say: 'Word: onto the current argv', weight: 1 },
+        { at: 'type:redir', say: 'fd From becomes To, before exec', weight: 1 },
+        { at: 'def:doredir', say: 'the redirections applied in the child', weight: 1 },
+        { at: 'def:mk_thread', say: 'a codevec made a thread', weight: 2 },
+        { at: 'def:globals', say: 'the global variables', weight: 1 },
+      ],
+    },
+    'Runtime.mli': {
+      summary: "Interface of the interpreter's state, what every part of orc is written with: thread, runq, variables.",
+      digest: 'd8822fcf0de6',
+      capitals: [
+        { at: 'type:thread', say: 'code, pc, argv stack, lexbuf, redirs' },
+        { at: 'def:runq', say: 'the run queue: its head is running' },
+        { at: 'type:var', say: 'a variable: a list of strings, or none' },
+      ],
+      important: [
+        { at: 'def:cur', say: 'the thread every opcode works on', weight: 2 },
+        { at: 'type:waitstatus', say: 'a pipe child waited for, or its status', weight: 1 },
+        { at: 'def:fns', say: 'the functions defined by fn', weight: 1 },
+      ],
+    },
+    'Var.ml': {
+      summary: 'Variables looked up (locals first, then globals), set, and initialized from the environment (var.c).',
+      digest: 'd18f6c9860e2',
+      capitals: [{ at: 'def:vlook', say: "a thread's locals, then the globals" }],
+      important: [
+        { at: 'def:setvar', say: 'a global set', weight: 1 },
+        { at: 'def:init', say: 'the environment, $pid, $prompt...', weight: 2 },
+      ],
+    },
+    'Var.mli': {
+      summary: 'Interface of the variables: gvlook, vlook, setvar, init.',
+      digest: '6b009a372edb',
+      important: [{ at: 'def:vlook', say: 'creates the variable when missing', weight: 1 }],
+    },
+    'Fn.ml': {
+      summary: 'A function looked up by name, for a simple command that may be one.',
+      digest: '85dbacb4dbe8',
+    },
+    'Fn.mli': { summary: 'Interface of flook.', digest: '2152bea7dfde' },
+    'Status.ml': {
+      summary: "$status: set by every command, true when empty or \"\", concatenated across a pipe.",
+      digest: '02c4269d051e',
+      important: [
+        { at: 'def:setstatus', say: 'what every command ends with', weight: 2 },
+        { at: 'def:truestatus', say: "rc's truth: an empty status", weight: 2 },
+      ],
+    },
+    'Status.mli': {
+      summary: 'Interface of the $status helpers: set, get, concatenate, true.',
+      digest: '2531b0c1bbca',
+    },
+    'Compile.ml': {
+      summary: 'The AST compiled to opcodes, jumps patched after (code.c): and, or, if, while, pipes, assignments.',
+      digest: 'da84a2607b35',
+      capitals: [{ at: 'def:compile', say: 'a line to a codevec ending in Return' }],
+      important: [
+        { at: 'def:outcode_seq', say: 'emit, then set the jump addresses', weight: 3 },
+        { at: 'code:"| A.Simple (w, ws) ->"', say: 'Mark, the words reversed, Simple', weight: 2 },
+        { at: 'code:"| A.And (cmd1, cmd2) ->"', say: 'True skips cmd2: the address set after', weight: 2 },
+        { at: 'def:split_at_non_assign', say: 'a=b cmd: assignments local to cmd', weight: 1 },
+        { at: 'code:"emit (O.F O.Return)"', say: 'back to the REPL thread when done', weight: 2 },
+      ],
+    },
+    'Compile.mli': { summary: 'Interface of compile.', digest: '9e1f965c9593' },
+    'Interpreter.ml': {
+      summary: 'One opcode interpreted on the current thread (exec.c): words, assignments, pipes, if, jumps, $.',
+      digest: '5a068430a539',
+      capitals: [{ at: 'def:interpret_operation', say: 'the opcode dispatcher' }],
+      important: [
+        { at: 'code:"| O.REPL -> Op_repl.op_REPL caps ()"', say: 'read, compile, push a thread', weight: 3 },
+        { at: 'code:"| O.Simple -> Op_process.op_Simple caps ()"', say: 'a command run: fork, exec, wait', weight: 3 },
+        { at: 'code:"| O.Pipe ->"', say: 'a fork, each side its own thread', weight: 2 },
+        { at: 'code:"| O.Assign ->"', say: 'two argv lists popped: name, value', weight: 1 },
+        { at: 'code:"| O.Glob ->"', say: 'globbing not implemented: logs TODO', weight: 1 },
+        { at: 'code:"failwith (\"TODO: \""', say: 'for, fn, `{}, &, most redirections: not yet', weight: 3 },
+        { at: 'comment:"list indexes in rc starts at 1"', say: '$x(1) is the first', weight: 1 },
+      ],
+      links: [
+        { from: 'def:interpret_operation', to: 'Op_repl.ml:def:op_REPL' },
+        { from: 'def:interpret_operation', to: 'Op_process.ml:def:op_Simple' },
+      ],
+    },
+    'Interpreter.mli': {
+      summary: "Interface of interpret_operation, called from main's loop.",
+      digest: '6f017ac4cc6e',
+    },
+    'Op_repl.ml': {
+      summary: "The REPL opcode (rc's Xrdcmds): a line parsed and compiled, run as a new thread, then again.",
+      digest: 'c46dac2fb11a',
+      capitals: [{ at: 'def:op_REPL', say: 'parse, compile, push; pc decremented' }],
+      important: [
+        { at: 'code:"decr t.R.pc;"', say: 'REPL runs again when the new thread returns', weight: 3 },
+        { at: 'code:"| None -> Process.return caps ()"', say: 'end of input: this thread returns', weight: 2 },
+        { at: 'code:"if t.R.iflag"', say: 'interactive: an error, then the next line', weight: 1 },
+      ],
+      links: [
+        { from: 'def:op_REPL', to: 'Parse.ml:def:parse_line' },
+        { from: 'def:op_REPL', to: 'Compile.ml:def:compile' },
+      ],
+    },
+    'Op_process.ml': {
+      summary: "The Simple opcode: a builtin, or $path searched, forked, exec'ed and waited for (simple.c).",
+      digest: '8027acd4d7ea',
+      capitals: [{ at: 'def:op_Simple', say: 'the essence of a shell: fork, exec, wait' }],
+      important: [
+        { at: 'def:forkexec', say: 'the child execs; the parent gets the pid', weight: 2 },
+        { at: 'def:execute', say: 'redirections applied, then execv', weight: 2 },
+        { at: 'code:"| s when Builtin.is_builtin s"', say: 'cd, ., exit: run in rc itself', weight: 2 },
+        { at: 'comment:"todo: if argv0 is a function"', say: 'functions are not called yet', weight: 1 },
+        { at: 'code:"while Process.waitfor caps pid"', say: 'waited again when interrupted', weight: 1 },
+      ],
+    },
+    'Process.ml': {
+      summary: 'Threads returning, rc exiting with a status, children waited for (their status to $status).',
+      digest: 'c4a1dce237c3',
+      important: [
+        { at: 'def:return', say: 'a thread popped; the last one exits rc', weight: 2 },
+        { at: 'def:waitfor', say: 'wait until that pid; the others noted', weight: 2 },
+        { at: 'def:exit', say: 'Cap.exit with $status', weight: 1 },
+      ],
+    },
+    'Process.mli': {
+      summary: 'Interface of the process helpers: return, exit, waitfor.',
+      digest: '436cd23c4efc',
+    },
+    'Builtin.ml': {
+      summary: 'The builtins run inside rc: cd, ., eval, exit, flag, finit, show (simple.c).',
+      digest: '9c336bb7c960',
+      capitals: [{ at: 'def:dispatch', say: 'a builtin by name' }],
+      important: [
+        { at: 'def:dotcmds', say: '. file: opcodes to REPL on a new lexbuf', weight: 3 },
+        { at: 'def:dochdir', say: 'cd, through Cap.chdir', weight: 1 },
+        { at: 'def:is_builtin', say: 'the list of builtins', weight: 1 },
+      ],
+    },
+    'Builtin.mli': { summary: 'Interface of the builtins: is_builtin, dispatch.', digest: '1755f8de3ba5' },
+    'Parse.ml': {
+      summary: 'A line parsed: the ocamlyacc parser over the lexer, with the prompt and its errors located.',
+      digest: '6257f8625fce',
+      capitals: [{ at: 'def:parse_line', say: 'a lexbuf to one line of commands' }],
+      important: [{ at: 'def:error', say: 'file:line: before the message', weight: 1 }],
+    },
+    'Parse.mli': { summary: 'Interface of parse_line.', digest: '1f12dfff88fb' },
+    'Lexer.mli': {
+      summary: "Interface of the ocamllex lexer (Lexer.mll): token, and its error.",
+      digest: '39228bd3b75d',
+    },
+    'Globals.ml': {
+      summary: "The lexer's and interpreter's shared flags: skipnl after && or |, ifnot, errstr, eflagok.",
+      digest: 'ed9a95f51300',
+      important: [
+        { at: 'def:skipnl', say: 'after && a newline is a space', weight: 2 },
+        { at: 'def:ifnot', say: "if not's memory of the last if", weight: 1 },
+      ],
+    },
+    'Prompt.ml': {
+      summary: 'The prompt: printed before the next line is read, indented while a command continues.',
+      digest: '30b31050b90e',
+      important: [{ at: 'def:doprompt', say: 'set after a newline, shown at the next read', weight: 2 }],
+    },
+    'Prompt.mli': { summary: 'Interface of the prompt: doprompt, prompt, pprompt.', digest: '78bde3f2c967' },
+    'PATH.ml': {
+      summary: "A command found in $path, unless its name is already a path (/, ./, ../, #).",
+      digest: '2884ee8e2710',
+      important: [{ at: 'def:find_dir_with_cmd_in_PATH', say: 'the first directory holding it', weight: 1 }],
+    },
+    'PATH.mli': { summary: 'Interface of the $path search.', digest: '54963784cdc9' },
+    'Pattern.ml': {
+      summary: "~'s patterns: for now a string compared as is, no * or ? yet.",
+      digest: '470d1c9d62ce',
+    },
+    'Pattern.mli': { summary: 'Interface of match_str.', digest: '1bc194b11742' },
+    'Error.ml': {
+      summary: 'An rc error: the message to $status, and threads returned until the interactive one.',
+      digest: 'de65915c2b4e',
+    },
+    'Error.mli': { summary: 'Interface of error, which behaves like a raise.', digest: 'eef58e2ea914' },
+    'Env.ml': {
+      summary: "The process environment read into variables (a copy of builder/Shellenv.ml; Plan 9 reads /env).",
+      digest: '21e0d9cdc8dd',
+    },
+    'Env.mli': { summary: 'Interface of read_environment.', digest: '788ae855e3ad' },
+    'Flags.ml': {
+      summary: "rc's flags (-i, -l, -e, -x, -s, -r, -m) and the port's debugging dumps.",
+      digest: '4230892a3443',
+      important: [
+        { at: 'def:rcmain', say: '-m: the script the bootstrap sources', weight: 1 },
+        { at: 'def:eflag', say: '-e: exit on a failed command', weight: 1 },
+      ],
+    },
+    'Glob.ml': { summary: 'Globbing, to come: an empty file (glob.c).', digest: '35a56369c15a' },
+    'Glob.mli': { summary: 'Globbing, to come: an empty interface.', digest: 'f8d36d895360' },
+    'Heredoc.ml': { summary: 'Here documents, to come: an empty file (here.c).', digest: 'faa13efb8fd2' },
+    'Heredoc.mli': { summary: 'Here documents, to come: an empty interface.', digest: 'e99dbfb449a7' },
+  },
+  dirs: {
+    docs: { summary: 'The book, orc.nw: rc explained, compiler and bytecode interpreter, the sources tangled from it.' },
+    data: { summary: "rcmain for Plan 9 and for Unix: the script the bootstrap sources, then '. /dev/stdin'." },
+  },
+  skeletons: [
+    skeletons.cli('orc: a line read, compiled, interpreted, again', [
+      ['CLI.ml:def:interpret_bootstrap', 'the loop: fetch an opcode, dispatch it', 'args'],
+      ['Interpreter.ml:def:interpret_operation', 'one opcode on the current thread', 'an opcode'],
+      ['Op_repl.ml:def:op_REPL', 'REPL: read a line', 'REPL'],
+      ['Parse.ml:def:parse_line', 'tokens to an AST', 'the lexbuf'],
+      ['Compile.ml:def:compile', 'the AST to opcodes', 'the AST'],
+      ['Runtime.ml:def:mk_thread', 'a new thread on the run queue', 'the codevec'],
+    ]) + {
+      bones+: [{ at: 'Op_process.ml:def:op_Simple', role: 'Simple: fork, exec, wait' }],
+      joints+: [
+        { from: 'Runtime.ml:def:mk_thread', to: 'CLI.ml:def:interpret_bootstrap', say: 'runq: its opcodes next' },
+        { from: 'Interpreter.ml:def:interpret_operation', to: 'Op_process.ml:def:op_Simple', say: 'Simple' },
+      ],
+    },
+    skeletons.parts("orc's files: compiler, then interpreter", [
+      ['Parse.ml', 'the front: lexer and parser'],
+      ['Ast.ml', 'the tree of a line'],
+      ['Compile.ml', 'the tree to opcodes'],
+      ['Opcode.ml', 'the instruction set'],
+      ['Interpreter.ml', 'the opcodes run'],
+      ['Runtime.mli', 'threads, variables: the machine'],
+      ['Op_process.ml', 'commands as processes'],
+      ['Builtin.ml', 'commands inside rc'],
+    ], [
+      ['Parse.ml', 'Ast.ml', 'builds'],
+      ['Ast.ml', 'Compile.ml', 'compiled'],
+      ['Compile.ml', 'Opcode.ml', 'emits'],
+      ['Opcode.ml', 'Interpreter.ml', 'dispatched'],
+      ['Interpreter.ml', 'Runtime.mli', 'changes'],
+      ['Interpreter.ml', 'Op_process.ml', 'Simple'],
+      ['Op_process.ml', 'Builtin.ml', 'cd, ., exit'],
+    ]),
+    skeletons.module('CLI.ml', "orc's start: flags, the bootstrap, the loop", [
+      ['main', 'flags, variables initialized', ''],
+      ['interpret_bootstrap', 'a thread of the bootstrap, then the loop', 'the arguments'],
+      ['bootstrap', '*=(argv); . rcmain $*', 'the first code'],
+    ]) + {
+      bones+: [{ at: 'Interpreter.ml:def:interpret_operation', role: 'each opcode' }],
+      joints+: [{ from: 'CLI.ml:def:interpret_bootstrap', to: 'Interpreter.ml:def:interpret_operation', say: 'code.(pc)' }],
+    },
+    {
+      name: 'The compiler: emit, and patch the jumps',
+      bones: [
+        { at: 'Compile.ml:def:compile', role: 'a growing codevec, emit and set' },
+        { at: 'Compile.ml:def:outcode_seq', role: 'a command at a time, recursively' },
+        { at: 'Compile.ml:def:split_at_non_assign', role: 'a=b cmd split' },
+        { at: 'Compile.ml:def:split_when_case', role: 'a switch cut at its cases' },
+        { at: 'Opcode.ml:type:codevec', role: 'the result' },
+      ],
+      joints: [
+        { from: 'Compile.ml:def:compile', to: 'Compile.ml:def:outcode_seq', say: 'emit, set, idx' },
+        { from: 'Compile.ml:def:outcode_seq', to: 'Compile.ml:def:split_at_non_assign', say: 'a simple command' },
+        { from: 'Compile.ml:def:outcode_seq', to: 'Compile.ml:def:split_when_case', say: 'a switch' },
+        { from: 'Compile.ml:def:compile', to: 'Opcode.ml:type:codevec', say: 'trimmed, Return last' },
+      ],
+    },
+    {
+      name: 'The interpreter: an opcode on the current thread',
+      bones: [
+        { at: 'Interpreter.ml:def:interpret_operation', role: 'the dispatcher' },
+        { at: 'Interpreter.ml:def:int_at_address', role: 'an inlined address or fd' },
+        { at: 'Interpreter.ml:def:vlook_varname_or_index', role: '$x or $1' },
+        { at: 'Op_repl.ml:def:op_REPL', role: 'REPL' },
+        { at: 'Op_process.ml:def:op_Simple', role: 'Simple' },
+        { at: 'Process.ml:def:return', role: 'Return: the thread popped' },
+      ],
+      joints: [
+        { from: 'Interpreter.ml:def:interpret_operation', to: 'Interpreter.ml:def:int_at_address', say: 'jumps, fds' },
+        { from: 'Interpreter.ml:def:interpret_operation', to: 'Interpreter.ml:def:vlook_varname_or_index', say: 'Dollar, Count' },
+        { from: 'Interpreter.ml:def:interpret_operation', to: 'Op_repl.ml:def:op_REPL', say: 'REPL' },
+        { from: 'Interpreter.ml:def:interpret_operation', to: 'Op_process.ml:def:op_Simple', say: 'Simple' },
+        { from: 'Interpreter.ml:def:interpret_operation', to: 'Process.ml:def:return', say: 'Return' },
+      ],
+    },
+    {
+      name: "The machine's state: threads on a queue, argv on a stack",
+      bones: [
+        { at: 'Runtime.ml:type:thread', role: 'code, pc, argv, redirections' },
+        { at: 'Runtime.ml:def:runq', role: 'the threads' },
+        { at: 'Runtime.ml:def:cur', role: 'the head, running' },
+        { at: 'Runtime.ml:def:mk_thread', role: 'a new one' },
+        { at: 'Runtime.ml:def:push_list', role: 'Mark' },
+        { at: 'Runtime.ml:def:push_word', role: 'Word' },
+        { at: 'Runtime.ml:def:doredir', role: 'redirections done' },
+      ],
+      joints: [
+        { from: 'Runtime.ml:def:mk_thread', to: 'Runtime.ml:type:thread', say: 'builds' },
+        { from: 'Runtime.ml:def:runq', to: 'Runtime.ml:def:cur', say: 'its head' },
+        { from: 'Runtime.ml:def:cur', to: 'Runtime.ml:def:push_list', say: 'its argv stack' },
+        { from: 'Runtime.ml:def:cur', to: 'Runtime.ml:def:push_word', say: 'its argv' },
+        { from: 'Runtime.ml:def:cur', to: 'Runtime.ml:def:doredir', say: 'its redirections' },
+      ],
+    },
+    {
+      name: 'The builtins: run inside rc',
+      bones: [
+        { at: 'Builtin.ml:def:is_builtin', role: 'the names' },
+        { at: 'Builtin.ml:def:dispatch', role: 'by name' },
+        { at: 'Builtin.ml:def:dochdir', role: 'cd' },
+        { at: 'Builtin.ml:def:dotcmds', role: '. file: a REPL on the file' },
+      ],
+      joints: [
+        { from: 'Builtin.ml:def:is_builtin', to: 'Builtin.ml:def:dispatch', say: 'a builtin' },
+        { from: 'Builtin.ml:def:dispatch', to: 'Builtin.ml:def:dochdir', say: 'cd' },
+        { from: 'Builtin.ml:def:dispatch', to: 'Builtin.ml:def:dotcmds', say: '.' },
+      ],
+    },
+  ],
+  tours: [
+    {
+      name: 'ls typed at the prompt',
+      stops: [
+        { at: 'CLI.ml:def:bootstrap', say: 'rc starts by interpreting: these opcodes source rcmain, which reads stdin.' },
+        { at: 'CLI.ml:def:interpret_bootstrap', say: 'The loop: the current thread, its opcode at pc, dispatched.' },
+        { at: 'Op_repl.ml:def:op_REPL', say: 'REPL parses one line, compiles it, pushes it as a thread, and backs its pc up.' },
+        { at: 'Compile.ml:def:outcode_seq', say: 'ls becomes Mark, Word ls, Simple, then Return.' },
+        { at: 'Interpreter.ml:def:interpret_operation', say: 'Mark starts an argv, Word pushes onto it.' },
+        { at: 'Op_process.ml:def:op_Simple', say: 'Simple: not a builtin, so fork, exec from $path, and wait.' },
+        { at: 'Process.ml:def:return', say: 'Return pops the thread: REPL runs again, for the next line.' },
+      ],
+    },
+  ],
+}

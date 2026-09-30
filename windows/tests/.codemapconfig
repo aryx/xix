@@ -1,0 +1,80 @@
+// windows/tests/: small programs to run inside orio (a window's /dev
+// seen from its client), what the code map says of it. Only hellorio is
+// built (the mkfile's PROGS); the two test_rio_* predate the
+// capabilities and no longer compile against libdraw's API.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Programs run inside orio: a graphical client of a window's /dev, and two older console and draw tests.",
+  files: {
+    'hellorio.ml': {
+      summary: "orio.nw's first program: a window's view found, a line drawn where the mouse is, q quits.",
+      digest: 'bdf1337b5484',
+      capitals: [{ at: 'def:thread_main', say: 'a graphical client of a rio window' }],
+      important: [
+        { at: 'code:"Draw_rio.get_view caps display"', say: "the window's image, through /dev/winname", weight: 3 },
+        { at: 'comment:"create other threads"', say: 'Keyboard.init, Mouse.init: a thread each', weight: 2 },
+        { at: 'code:"] |> Event.select"', say: 'keys and mouse, whichever comes first', weight: 3 },
+        { at: 'def:redraw', say: 'the whole view redrawn, then flushed', weight: 2 },
+        { at: 'code:"then exit 0"', say: 'exit, not CapStdlib.exit: the rule broken', weight: 1 },
+      ],
+    },
+    'test_rio_console_app1.ml': {
+      summary: 'A console client: hello world written on /dev/cons, then a busy loop to keep the window.',
+      digest: '33d6fe56114d',
+      important: [
+        { at: 'code:"Unix.write Unix.stdout"', say: "stdout is the window's cons", weight: 2 },
+        { at: 'code:"while true do"', say: 'spins: burns the CPU to stay alive', weight: 1 },
+      ],
+    },
+    'test_rio_graph_app1.ml': {
+      summary: "A draw client finding its window by /dev/winname by hand; stale: Draw.init without capabilities.",
+      digest: '71a1b144943b',
+      important: [
+        { at: 'code:"Draw.init \"Hello Draw\""', say: 'stale: Draw.init now takes caps first', weight: 2 },
+        { at: 'code:"Draw_ipc.get_named_image display winname"', say: "the window's image, by its name", weight: 3 },
+        { at: 'code:"open_in \"/dev/winname\""', say: 'open_in without a capability', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts('Clients of a rio window', [
+      ['hellorio.ml', 'graphics and input through the window'],
+      ['test_rio_console_app1.ml', 'text through its /dev/cons'],
+      ['test_rio_graph_app1.ml', 'graphics through /dev/winname'],
+      ['../Virtual_cons.ml', "what serves a window's cons"],
+      ['../Virtual_draw.ml', 'what serves its /dev/winname'],
+    ], [
+      ['test_rio_console_app1.ml', '../Virtual_cons.ml', 'a write'],
+      ['hellorio.ml', '../Virtual_draw.ml', 'reads the name'],
+      ['test_rio_graph_app1.ml', '../Virtual_draw.ml', 'reads the name'],
+    ]),
+    {
+      name: 'hellorio: a view, an event loop, a redraw',
+      bones: [
+        { at: 'hellorio.ml:def:_', role: 'Cap.main' },
+        { at: 'hellorio.ml:def:thread_main', role: 'display, view, keyboard, mouse; the loop' },
+        { at: 'hellorio.ml:type:event', role: 'a key or a mouse state' },
+        { at: 'hellorio.ml:def:redraw', role: 'the picture' },
+        { at: '../../lib_graphics/draw/Draw_rio.ml:def:get_view', role: "the window's view" },
+      ],
+      joints: [
+        { from: 'hellorio.ml:def:_', to: 'hellorio.ml:def:thread_main', say: 'caps' },
+        { from: 'hellorio.ml:def:thread_main', to: '../../lib_graphics/draw/Draw_rio.ml:def:get_view', say: 'the display' },
+        { from: 'hellorio.ml:def:thread_main', to: 'hellorio.ml:type:event', say: 'Event.select' },
+        { from: 'hellorio.ml:type:event', to: 'hellorio.ml:def:redraw', say: 'the mouse position' },
+      ],
+    },
+    skeletons.module('test_rio_console_app1.ml', 'A console client', [
+      ['_', 'the entry', ''],
+      ['main', 'write, then spin', 'calls'],
+    ]),
+    skeletons.module('test_rio_graph_app1.ml', 'A draw client, by hand', [
+      ['_', 'the entry', ''],
+      ['main', 'winname, its image, a rectangle drawn', 'calls'],
+    ]) + {
+      bones+: [{ at: '../../lib_graphics/draw/Draw_ipc.ml:def:get_named_image', role: 'the named image' }],
+      joints+: [{ from: 'test_rio_graph_app1.ml:def:main', to: '../../lib_graphics/draw/Draw_ipc.ml:def:get_named_image', say: 'the name' }],
+    },
+  ],
+}

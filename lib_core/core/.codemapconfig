@@ -1,0 +1,84 @@
+// lib_core/core/: what the code map says of it (tinybox codemap)
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The stdlib's root for ocaml-light, compiled -nopervasives: Stdlib, Obj, Marshal, Gc, exit hooks.",
+  files: {
+    'Callback.ml': { summary: 'Values and exceptions registered by name for the C side: how Unix and zlib raise.', digest: '56d33c7281cc' },
+    'Callback.mli': { summary: 'The Callback interface: register and register_exception, for C stubs.', digest: 'cda3822ad540' },
+    'Gc.ml': { summary: "The GC's statistics and parameters, over the runtime's primitives (1.07's Gc).", digest: '8b692d967f2d' },
+    'Gc.mli': { summary: 'The Gc interface: stat, control, get and set; ogit tunes the heap with it.', digest: '1bd823dc5985' },
+    'Marshal.ml': { summary: 'Values to bytes and back, sharing kept: the capability TCB and Proc send them.', digest: '6ef72b8e4a76' },
+    'Marshal.mli': { summary: 'The Marshal interface: to_channel, to_string, from_channel; unsafe, untyped.', digest: 'a8665298eb15' },
+    'Obj.ml': {
+      summary: "Values' representation, unchecked: magic, repr, tag, field; Printf and the parsers use it.",
+      digest: 'cf13a953a8cb',
+      important: [{ at: 'def:magic', say: 'the type system turned off: Printf needs it', weight: 3 }],
+    },
+    'Obj.mli': { summary: 'The Obj interface: the escape hatch Parsing, Dumper and Printexc look through.', digest: 'c15c619b1236' },
+    'Stdlib.ml': {
+      summary: "OCaml 1.07's Pervasives, with 3.12 to 4.02 additions: |>, result, format6; opened everywhere.",
+      digest: '37e5b5516218',
+      important: [
+        { at: 'comment:"coupling: if you add functions here"', say: 'the threads library patches these', weight: 1 },
+        { at: 'type:result', say: 'Ok | Error lives here, as in 4.02.2', weight: 1 },
+        { at: 'def:compare', say: 'polymorphic: what Set and Map order by', weight: 3 },
+        { at: 'type:in_channel', say: 'abstract: the runtime\'s buffered channels', weight: 1 },
+        { at: 'def:stdout', say: 'descriptor 1, a channel for all', weight: 1 },
+        { at: 'def:exit_function', say: 'the at_exit chain, flushes first', weight: 3 },
+        { at: 'def:exit', say: 'runs the hooks, then the C exit', weight: 1 },
+      ],
+    },
+    'Stdlib.mli': {
+      summary: 'The Stdlib interface, opened by every module: exceptions, compare, channels, refs.',
+      digest: '1adba14f2fed',
+      important: [
+        { at: 'def:compare', say: 'the order behind Set and Map', weight: 3 },
+        { at: 'type:ref', say: 'a record with a mutable field', weight: 1 },
+      ],
+    },
+    'std_exit.ml': {
+      summary: "Linked last into every program: runs the at_exit hooks, so channels are flushed.",
+      digest: 'a96806d42cf8',
+      important: [{ at: 'comment:"Ensure that [at_exit] functions are called"', say: 'the linker adds it after main', weight: 3 }],
+    },
+  },
+  skeletons: [
+    skeletons.parts('The root of the stdlib: Stdlib first, the runtime beside', [
+      ['Stdlib.ml', 'the primitives every module is opened on'],
+      ['Obj.ml', "values' representation, unchecked"],
+      ['Callback.ml', 'values named for C'],
+      ['Marshal.ml', 'values as bytes'],
+      ['Gc.ml', 'the collector tuned'],
+      ['std_exit.ml', 'the end of every program'],
+    ], [
+      ['Callback.ml', 'Obj.ml', 'registers an Obj.t'],
+      ['Marshal.ml', 'Stdlib.ml', 'channels'],
+      ['std_exit.ml', 'Stdlib.ml', 'calls do_at_exit'],
+      ['Obj.ml', 'Stdlib.ml', 'compiled after it'],
+      ['Gc.ml', 'Stdlib.ml', 'compiled after it'],
+    ]),
+    {
+      name: 'Stdlib: channels, and the exit that flushes them',
+      bones: [
+        { at: 'Stdlib.ml:type:out_channel', role: "the runtime's buffered channel" },
+        { at: 'Stdlib.ml:def:stdout', role: 'descriptor 1 as a channel' },
+        { at: 'Stdlib.ml:def:output_string', role: 'written into the buffer' },
+        { at: 'Stdlib.ml:def:flush', role: 'the buffer to the descriptor' },
+        { at: 'Stdlib.ml:def:exit_function', role: 'the hooks, flushing first' },
+        { at: 'Stdlib.ml:def:at_exit', role: 'a hook chained in' },
+        { at: 'Stdlib.ml:def:exit', role: 'hooks, then the C exit' },
+        { at: 'std_exit.ml', role: 'the implicit exit at the end' },
+      ],
+      joints: [
+        { from: 'Stdlib.ml:type:out_channel', to: 'Stdlib.ml:def:stdout', say: 'opened on 1' },
+        { from: 'Stdlib.ml:def:stdout', to: 'Stdlib.ml:def:output_string', say: 'print_string' },
+        { from: 'Stdlib.ml:def:output_string', to: 'Stdlib.ml:def:flush', say: 'the bytes held' },
+        { from: 'Stdlib.ml:def:flush', to: 'Stdlib.ml:def:exit_function', say: 'called by the first hook' },
+        { from: 'Stdlib.ml:def:at_exit', to: 'Stdlib.ml:def:exit_function', say: 'prepends a hook' },
+        { from: 'Stdlib.ml:def:exit_function', to: 'Stdlib.ml:def:exit', say: 'run' },
+        { from: 'Stdlib.ml:def:exit_function', to: 'std_exit.ml', say: 'run when main returns' },
+      ],
+    },
+  ],
+}

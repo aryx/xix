@@ -1,0 +1,569 @@
+// kernel/Byterun/: what the code map says of it. OCaml's bytecode
+// runtime (ocamlrun) of the late 1990s (1.07's files, $Id 1997, with
+// backtrace.c from 2000), taken from the author's fork-ocaml (the
+// mkfile's $OCAML) and compiled by 5c to run bare inside the kernel:
+// every POSIX #include wrapped in #ifndef OS_PLAN9, plan9.h mapping
+// stdio and errno to Plan 9's libc, 9.c faking the system calls, the
+// threaded code off (5c has no GCC labels: jumptbl.h removed), prims.c
+// replaced by the ocaml.c that `ocamlc -output-c` generates (which also
+// defines caml_startup, called by ../main.c).
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "OCaml's bytecode interpreter and GC (ocamlrun, 1997), compiled by 5c to run bare in the kernel.",
+  files: {
+    // the hubs: what the whole runtime is written with
+    'mlvalues.h': {
+      summary: "An OCaml value: a tagged word, or a pointer to a block after its header -- the runtime's ABI.",
+      digest: '089ca116cc2b',
+      capitals: [
+        { at: 'type:value', say: 'every OCaml value: an int or a pointer' },
+        { at: 'def:Field', say: "a block's fields, what the interpreter reads" },
+        { at: 'type:header_t', say: "size, colour, tag: the GC's word" },
+      ],
+      important: [
+        { at: 'def:Is_long', say: 'the low bit tells ints from pointers', weight: 3 },
+        { at: 'def:Val_long', say: 'n stored as 2n+1', weight: 2 },
+        { at: 'def:Wosize_hd', say: 'the size, from the header', weight: 1 },
+        { at: 'def:Tag_val', say: 'the tag: which constructor, or string', weight: 1 },
+        { at: 'def:Closure_tag', say: 'a function: its code pointer, its env', weight: 1 },
+        { at: 'def:String_tag', weight: 1 },
+        { at: 'def:Val_unit', weight: 1 },
+      ],
+    },
+    'misc.h': {
+      summary: "The runtime's basic types and helpers: asize_t, Assert, fatal_error, gc_message.",
+      digest: 'c3b4779ad062',
+      capitals: [
+        { at: 'type:asize_t', say: 'a size in bytes, all over the GC' },
+        { at: 'def:Assert', say: 'checks, compiled only with DEBUG' },
+      ],
+      important: [
+        { at: 'def:fatal_error', say: 'the end: no exception possible', weight: 2 },
+        { at: 'def:gc_message', weight: 1 },
+      ],
+    },
+    'misc.c': {
+      summary: "misc.h's functions: fatal errors, the GC's verbose messages, aligned malloc over the kernel's.",
+      digest: '2bcfe1accb3f',
+      capitals: [{ at: 'def:fatal_error', say: 'a runtime error with no way back' }],
+      important: [
+        { at: 'def:aligned_malloc', say: "the heap's chunks, from the kernel's malloc", weight: 2 },
+        { at: 'def:gc_message', say: 'print, not fprintf: plan9.h maps it', weight: 1 },
+      ],
+    },
+    'config.h': {
+      summary: 'The build switches and the GC sizes; includes config/ and then plan9.h, which overrides it.',
+      digest: 'da76b289f5af',
+      capitals: [
+        { at: 'def:THREADED_CODE', say: 'GCC only: under 5c, a switch interprets' },
+        { at: 'def:Minor_heap_def', say: "the young generation's default size" },
+      ],
+      important: [
+        { at: 'def:Page_size', say: "the major heap's page table unit", weight: 1 },
+        { at: 'def:Stack_size', say: "the interpreter's stack, in words", weight: 1 },
+        { at: 'def:Heap_chunk_def', weight: 1 },
+      ],
+    },
+    'plan9.h': {
+      summary: "xix's own: POSIX undone, stdio and open flags mapped to Plan 9's libc, the kernel's print.",
+      digest: 'da911fffe35f',
+      important: [
+        { at: 'code:"#define OS_PLAN9"', say: 'the switch every .c tests', weight: 3 },
+        { at: 'code:"#undef ARCH_SIXTYFOUR"', say: "config/m.h's host was 64-bit", weight: 2 },
+        { at: 'code:"#define sprintf sprint"', say: "Plan 9's fmt under C's names", weight: 1 },
+        { at: 'code:"#define exit(x) _exits(0)"', say: 'exit is a fake in ../fakes.c', weight: 1 },
+        { at: 'comment:"calling kernel devcons.c functions"', say: 'print is a pointer main.c fills', weight: 2 },
+      ],
+    },
+    '9.c': {
+      summary: "xix's own fakes of the Unix calls sys.c needs (unlink, getcwd...), and timeofday from the timer.",
+      digest: '97e863590903',
+      important: [
+        { at: 'def:timeofday', say: "threads' clock: tmrget ticks / 62.5 MHz", weight: 2 },
+        { at: 'def:unlink', say: 'every file call fails: no filesystem', weight: 1 },
+      ],
+    },
+    // the entry and the interpreter
+    'startup.c': {
+      summary: 'Start-up: the GC, the stack and the atoms set up, the globals unmarshalled, the code run.',
+      digest: '6251c1c3f2b7',
+      capitals: [{ at: 'def:caml_startup_code', say: "the kernel's entry into OCaml" }],
+      important: [
+        { at: 'code:"init_gc (minor_heap_init"', say: 'the heaps sized before any value', weight: 2 },
+        { at: 'code:"global_data = input_val_from_string"', say: 'the globals: data linked into ocaml.c', weight: 2 },
+        { at: 'code:"interprete(start_code, code_size)"', say: 'the kernel, in bytecode, runs', weight: 3 },
+        { at: 'comment:"parse_camlrunparam"', say: 'no CAMLRUNPARAM: no environment', weight: 1 },
+        { at: 'def:caml_main', say: 'dead here: reads a bytecode file', weight: 1 },
+      ],
+    },
+    'startup.h': {
+      summary: 'The prototypes of the two entries: caml_main (a file) and caml_startup_code (linked in).',
+      digest: '0a8f64d6603d',
+    },
+    'interp.c': {
+      summary: 'The bytecode interpreter: one switch over the opcodes, accu, sp, pc and env in registers.',
+      digest: '613526deeb2e',
+      capitals: [{ at: 'def:interprete', say: 'the loop every OCaml instruction runs in' }],
+      important: [
+        { at: 'def:Instruct', say: 'a case label: no threaded code under 5c', weight: 2 },
+        { at: 'code:"Instruct(APPLY)"', say: 'a call: extra_args, env, pc pushed', weight: 3 },
+        { at: 'code:"Instruct(GRAB)"', say: 'partial application: a closure built', weight: 2 },
+        { at: 'code:"Instruct(C_CALL1)"', say: 'into a C primitive, registers saved', weight: 2 },
+        { at: 'code:"raise_exception:"', say: 'unwinds to the trap frame', weight: 2 },
+        { at: 'code:"process_signal:"', say: "where the threads' timer switches", weight: 2 },
+        { at: 'def:Setup_for_c_call', say: 'sp and env visible to the GC', weight: 1 },
+      ],
+    },
+    'interp.h': { summary: "interprete's prototype.", digest: '779a869a512e' },
+    'instruct.h': {
+      summary: "The instruction set: an enum of OCaml's bytecode opcodes, the compiler's twin table.",
+      digest: 'ed0665f8b2f5',
+    },
+    'opnames.h': {
+      summary: "The opcodes' names as strings, for instrtrace.c's traces.",
+      digest: '49eb65d27e67',
+    },
+    'fix_code.c': {
+      summary: 'Bytecode as loaded: read and MD5 summed, byte-swapped if big endian, threaded for GCC.',
+      digest: '8e6144ac2137',
+      important: [
+        { at: 'def:load_code', say: 'unused here: the code is linked in', weight: 1 },
+        { at: 'def:thread_code', say: 'opcodes to label addresses: GCC only', weight: 2 },
+        { at: 'def:fixup_endianness', weight: 1 },
+      ],
+    },
+    'fix_code.h': { summary: "fix_code.c's prototypes and the code's start and size.", digest: '0a820bb29e82' },
+    'prims.c': {
+      summary: "The primitives' table from ocamlrun's build: not linked, ocamlc -output-c's ocaml.c has it.",
+      digest: '76a2b406a9b3',
+      important: [
+        { at: 'code:"c_primitive cprim[] = {"', say: 'C_CALL n calls cprim[n]', weight: 3 },
+        { at: 'code:"char * names_of_cprim[] = {"', say: 'names, to check a bytecode file', weight: 1 },
+      ],
+    },
+    'prims.h': {
+      summary: 'A C primitive: the type of the table the interpreter indexes by C_CALL.',
+      digest: 'aec5a9323125',
+      important: [{ at: 'type:c_primitive', weight: 2 }],
+    },
+    'exec.h': {
+      summary: "A bytecode executable's trailer: sections' sizes and the magic, for caml_main.",
+      digest: 'f0f40786d8d8',
+    },
+    'callback.c': {
+      summary: 'Callbacks from C into OCaml: a small bytecode stub run by interprete, named values.',
+      digest: 'a75dedba7cd4',
+      important: [
+        { at: 'def:callback', say: 'C calls OCaml: interprete re-entered', weight: 2 },
+        { at: 'def:caml_named_value', weight: 1 },
+      ],
+    },
+    'callback.h': { summary: 'The callback API, and the prototypes of caml_main and caml_startup.', digest: 'babac25878eb' },
+    'stacks.c': {
+      summary: "The interpreter's stack: allocated, grown by doubling, bounded by a maximum.",
+      digest: '536edf67275f',
+      important: [{ at: 'def:realloc_stack', say: 'grows, or Stack_overflow', weight: 2 }],
+    },
+    'stacks.h': { summary: "The stack's bounds and the trap pointer, shared with the GC's roots.", digest: '44f9b87cfc57' },
+    // memory: allocation and the GC
+    'memory.c': {
+      summary: 'The major heap grown chunk by chunk from malloc, alloc_shr, and the write barrier.',
+      digest: '93b687baee01',
+      important: [
+        { at: 'def:alloc_shr', say: 'a block in the major heap: free list first', weight: 3 },
+        { at: 'def:expand_heap', say: "a new chunk from the kernel's malloc", weight: 2 },
+        { at: 'def:modify', say: 'the write barrier: old points to young', weight: 2 },
+        { at: 'def:stat_alloc', weight: 1 },
+      ],
+    },
+    'memory.h': {
+      summary: "Allocation macros: Alloc_small from the minor heap, Modify, the local roots' CAMLparam.",
+      digest: '7345a78c4819',
+      important: [
+        { at: 'def:Alloc_small', say: 'a pointer bump, a minor GC if full', weight: 3 },
+        { at: 'def:Modify', say: 'every store into a block goes here', weight: 2 },
+      ],
+    },
+    'alloc.c': {
+      summary: 'Allocation functions for C: alloc, alloc_string, copy_string, the same work as the macros.',
+      digest: '4d66b724046f',
+      important: [{ at: 'def:alloc', say: 'small: minor heap; big: alloc_shr', weight: 2 }],
+    },
+    'alloc.h': { summary: "alloc.c's prototypes.", digest: '1aa53e763405' },
+    'minor_gc.c': {
+      summary: 'The minor GC: live young blocks copied to the major heap, the ref table as extra roots.',
+      digest: 'd727108c65c5',
+      important: [
+        { at: 'def:minor_collection', say: 'empty the young heap, then a major slice', weight: 3 },
+        { at: 'def:oldify', say: 'a young value copied, a forward left', weight: 3 },
+        { at: 'def:ref_table', say: 'old fields pointing young: from Modify', weight: 2 },
+      ],
+    },
+    'minor_gc.h': { summary: 'The young heap bounds and Is_young.', digest: 'fb2a1bb4afd0' },
+    'major_gc.c': {
+      summary: 'The major GC: incremental mark and sweep in slices, driven by the minor collections.',
+      digest: '9018612d631f',
+      important: [
+        { at: 'def:major_collection_slice', say: 'a slice sized by what was promoted', weight: 3 },
+        { at: 'def:mark_slice', say: 'gray values darkened, a bounded amount', weight: 2 },
+        { at: 'def:sweep_slice', say: 'white blocks to the free list', weight: 2 },
+        { at: 'def:finish_major_cycle', weight: 1 },
+      ],
+    },
+    'major_gc.h': { summary: "The major heap's chunks, phases and page table.", digest: '67a1e181b01a' },
+    'freelist.c': {
+      summary: "The major heap's free list, sorted by address: first fit, merging adjacent blocks.",
+      digest: 'ecc0882e074b',
+      important: [
+        { at: 'def:fl_allocate', say: 'first fit, from where the last one stopped', weight: 2 },
+        { at: 'def:fl_merge_block', say: 'the sweep gives blocks back, merged', weight: 2 },
+      ],
+    },
+    'freelist.h': { summary: "The free list's API.", digest: '05b56a6b1e80' },
+    'compact.c': {
+      summary: "The heap compactor: pointers inverted into chains, blocks slid, chains resolved (Doligez).",
+      digest: '5ac0173a69b1',
+      important: [
+        { at: 'def:compact_heap', say: 'three passes over the whole heap', weight: 3 },
+        { at: 'def:invert_pointer_at', say: 'a pointer threaded into its target', weight: 2 },
+        { at: 'def:compact_heap_maybe', say: 'only when free space is past percent_max', weight: 1 },
+      ],
+    },
+    'compact.h': { summary: "compact.c's entries.", digest: 'cbf4c2d1bd13' },
+    'gc.h': { summary: "The header's colours for the GC: white, gray, blue, black.", digest: 'f4b14710a823' },
+    'gc_ctrl.c': {
+      summary: "The Gc module's primitives: statistics, parameters, forced collections; init_gc.",
+      digest: '137c77e24101',
+      important: [
+        { at: 'def:init_gc', say: 'both heaps, called by startup first', weight: 2 },
+        { at: 'def:gc_set', weight: 1 },
+        { at: 'def:gc_full_major', weight: 1 },
+      ],
+    },
+    'gc_ctrl.h': { summary: "gc_ctrl.c's counters and init_gc.", digest: 'd19b4d1a369f' },
+    'roots.c': {
+      summary: "The GC's roots: the stack, the globals, the registered C roots, and a hook for threads.",
+      digest: 'f68550314c4c',
+      important: [
+        { at: 'def:scan_roots_hook', say: "scheduler.c adds every thread's stack", weight: 2 },
+        { at: 'def:oldify_local_roots', weight: 1 },
+      ],
+    },
+    'roots.h': { summary: 'The roots API and the local roots blocks of CAMLparam.', digest: '72ce9816bf93' },
+    'weak.c': { summary: 'Weak arrays: pointers the GC may erase.', digest: 'be797b708b4e' },
+    'weak.h': { summary: 'The list of weak arrays, walked by the major GC.', digest: '1344ef0d2ffd' },
+    // exceptions
+    'fail.c': {
+      summary: 'Raising OCaml exceptions from C: longjmp to the interpreter, which unwinds.',
+      digest: '3b9364b8af68',
+      important: [
+        { at: 'def:mlraise', say: 'longjmp to the running interprete', weight: 3 },
+        { at: 'def:failwith', weight: 1 },
+      ],
+    },
+    'fail.h': {
+      summary: "The predefined exceptions' slots and the longjmp buffer every raise from C goes through.",
+      digest: 'd93e95860434',
+      important: [{ at: 'type:longjmp_buffer', say: 'where mlraise jumps back to', weight: 2 }],
+    },
+    'printexc.c': { summary: 'An uncaught exception printed, and the runtime stops.', digest: 'bcb5d3ce9f44' },
+    'backtrace.c': {
+      summary: "Backtraces of uncaught exceptions (OCaml 3's, 2000): the debug info unread on the kernel.",
+      digest: 'f847dffaeaeb',
+      important: [
+        { at: 'def:stash_backtrace', say: 'at each raise: the pcs recorded', weight: 2 },
+        { at: 'def:read_debug_info', say: 'needs a file: compiled out here', weight: 2 },
+        { at: 'def:print_exception_backtrace', weight: 1 },
+      ],
+    },
+    'backtrace.h': { summary: "backtrace.c's API.", digest: '85d84d059643' },
+    'debugger.c': {
+      summary: "ocamldebug's socket protocol; without sockets (plan9.h), two empty stubs.",
+      digest: '64cb6cab8921',
+      important: [
+        { at: 'def:debugger_init', say: 'the stub: HAS_SOCKETS is off', weight: 2 },
+        { at: 'code:"#include <sys/socket.h>"', say: 'from here on, never compiled', weight: 1 },
+      ],
+    },
+    'debugger.h': { summary: "The debugger's events and protocol codes.", digest: '975aad95158c' },
+    'instrtrace.c': { summary: 'A trace of each instruction executed, DEBUG only.', digest: '57b62f378014' },
+    'instrtrace.h': { summary: "instrtrace.c's API.", digest: '44890782b898' },
+    // marshalling
+    'extern.c': {
+      summary: "output_value: a value marshalled to bytes, sharing kept through a table of seen objects.",
+      digest: '49229c02df22',
+      important: [
+        { at: 'def:extern_rec', say: 'the recursive walk: a code per kind', weight: 3 },
+        { at: 'def:extern_value', weight: 1 },
+      ],
+    },
+    'intern.c': {
+      summary: "input_value: bytes unmarshalled into a block allocated at once; how startup gets the globals.",
+      digest: '2fa49046c6be',
+      important: [
+        { at: 'def:intern_rec', say: 'the reverse walk, into one big block', weight: 3 },
+        { at: 'def:input_val_from_string', say: "startup's globals, from ocaml.c's data", weight: 2 },
+      ],
+    },
+    'intext.h': { summary: "The marshalling format's codes, shared by extern.c and intern.c.", digest: '61b73c42eb0c' },
+    'reverse.h': { summary: 'Byte swaps for 32-bit words, for big-endian machines.', digest: '10deb4532168' },
+    'md5.c': {
+      summary: 'MD5 digests (Colin Plumb): the Digest module, and the bytecode checksum.',
+      digest: 'e2195b3b90cf',
+      important: [{ at: 'def:MD5Transform', say: 'the 64 steps on one 64-byte block', weight: 2 }],
+    },
+    'md5.h': { summary: 'The MD5 context and its API.', digest: 'adeb13a7869f' },
+    // the primitives of the standard library
+    'array.c': { summary: 'Array primitives: get, set, make.', digest: '02abe8ec4f16' },
+    'compare.c': {
+      summary: 'Structural comparison (compare, =, <) walking both trees.',
+      digest: '8217ffc10d89',
+      important: [{ at: 'def:compare_val', weight: 2 }],
+    },
+    'hash.c': { summary: 'Hashtbl.hash: a bounded walk of a value.', digest: 'eddfd5f98369' },
+    'floats.c': {
+      summary: 'Float primitives: each unboxes, computes with libc/port, boxes a new double.',
+      digest: 'fbcf0f138243',
+      important: [
+        { at: 'def:copy_double', say: 'every result boxed: an allocation', weight: 2 },
+        { at: 'def:format_float', weight: 1 },
+        { at: 'def:float_of_string', weight: 1 },
+      ],
+    },
+    'ints.c': { summary: 'Integer primitives: parsing and formatting ints.', digest: '27fa8be0d0b3' },
+    'str.c': { summary: 'String primitives: length, get, set, blit, equality.', digest: '2addb2ebdf43' },
+    'str.h': { summary: "str.c's prototypes.", digest: 'de7d37bdd494' },
+    'obj.c': { summary: 'Obj module primitives: tags, fields, blocks by hand.', digest: 'f6d3b87a39a6' },
+    'meta.c': { summary: "The toplevel's primitives: global data, bytecode reified; mostly stubs.", digest: '288c0f6c98f3' },
+    'lexing.c': { summary: 'The table-driven automaton ocamllex lexers run on.', digest: '68fded9de4f7' },
+    'parsing.c': {
+      summary: 'The pushdown automaton ocamlyacc parsers run on, resumed by OCaml for each action.',
+      digest: 'a03eb9ea07f1',
+      important: [
+        { at: 'def:parse_engine', say: 'returns to OCaml to read or reduce', weight: 3 },
+        { at: 'type:parser_tables', weight: 1 },
+      ],
+    },
+    'terminfo.c': { summary: 'Terminal capabilities; without termcap, stubs raising Not_found.', digest: '58c066913cdc' },
+    'io.c': {
+      summary: 'Buffered channels over read and write: on the kernel, fakes.c writes to the console.',
+      digest: '98a2b6d5fca6',
+      important: [
+        { at: 'def:do_write', say: 'write() is ../fakes.c: the screen', weight: 3 },
+        { at: 'def:do_read', say: 'read() is a fake: nothing to read', weight: 2 },
+        { at: 'def:caml_output', weight: 1 },
+        { at: 'def:flush_partial', weight: 1 },
+      ],
+    },
+    'io.h': {
+      summary: 'A channel: a file descriptor, its buffer and position.',
+      digest: '80c2c965dc56',
+      important: [{ at: 'type:channel', say: 'stdout is one, over fd 1', weight: 2 }],
+    },
+    'sys.c': {
+      summary: "Sys's primitives: open, remove, getenv, argv, exit -- over 9.c's and fakes.c's stubs.",
+      digest: '9b8e060945f3',
+      important: [
+        { at: 'def:sys_init', say: 'argv: empty on the kernel (main.c)', weight: 2 },
+        { at: 'def:sys_error', weight: 1 },
+        { at: 'def:sys_exit', weight: 1 },
+      ],
+    },
+    'sys.h': { summary: "sys.c's API.", digest: 'a7da91cf2edb' },
+    'signals.c': {
+      summary: 'Signals delivered between instructions, and the blocking sections around system calls.',
+      digest: '7706551421f2',
+      important: [
+        { at: 'def:handle_signal', say: 'only flags: the interpreter acts later', weight: 2 },
+        { at: 'def:enter_blocking_section', weight: 1 },
+        { at: 'def:urge_major_slice', say: 'the GC asks the interpreter to stop', weight: 1 },
+      ],
+    },
+    'signals.h': { summary: 'something_to_do and the blocking sections.', digest: '00718266e26f' },
+    'scheduler.c': {
+      summary: "OCaml's threads library (1997): green threads, each its own stack, switched by the interpreter.",
+      digest: '6aed01c106a7',
+      important: [
+        { at: 'type:thread_struct', say: "a thread: its stack, pc, status", weight: 2 },
+        { at: 'def:schedule_thread', say: 'round robin; select and timer compiled out', weight: 3 },
+        { at: 'def:thread_new', weight: 1 },
+        { at: 'def:thread_yield', say: 'the kernel threads yield cooperatively', weight: 2 },
+        { at: 'def:thread_scan_roots', say: "every thread's stack a GC root", weight: 1 },
+        { at: 'comment:"pad: todo: saved backtrace in recent ocaml"', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts("ocamlrun's parts: the interpreter and what it stands on", [
+      ['startup.c', 'the entry: set up, unmarshal the globals, run'],
+      ['interp.c', 'the loop over the bytecode'],
+      ['prims.c', "the C primitives' table (ocaml.c's on the kernel)"],
+      ['memory.c', 'allocation: the heap and the write barrier'],
+      ['minor_gc.c', 'the young heap emptied'],
+      ['major_gc.c', 'the old heap marked and swept, in slices'],
+      ['compact.c', 'the old heap compacted'],
+      ['intern.c', 'values unmarshalled: the globals'],
+      ['scheduler.c', "OCaml's threads, switched by the interpreter"],
+      ['plan9.h', 'the port: POSIX mapped to the kernel'],
+    ], [
+      ['startup.c', 'intern.c', 'the globals'],
+      ['startup.c', 'interp.c', 'the code'],
+      ['interp.c', 'prims.c', 'C_CALL n'],
+      ['interp.c', 'memory.c', 'allocates'],
+      ['memory.c', 'minor_gc.c', 'young heap full'],
+      ['minor_gc.c', 'major_gc.c', 'promoted, then a slice'],
+      ['major_gc.c', 'compact.c', 'too much free space'],
+      ['interp.c', 'scheduler.c', 'a signal: switch thread'],
+    ]),
+    skeletons.chain('The kernel enters OCaml', [
+      ['../main.c:def:main', 'C: the machine set up', ''],
+      ['startup.c:def:caml_startup_code', 'heaps, stack, atoms, globals', 'caml_startup, generated in ocaml.c'],
+      ['interp.c:def:interprete', "the kernel's bytecode runs", 'start_code'],
+    ]),
+    skeletons.module('startup.c', 'Start-up, linked-in code', [
+      ['caml_startup_code', 'the entry from ocaml.c', ''],
+      ['init_atoms', 'the zero-size blocks', 'first'],
+    ]) + {
+      bones+: [
+        { at: 'gc_ctrl.c:def:init_gc', role: 'both heaps' },
+        { at: 'intern.c:def:input_val_from_string', role: 'the globals' },
+        { at: 'interp.c:def:interprete', role: 'the run' },
+        { at: 'startup.c:def:caml_main', role: 'the bytecode-file entry, unused' },
+      ],
+      joints+: [
+        { from: 'startup.c:def:caml_startup_code', to: 'gc_ctrl.c:def:init_gc', say: 'the sizes' },
+        { from: 'startup.c:def:caml_startup_code', to: 'intern.c:def:input_val_from_string', say: 'data' },
+        { from: 'startup.c:def:caml_startup_code', to: 'interp.c:def:interprete', say: 'code' },
+      ],
+    },
+    skeletons.module('interp.c', 'The interpreter: a switch, the registers, the ways out', [
+      ['interprete', 'the loop: fetch, switch', ''],
+      ['Instruct', 'an opcode, a case', 'each instruction'],
+      ['Setup_for_c_call', 'state saved for C', 'C_CALL'],
+      ['Restore_after_c_call', 'state back', 'return'],
+    ]) + {
+      bones+: [{ at: 'interp.c:code:"raise_exception:"', role: 'an exception: to the trap' }],
+      joints+: [{ from: 'interp.c:def:interprete', to: 'interp.c:code:"raise_exception:"', say: 'RAISE, or from C' }],
+    },
+    skeletons.module('prims.c', 'The primitives, as a table', [
+      ['array_get', 'a primitive declared', ''],
+    ]) + {
+      bones+: [
+        { at: 'prims.c:code:"c_primitive cprim[] = {"', role: 'the table C_CALL indexes' },
+        { at: 'prims.c:code:"char * names_of_cprim[] = {"', role: 'their names' },
+      ],
+      joints+: [{ from: 'prims.c:def:array_get', to: 'prims.c:code:"c_primitive cprim[] = {"', say: 'an entry' }],
+    },
+    skeletons.module('memory.c', 'The major heap allocated', [
+      ['alloc_shr', 'a block, old generation', ''],
+      ['expand_heap', 'a chunk added', 'free list empty'],
+      ['modify', 'the write barrier', ''],
+      ['stat_alloc', 'plain malloc, counted', ''],
+    ]),
+    skeletons.module('minor_gc.c', 'The minor collection', [
+      ['minor_collection', 'the young heap emptied', ''],
+      ['oldify', 'one value promoted', 'each root'],
+      ['realloc_ref_table', 'the remembered set grown', ''],
+      ['check_urgent_gc', 'a collection when asked', ''],
+    ]),
+    skeletons.module('major_gc.c', 'The incremental major GC', [
+      ['major_collection_slice', 'a slice', ''],
+      ['mark_slice', 'mark: gray to black', 'marking phase'],
+      ['sweep_slice', 'sweep: white freed', 'then'],
+      ['finish_major_cycle', 'a whole cycle at once', ''],
+    ]),
+    skeletons.module('freelist.c', 'The free list', [
+      ['fl_allocate', 'first fit', ''],
+      ['allocate_block', 'a block split', 'found'],
+      ['fl_merge_block', 'a freed block merged', ''],
+      ['fl_add_block', 'a new chunk added', ''],
+    ]),
+    skeletons.module('compact.c', 'Compaction by pointer inversion', [
+      ['compact_heap_maybe', 'when to', ''],
+      ['compact_heap', 'the three passes', 'too fragmented'],
+      ['invert_pointer_at', 'a pointer inverted', 'pass 1'],
+      ['compact_allocate', 'the new place', 'pass 2'],
+    ]),
+    skeletons.module('gc_ctrl.c', 'The GC controlled', [
+      ['init_gc', 'set up at start', ''],
+      ['gc_set', 'parameters changed', ''],
+      ['norm_pfree', 'clamped', 'each'],
+    ]) + {
+      bones+: [{ at: 'gc_ctrl.c:def:gc_stat', role: 'statistics walked' }, { at: 'gc_ctrl.c:def:gc_full_major', role: 'a forced cycle' }],
+    },
+    skeletons.module('extern.c', 'Marshalling out', [
+      ['output_value', 'to a channel', ''],
+      ['extern_value', 'header and table', 'the value'],
+      ['extern_rec', 'the walk', 'each field'],
+      ['writecode32', 'bytes out', 'a code'],
+    ]),
+    skeletons.module('intern.c', 'Marshalling in', [
+      ['input_val_from_string', 'from memory', ''],
+      ['intern_alloc', 'one block for all', 'the size'],
+      ['intern_rec', 'the walk', 'filled'],
+    ]) + {
+      bones+: [{ at: 'intern.c:def:input_value', role: 'from a channel' }],
+      joints+: [{ from: 'intern.c:def:input_value', to: 'intern.c:def:intern_rec', say: 'the same walk' }],
+    },
+    skeletons.module('backtrace.c', 'Backtraces', [
+      ['stash_backtrace', 'at a raise', ''],
+      ['print_exception_backtrace', 'at the end', 'the pcs'],
+      ['read_debug_info', 'the events file', 'names'],
+      ['print_location', 'one line', 'each pc'],
+    ]),
+    skeletons.module('debugger.c', 'The debugger, stubbed', [
+      ['debugger_init', 'nothing: no sockets', ''],
+      ['debugger', 'nothing: an event ignored', ''],
+    ]) + { bones+: [{ at: 'debugger.c:code:"#include <sys/socket.h>"', role: 'the real one, never compiled' }] },
+    skeletons.module('fix_code.c', 'Bytecode prepared', [
+      ['load_code', 'read from a file', ''],
+      ['fixup_endianness', 'swapped', 'big endian'],
+      ['thread_code', 'threaded', 'GCC'],
+      ['is_instruction', 'a pc checked', ''],
+    ]),
+    skeletons.module('floats.c', 'A float primitive', [
+      ['add_float', 'unbox, add', ''],
+      ['copy_double', 'box the result', 'a double'],
+    ]) + { bones+: [{ at: 'floats.c:def:format_float', role: 'to a string' }, { at: 'floats.c:def:float_of_string', role: 'from a string' }] },
+    skeletons.module('md5.c', 'MD5', [
+      ['md5_string', 'Digest.string', ''],
+      ['MD5Update', 'bytes fed', 'the string'],
+      ['MD5Transform', 'a block', 'each 64 bytes'],
+      ['MD5Final', 'padding, the digest', ''],
+    ]),
+    skeletons.module('io.c', 'A channel written', [
+      ['caml_output', 'OCaml output', ''],
+      ['putblock', 'into the buffer', 'bytes'],
+      ['flush_partial', 'buffer full', 'full'],
+      ['do_write', 'write(): the console', 'the buffer'],
+    ]) + {
+      bones+: [{ at: 'io.c:def:do_read', role: 'read(): a fake' }, { at: 'io.c:def:caml_input', role: 'OCaml input' }],
+      joints+: [{ from: 'io.c:def:caml_input', to: 'io.c:def:do_read', say: 'refill' }],
+    },
+    skeletons.module('parsing.c', 'The yacc automaton', [
+      ['parse_engine', 'shift, reduce, back to OCaml', ''],
+    ]) + { bones+: [{ at: 'parsing.c:type:parser_tables', role: "ocamlyacc's tables" }, { at: 'parsing.c:type:parser_env', role: "the parser's state" }] },
+    skeletons.module('scheduler.c', 'Green threads', [
+      ['thread_initialize', 'the main thread made', ''],
+      ['thread_new', 'a thread: a stack', ''],
+      ['thread_yield', 'give up the CPU', ''],
+      ['schedule_thread', 'the next runnable', 'switch'],
+    ]) + {
+      bones+: [{ at: 'scheduler.c:type:thread_struct', role: 'a thread' }, { at: 'scheduler.c:def:thread_scan_roots', role: 'stacks as roots' }],
+      joints+: [{ from: 'scheduler.c:def:schedule_thread', to: 'scheduler.c:type:thread_struct', say: 'stacks swapped' }],
+    },
+    skeletons.module('signals.c', 'Signals, deferred', [
+      ['handle_signal', 'a flag set', ''],
+      ['execute_signal', 'the OCaml handler', 'later'],
+      ['enter_blocking_section', 'before a system call', ''],
+      ['leave_blocking_section', 'after', ''],
+    ]),
+    skeletons.module('sys.c', 'The Sys primitives', [
+      ['sys_init', 'argv kept', ''],
+      ['sys_open', 'a file opened (a fake)', ''],
+      ['sys_error', 'Sys_error raised', 'failure'],
+      ['sys_exit', 'the end', ''],
+    ]),
+  ],
+}

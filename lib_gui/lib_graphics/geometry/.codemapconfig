@@ -1,0 +1,39 @@
+// lib_gui/lib_graphics/geometry/: an older copy of
+// ../../../lib_graphics/geometry, what the code map says of it.
+local skeletons = import '../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Points and rectangles, an older copy of lib_graphics' geometry.",
+  files: {
+    'point.ml': {
+      summary: 'Points and their arithmetic.',
+      digest: 'ceb18405f41c',
+      important: [{ at: 'type:t', weight: 2 }],
+    },
+    'point.mli': {
+      summary: 'The point type and its functions.',
+      digest: '67081d35f5d7',
+    },
+    'rectangle.ml': {
+      summary: 'Rectangles, max excluded, and their operations.',
+      digest: 'a8728fd2ff10',
+      important: [{ at: 'type:t', weight: 2 }, { at: 'comment:"does not belong to the rectangle"', weight: 1 }],
+    },
+    'vector.ml': {
+      summary: 'Vectors: points as directions.',
+      digest: 'd9227e2b24fa',
+    },
+  },
+  skeletons: [
+    skeletons.parts('Geometry, copied', [
+      ['point.ml', 'a position'],
+      ['rectangle.ml', 'min and max'],
+      ['vector.ml', 'a direction'],
+      ['../../../lib_graphics/geometry/', 'the original'],
+    ], [
+      ['point.ml', 'rectangle.ml', 'its corners'],
+      ['point.ml', 'vector.ml', 'the same data'],
+      ['rectangle.ml', '../../../lib_graphics/geometry/', 'copied from'],
+    ]),
+  ],
+}

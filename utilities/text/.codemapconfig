@@ -1,0 +1,11 @@
+// utilities/text/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). grep/ is a program; ed/ holds only the .md5sum_* files syncweb
+// left behind when oed moved to editor/.
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Text utilities: grep, over xix's own Perl-style regexps (Plan 9's sed and awk not ported yet).",
+  dirs: {
+    ed: { summary: "No code: syncweb's .md5sum_* files left from when oed lived here (now editor/)." },
+  },
+}

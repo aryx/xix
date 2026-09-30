@@ -1,0 +1,283 @@
+// lib_core/regexps/: what the code map says of it
+// ocaml-re (Jerome Vouillon's RE, 2001) split and adapted for ocaml-light:
+// front-ends parse a syntax into Regexp_AST, Compile_regexp turns it into
+// Automata's expressions, Re_core runs a lazily built DFA; Regexp is the
+// small API the programs use, over the Str-compatible re_str.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: 'Regular expressions in pure OCaml (ocaml-re): syntaxes parsed, compiled to a lazy DFA, matched.',
+  files: {
+    'Regexp.mli': {
+      summary: "Pad's easy regexp API: s =~ re, then matched1 s .. matched7 s for the groups; split.",
+      digest: 'fe0220926380',
+      capitals: [
+        { at: 'def:matched1', say: 'the groups of the last =~, as a tuple' },
+        { at: "code:\"val ( =~ )\"", say: 'what 29 files match with' },
+      ],
+      important: [
+        { at: 'def:split', say: 'a separator regexp, not a string', weight: 1 },
+        { at: 'type:t', say: "Re_core's AST, for re_perl and re_posix", weight: 1 },
+      ],
+    },
+    'Regexp.ml': {
+      summary: 'The easy API over re_str (module Str = Re_str): compiled regexps memoized by their text.',
+      digest: '38a1d4e87fc6',
+      important: [
+        { at: 'code:"module Str = Re_str"', say: 'was the C Str; now pure OCaml, one line', weight: 3 },
+        { at: 'def:candidate_match_func', say: 'each pattern compiled once, kept in a table', weight: 3 },
+        { at: 'def:matched', say: 'groups of the last match: Str global state', weight: 1 },
+      ],
+    },
+    'Regexp_AST.ml': {
+      summary: 'The regexp AST (sets, sequences, repeats, groups, anchors) and the builders over it.',
+      digest: 'c9a49af3ac6a',
+      capitals: [{ at: 'type:t', say: 'what every syntax parses to' }],
+      important: [
+        { at: 'def:is_charset', say: 'inter, compl, diff only on character sets', weight: 3 },
+        { at: 'def:alt', say: 'builders flatten nested alternatives', weight: 1 },
+        { at: 'def:rg', say: 'a range: the classes are unions of these', weight: 1 },
+        { at: 'section:Shortcuts', say: 'POSIX classes as builders', weight: 1 },
+      ],
+    },
+    'Compile_regexp.ml': {
+      summary: "The AST compiled to Automata's expressions: case folded, characters coloured into classes.",
+      digest: '6a83340601bb',
+      capitals: [{ at: 'def:compile_1', say: 'AST to automaton: case, colours, translate' }],
+      important: [
+        { at: 'def:compile', say: 'an unanchored search: shortest (rep any) first', weight: 3 },
+        { at: 'def:colorize', say: 'chars that behave alike share one colour', weight: 3 },
+        { at: 'def:translate', say: 'each AST node to an Automata expression', weight: 1 },
+        { at: 'def:handle_case', say: 'Case/No_case pushed down into the sets', weight: 1 },
+        { at: 'type:re', say: 'the compiled regexp: states filled lazily', weight: 1 },
+      ],
+    },
+    'Compile_regexp.mli': {
+      summary: "The compiled regexp's type and its categories (letter, newline, boundary), for Re_core.",
+      digest: 'b07a1316a0f4',
+      important: [
+        { at: 'type:re', say: 'shared with Re_core, which runs it', weight: 1 },
+        { at: 'def:compile', weight: 1 },
+      ],
+    },
+    'Re_core.ml': {
+      summary: 'The matcher: runs the DFA over a string, computing its states on demand, then the groups.',
+      digest: 'd315993e1b19',
+      capitals: [{ at: 'def:match_str', say: 'the matching engine' }],
+      important: [
+        { at: 'def:validate', say: 'an unknown transition: computed now, cached', weight: 3 },
+        { at: 'def:loop', say: 'the inner loop: one table lookup per char', weight: 3 },
+        { at: 'def:delta', say: 'grows the position table as marks appear', weight: 1 },
+        { at: 'def:exec', say: 'raises Not_found; groups as substrings', weight: 1 },
+        { at: 'section:Exposing Regexp.ml builders', say: "the AST's builders re-exported", weight: 1 },
+      ],
+    },
+    'Re_core.mli': {
+      summary: 'The regexp library: build a regexp (seq, alt, rep, group...), compile, exec, get the groups.',
+      digest: 'c905d3a280da',
+      capitals: [
+        { at: 'def:compile', say: 'a regexp to a matcher' },
+        { at: 'def:exec', say: 'a match and its groups' },
+        { at: 'type:re', say: 'the compiled regexp' },
+      ],
+      important: [
+        { at: 'def:char', say: 'the builders the tests write regexps with', weight: 1 },
+        { at: 'def:group', weight: 1 },
+        { at: 'def:longest', say: 'match semantics: longest, shortest, first', weight: 1 },
+      ],
+    },
+    'automata.ml': {
+      summary: 'The automaton: expressions with marks, and delta, the next state of a set of them on a char.',
+      digest: '1bba617a0118',
+      capitals: [{ at: 'def:delta', say: 'the next DFA state, by derivation' }],
+      important: [
+        { at: 'type:expr', say: 'the compiled regexp: Cst, Alt, Seq, Rep, Mark', weight: 3 },
+        { at: 'type:state', say: 'a DFA state: a list of expressions, hashed', weight: 3 },
+        { at: 'def:free_index', say: 'states reuse position slots for marks', weight: 1 },
+        { at: 'def:remove_duplicates', say: 'keeps the state set finite', weight: 1 },
+        { at: 'def:deriv', say: "all chars at once: an older delta, unused", weight: 1 },
+        { at: 'def:status', say: 'Failed, Match with the marks, or Running', weight: 1 },
+      ],
+    },
+    'automata.mli': {
+      summary: "The automaton's expressions, states and their table, and delta, for the compiler and matcher.",
+      digest: 'd7a715a52919',
+      important: [
+        { at: 'type:expr', weight: 1 },
+        { at: 'type:state', weight: 1 },
+        { at: 'def:delta', weight: 1 },
+      ],
+    },
+    'cset.ml': {
+      summary: 'Character sets as sorted lists of intervals: union, intersection, difference by merging.',
+      digest: '9cce8530212d',
+      important: [
+        { at: 'def:union', say: 'a merge of two sorted interval lists', weight: 3 },
+        { at: 'def:diff', weight: 1 },
+      ],
+    },
+    'cset.mli': {
+      summary: 'The interface of character sets, sorted lists of intervals of char codes.',
+      digest: '46400aef6a42',
+      important: [{ at: 'type:t', say: '(lo, hi) pairs, sorted', weight: 1 }],
+    },
+    're_emacs.ml': {
+      summary: 'Emacs regexp syntax (\\( \\| \\)) parsed into the AST: what re_str, the Str API, reads.',
+      digest: 'e24b5f155c32',
+      important: [
+        { at: 'def:parse', say: 'recursive descent over the pattern', weight: 3 },
+        { at: 'def:re', say: 'case-insensitive via no_case', weight: 1 },
+      ],
+    },
+    're_emacs.mli': {
+      summary: 'Emacs-syntax regexps: re parses a pattern, compile_pat parses and compiles it.',
+      digest: 'f059c839738a',
+      important: [{ at: 'def:re', weight: 1 }],
+    },
+    're_glob.ml': {
+      summary: "Shell globs (*, ?, [..], {a,b}) to regexps, dotfiles unmatched unless asked; used by none.",
+      digest: '346dc9a2da80',
+      important: [
+        { at: 'def:glob_parse', say: 'a glob, char by char, to a sequence', weight: 3 },
+        { at: 'def:explode', say: '{a,b} braces expanded first', weight: 1 },
+        { at: 'def:notdot', say: 'a leading dot must be matched explicitly', weight: 1 },
+      ],
+    },
+    're_glob.mli': {
+      summary: 'Shell glob patterns as regexps: glob, and globx with {a,b} alternatives.',
+      digest: '9908d0f96c8d',
+    },
+    're_pcre.ml': {
+      summary: "PCRE's API (regexp, exec, substitute, split) over re_perl; no .mli, used by none.",
+      digest: '5b620d74d730',
+      important: [{ at: 'def:substitute', say: 'the only non-trivial function here', weight: 1 }],
+    },
+    're_perl.ml': {
+      summary: 'Perl regexp syntax (\\d, (?:..), *?, ...) parsed into the AST: what grep reads.',
+      digest: '8449aa20ed6b',
+      important: [
+        { at: 'def:parse', say: 'the options arrive as booleans', weight: 3 },
+        { at: 'def:re', say: 'Anchored and Caseless applied after parsing', weight: 1 },
+      ],
+    },
+    're_perl.mli': {
+      summary: 'Perl-syntax regexps with their options (Caseless, Multiline, Ungreedy...).',
+      digest: '85d9b706ed5c',
+      important: [{ at: 'def:compile_pat', say: "utilities/text/grep's entry", weight: 1 }],
+    },
+    're_posix.ml': {
+      summary: 'POSIX extended regexp syntax parsed into the AST, longest match; used by none.',
+      digest: '016613479fa4',
+      important: [
+        { at: 'comment:"What we could (should?) do"', say: 'POSIX semantics only approximated', weight: 3 },
+        { at: 'def:parse', weight: 1 },
+      ],
+    },
+    're_posix.mli': {
+      summary: "POSIX regexps with REG_ICASE, REG_NEWLINE's options, compiled with longest-match semantics.",
+      digest: '7b73e0189f9a',
+    },
+    're_str.ml': {
+      summary: "OCaml's Str API redone over Re: Emacs syntax, the last match kept in a global.",
+      digest: '88e98d78e1b5',
+      capitals: [{ at: 'def:search_forward', say: 'what split and replace loop on' }],
+      important: [
+        { at: 'type:regexp', say: 'match and search compiled lazily, once', weight: 3 },
+        { at: 'def:state', say: "the last match: Str's global state", weight: 3 },
+        { at: 'def:replacement_text', say: '\\1 in a replacement expanded', weight: 1 },
+        { at: 'def:bounded_split', weight: 1 },
+      ],
+    },
+    're_str.mli': {
+      summary: "Str's interface, unchanged: regexp, string_match, search_forward, matched_group, split.",
+      digest: '716809cb5552',
+      important: [
+        { at: 'type:regexp', weight: 1 },
+        { at: 'def:string_match', weight: 1 },
+        { at: 'def:matched_group', say: 'reads the global last match', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts('Regexps: a syntax parsed, compiled, matched', [
+      ['re_perl.ml', 'a front-end: Perl syntax (grep)'],
+      ['re_emacs.ml', 'a front-end: Emacs syntax (Str)'],
+      ['Regexp_AST.ml', 'the AST every syntax parses to'],
+      ['Compile_regexp.ml', 'the AST to automaton expressions'],
+      ['automata.ml', 'expressions and their derivation'],
+      ['Re_core.ml', 'the lazy DFA run over a string'],
+      ['re_str.ml', "Str's API over the others"],
+      ['Regexp.ml', 'the easy API the programs use'],
+    ], [
+      ['re_perl.ml', 'Regexp_AST.ml', 'builds'],
+      ['re_emacs.ml', 'Regexp_AST.ml', 'builds'],
+      ['Regexp_AST.ml', 'Compile_regexp.ml', 'the AST'],
+      ['Compile_regexp.ml', 'automata.ml', 'expressions'],
+      ['Compile_regexp.ml', 'Re_core.ml', 'the compiled re'],
+      ['automata.ml', 'Re_core.ml', 'next states, on demand'],
+      ['re_str.ml', 're_emacs.ml', 'parses with'],
+      ['Regexp.ml', 're_str.ml', 'module Str = Re_str'],
+    ]),
+    skeletons.module('Compile_regexp.ml', 'An AST compiled: case, colours, translation', [
+      ['compile', 'unanchored: shortest (rep any) prefixed', ''],
+      ['compile_1', 'the steps, then the re record', 'the regexp'],
+      ['handle_case', 'case folding pushed into the sets', 'first'],
+      ['colorize', 'chars partitioned into colours', 'the folded AST'],
+      ['translate', 'each node to an Automata expression', 'the colour map'],
+    ]),
+    skeletons.chain('Re_core: a match, the DFA built as it runs', [
+      ['Re_core.ml:def:exec', 'the entry: a match and its groups', ''],
+      ['Re_core.ml:def:match_str', 'the initial state, then the scan', 'the string'],
+      ['Re_core.ml:def:scan_str', 'the scan, with or without marks', 'the state'],
+      ['Re_core.ml:def:loop', 'a table lookup per char', 'each char'],
+      ['Re_core.ml:def:validate', 'an unknown transition computed', 'a missing state'],
+      ['automata.ml:def:delta', 'the next state, by derivation', 'the char and category'],
+    ]) + { joints+: [{ from: 'Re_core.ml:def:validate', to: 'Re_core.ml:def:loop', say: 'the cached next state' }] },
+    {
+      name: 'The AST and its builders',
+      bones: [
+        { at: 'Regexp_AST.ml:type:t', role: 'the regexp as a tree' },
+        { at: 'Regexp_AST.ml:def:alt', role: 'builders: flatten as they build' },
+        { at: 'Regexp_AST.ml:def:rg', role: 'a range, the classes over it' },
+        { at: 'Regexp_AST.ml:def:is_charset', role: 'what inter, compl, diff accept' },
+        { at: 'Regexp_AST.ml:def:compl', role: 'a set complement' },
+      ],
+      joints: [
+        { from: 'Regexp_AST.ml:def:alt', to: 'Regexp_AST.ml:type:t', say: 'a node' },
+        { from: 'Regexp_AST.ml:def:rg', to: 'Regexp_AST.ml:type:t', say: 'a Set' },
+        { from: 'Regexp_AST.ml:def:compl', to: 'Regexp_AST.ml:def:is_charset', say: 'checked first' },
+      ],
+    },
+    skeletons.chain('automata.ml: the next state of a DFA', [
+      ['automata.ml:type:expr', 'the expressions a state is made of', ''],
+      ['automata.ml:type:state', 'a state: expressions with marks', 'a list'],
+      ['automata.ml:def:delta', 'the next state on a char', 'the current state'],
+      ['automata.ml:def:delta_4', 'each expression derived', 'its expressions'],
+      ['automata.ml:def:remove_duplicates', 'keeps the states finite', 'the derived list'],
+      ['automata.ml:def:free_index', 'a position slot for the marks', 'the new expressions'],
+      ['automata.ml:def:status', 'Failed, Match or Running', 'a state'],
+    ]),
+    skeletons.module('re_glob.ml', 'A glob to a regexp', [
+      ["globx'", 'braces, then each glob', ''],
+      ['explode', '{a,b} expanded to a list', 'the pattern'],
+      ["glob'", 'dotfiles or not', 'each alternative'],
+      ['glob_parse', 'the glob, char by char', 'the pattern'],
+    ]),
+    skeletons.module('re_perl.ml', 'A Perl regexp parsed', [
+      ['compile_pat', "grep's entry", ''],
+      ['re', 'options applied', 'the pattern and options'],
+      ['parse', 'recursive descent to the AST', 'the flags'],
+    ]),
+    skeletons.module('re_posix.ml', 'A POSIX regexp parsed', [
+      ['compile_pat', 'the entry', ''],
+      ['re', 'options applied, longest match', 'the pattern'],
+      ['parse', 'recursive descent to the AST', 'the flags'],
+    ]),
+    skeletons.module('re_str.ml', "Str's API: a regexp, a search, the last match", [
+      ['compile_regexp', 'Emacs syntax parsed, compiled later', ''],
+      ['search_forward', 'the search, compiled on first use', 'the regexp'],
+      ['state', 'the last match, global', 'the groups'],
+      ['replacement_text', 'the groups substituted', 'the match'],
+    ]),
+  ],
+}

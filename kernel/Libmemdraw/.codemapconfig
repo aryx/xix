@@ -1,0 +1,231 @@
+// kernel/Libmemdraw/: what the code map says of it. Plan 9's libmemdraw
+// (~/principia/lib_graphics/libmemdraw/, Graphics.nw's "the actual
+// rendering"), copied into the kernel's C for its screen and console
+// (Port/swconsole.c, Bcm/screen.c). Diffed with principia: the syncweb
+// markers dropped, io.c and compressed.c left out, hooks.c's hwdraw
+// renamed (the kernel has its own), defont.c declaring drawld2chan
+// itself; alphadraw.c keeps the writebyte overflow principia fixed.
+local skeletons = import '../../skeletons.libsonnet';
+local mod(file, name, steps) = skeletons.chain(name, [[file + ':' + s[0], s[1], s[2]] for s in steps]);
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Plan 9's libmemdraw, copied: Memimages drawn and composited in memory, the kernel's screen pixels.",
+  files: {
+    'draw.c': {
+      summary: "memimagedraw from Plan 9 unchanged: clip, then the fastest path (memset, glyphs, alphadraw).",
+      digest: '06d4a8b6b077',
+      capitals: [{ at: 'def:memimagedraw', say: 'every pixel of the console goes through here' }],
+      important: [
+        { at: 'def:drawclip', say: 'dst clipped, src and mask moved to match', weight: 3 },
+        { at: 'code:"if(hwdraw(&par)){"', say: 'Bcm/screen.c may accelerate', weight: 2 },
+        { at: 'code:"if(memoptdraw(&par)){"', say: 'solid fills and copies: memset, memmove', weight: 3 },
+        { at: 'code:"if(chardraw(&par)){"', say: 'text: a colour through a boolean mask', weight: 2 },
+        { at: 'code:"alphadraw(&par);"', say: 'the general case, pixel by pixel', weight: 3 },
+      ],
+    },
+    'alphadraw.c': {
+      summary: "Plan 9's general draw: lines read as RGBA, a Porter-Duff operator, written back; isalpha_ back to isalpha.",
+      digest: '7fc17ebac921',
+      important: [
+        { at: 'def:MUL', say: 'x*y/255 rounded, without a division', weight: 2 },
+        { at: 'def:alphacalc', say: 'a function per Porter-Duff operator', weight: 3 },
+        { at: 'code:"rdsrc = readfn(src)"', say: 'any pixel format read into a common buffer', weight: 2 },
+        { at: 'code:"alphacalc11(Buffer bdst"', say: 'SoverD: the usual one', weight: 2 },
+        { at: 'code:"w[3] = u>>24;"', say: 'bug: 4 bytes written past a 1-3 byte last pixel (principia fixed)', weight: 3 },
+        { at: 'code:"boolcopyfn(Memimage *img"', say: 'the shortcut: a copy through a boolean mask', weight: 1 },
+      ],
+    },
+    'alloc.c': {
+      summary: 'Memimages allocated over the image pool, and freed; from Plan 9 unchanged.',
+      digest: '1524715dbfe7',
+      important: [{ at: 'def:allocmemimage', weight: 2 }, { at: 'def:allocmemimaged', say: 'an image over given data: the framebuffer', weight: 2 }, { at: 'def:freememimage', weight: 1 }],
+    },
+    'init.c': {
+      summary: 'memimageinit: the image pool and the constant images (white, black, opaque); Plan 9 unchanged.',
+      digest: 'c40e15c87d40',
+      important: [{ at: 'def:memimageinit', say: 'called by Bcm/screen.c at boot', weight: 2 }, { at: 'def:imagmem', say: 'the pool the pixels come from', weight: 1 }],
+    },
+    'line.c': {
+      summary: 'Thick lines with square, disc or arrow ends, a polygon or a disc brush; Plan 9 unchanged.',
+      digest: '214bb9f0e7cb',
+      important: [
+        { at: 'def:_memimageline', weight: 3 },
+        { at: 'def:membrush', say: 'a disc image, stamped for round ends', weight: 1 },
+        { at: 'def:memlinebbox', say: 'what the line may touch: for layers', weight: 1 },
+      ],
+    },
+    'fillpoly.c': {
+      summary: 'Polygons filled by scan conversion, winding or even-odd; from Plan 9 unchanged.',
+      digest: 'f0458150d0b8',
+      important: [
+        { at: 'def:_memfillpolysc', weight: 2 },
+        { at: 'code:"xscan(Memimage *dst"', say: 'horizontal spans: the fill', weight: 3 },
+        { at: 'code:"yscan(Memimage *dst"', say: 'vertical spans: thin details kept', weight: 1 },
+        { at: 'type:Seg', say: 'an edge in fixed point', weight: 1 },
+      ],
+    },
+    'ellipse.c': {
+      summary: 'Ellipses, thick or filled, by an incremental midpoint algorithm; Plan 9 unchanged.',
+      digest: 'abfe20d1d5a7',
+      important: [{ at: 'def:memellipse', weight: 2 }, { at: 'def:step', say: 'the next point of the curve', weight: 2 }, { at: 'def:newstate', weight: 1 }],
+    },
+    'arc.c': {
+      summary: 'Arcs: an ellipse drawn through a mask of the wanted angles; Plan 9 unchanged.',
+      digest: '454da97c1389',
+    },
+    'poly.c': {
+      summary: 'mempoly: an open polygon as a series of lines; Plan 9 unchanged.',
+      digest: '13bc18575a90',
+    },
+    'color.c': {
+      summary: 'Pixel values to RGBA and back, any format; images filled with a colour; Plan 9 unchanged.',
+      digest: 'a82e266ddd55',
+      important: [{ at: 'def:imgtorgba', weight: 1 }, { at: 'def:rgbatoimg', weight: 1 }, { at: 'def:memfillcolor', weight: 1 }],
+    },
+    'cmap.c': {
+      summary: 'The default 8-bit colour map as a table, generated by mkcmap.c; Plan 9 unchanged.',
+      digest: 'f89a38eb34d4',
+      important: [{ at: 'def:def', say: 'the whole table: 256 entries each way', weight: 1 }],
+    },
+    'chan.c': {
+      summary: "memsetchan: an image's pixel format set, its channels' shifts and masks; Plan 9 unchanged.",
+      digest: '9baabc891c14',
+    },
+    'resolution.c': {
+      summary: 'The address of a pixel, and its bits; from Plan 9 unchanged.',
+      digest: '5f068f0ed527',
+      important: [{ at: 'def:byteaddr', weight: 1 }],
+    },
+    'transfer.c': {
+      summary: 'Pixels copied into and out of a Memimage (loadimage, unloadimage); Plan 9 unchanged.',
+      digest: 'd1035dfc3fdd',
+    },
+    'string.c': {
+      summary: "memimagestring: text on a Memimage, what the kernel's console prints with; Plan 9 unchanged.",
+      digest: 'adb8352f6d36',
+      important: [{ at: 'def:memimagestring', weight: 2 }],
+    },
+    'subfont.c': {
+      summary: 'Memsubfonts allocated; from Plan 9 unchanged.',
+      digest: '711671956549',
+    },
+    'defont.c': {
+      summary: "The default font as a Memsubfont, from Plan 9; xix declares drawld2chan instead of draw_private.h.",
+      digest: 'eabb977c0657',
+      important: [{ at: 'def:getmemdefont', say: "swconsole's font", weight: 2 }],
+    },
+    'hooks.c': {
+      summary: "Hooks: iprint, and Plan 9's hwdraw renamed hwdraw_OVERRIDEN, the kernel defining its own.",
+      digest: 'ddecbd34e1cb',
+      important: [{ at: 'def:hwdraw_OVERRIDEN', say: 'dead: renamed away from the kernel hwdraw', weight: 1 }],
+    },
+    'replmul.c': {
+      summary: 'A table generator (a hoc script in a comment) for replicating pixel bits; Plan 9 unchanged.',
+      digest: '3da3fd53e1b3',
+    },
+  },
+  skeletons: [
+    skeletons.parts('libmemdraw: from a draw to the pixels', [
+      ['draw.c', 'memimagedraw: clip, then the fastest path'],
+      ['alphadraw.c', 'the general path: per-pixel compositing'],
+      ['line.c', 'shapes: lines, with fillpoly.c and ellipse.c'],
+      ['string.c', 'text: the console draws with it'],
+      ['alloc.c', 'Memimages and their memory'],
+      ['color.c', 'pixel formats to RGBA'],
+      ['init.c', 'the pool and the constant images'],
+    ], [
+      ['draw.c', 'alphadraw.c', 'what no shortcut handles'],
+      ['line.c', 'draw.c', 'shapes end as draws'],
+      ['string.c', 'draw.c', 'a glyph through its mask'],
+      ['alphadraw.c', 'color.c', 'pixels converted'],
+      ['alloc.c', 'init.c', 'from its pool'],
+    ]),
+    {
+      name: 'memimagedraw: the paths of a draw',
+      bones: [
+        { at: 'draw.c:def:memimagedraw', role: 'the call' },
+        { at: 'draw.c:def:drawclip', role: 'the rectangles clipped' },
+        { at: 'draw.c:code:"memoptdraw(Memdrawparam *par)"', role: 'memset and memmove' },
+        { at: 'draw.c:code:"chardraw(Memdrawparam *par)"', role: 'glyphs' },
+        { at: 'alphadraw.c:def:alphadraw', role: 'the general case' },
+      ],
+      joints: [
+        { from: 'draw.c:def:memimagedraw', to: 'draw.c:def:drawclip', say: 'dst, src, mask' },
+        { from: 'draw.c:def:memimagedraw', to: 'draw.c:code:"memoptdraw(Memdrawparam *par)"', say: 'solid or copy' },
+        { from: 'draw.c:def:memimagedraw', to: 'draw.c:code:"chardraw(Memdrawparam *par)"', say: 'else' },
+        { from: 'draw.c:def:memimagedraw', to: 'alphadraw.c:def:alphadraw', say: 'else' },
+      ],
+    },
+    {
+      name: 'alphadraw: read, compute, write, line by line',
+      bones: [
+        { at: 'alphadraw.c:def:alphadraw', role: 'the loop over lines' },
+        { at: 'alphadraw.c:code:"readfn(Memimage *img)"', role: 'a reader for the format' },
+        { at: 'alphadraw.c:def:alphacalc', role: 'the operator' },
+        { at: 'alphadraw.c:code:"alphacalc11(Buffer bdst"', role: 'SoverD' },
+        { at: 'alphadraw.c:code:"writefn(Memimage *img)"', role: 'a writer for the format' },
+        { at: 'alphadraw.c:code:"convfn(Memimage *dst"', role: 'or a conversion, for copies' },
+      ],
+      joints: [
+        { from: 'alphadraw.c:def:alphadraw', to: 'alphadraw.c:code:"readfn(Memimage *img)"', say: 'src, mask, dst' },
+        { from: 'alphadraw.c:def:alphadraw', to: 'alphadraw.c:def:alphacalc', say: 'op' },
+        { from: 'alphadraw.c:def:alphacalc', to: 'alphadraw.c:code:"alphacalc11(Buffer bdst"', say: 'SoverD' },
+        { from: 'alphadraw.c:def:alphadraw', to: 'alphadraw.c:code:"writefn(Memimage *img)"', say: 'the result' },
+        { from: 'alphadraw.c:def:alphadraw', to: 'alphadraw.c:code:"convfn(Memimage *dst"', say: 'a boolean mask' },
+      ],
+    },
+    {
+      name: 'A thick line',
+      bones: [
+        { at: 'line.c:def:_memimageline', role: 'the line' },
+        { at: 'line.c:def:discend', role: 'a round end' },
+        { at: 'line.c:def:arrowend', role: 'an arrow' },
+        { at: 'line.c:def:membrush', role: 'the disc' },
+        { at: 'fillpoly.c:def:_memfillpolysc', role: 'the body, as a polygon' },
+      ],
+      joints: [
+        { from: 'line.c:def:_memimageline', to: 'fillpoly.c:def:_memfillpolysc', say: 'four corners' },
+        { from: 'line.c:def:_memimageline', to: 'line.c:def:discend', say: 'Enddisc' },
+        { from: 'line.c:def:_memimageline', to: 'line.c:def:arrowend', say: 'Endarrow' },
+        { from: 'line.c:def:discend', to: 'line.c:def:membrush', say: 'radius' },
+      ],
+    },
+    {
+      name: 'Scan conversion',
+      bones: [
+        { at: 'fillpoly.c:def:memfillpoly', role: 'the call' },
+        { at: 'fillpoly.c:def:_memfillpolysc', role: 'edges made' },
+        { at: 'fillpoly.c:code:"xscan(Memimage *dst"', role: 'spans by lines' },
+        { at: 'fillpoly.c:code:"yscan(Memimage *dst"', role: 'spans by columns' },
+        { at: 'fillpoly.c:def:fillline', role: 'a span filled' },
+      ],
+      joints: [
+        { from: 'fillpoly.c:def:memfillpoly', to: 'fillpoly.c:def:_memfillpolysc', say: 'vertices' },
+        { from: 'fillpoly.c:def:_memfillpolysc', to: 'fillpoly.c:code:"xscan(Memimage *dst"', say: 'Segs' },
+        { from: 'fillpoly.c:def:_memfillpolysc', to: 'fillpoly.c:code:"yscan(Memimage *dst"', say: 'detail' },
+        { from: 'fillpoly.c:code:"xscan(Memimage *dst"', to: 'fillpoly.c:def:fillline', say: 'a span' },
+      ],
+    },
+    {
+      name: 'An ellipse, incrementally',
+      bones: [
+        { at: 'ellipse.c:def:memellipse', role: 'the call' },
+        { at: 'ellipse.c:def:newstate', role: 'the state of the curve' },
+        { at: 'ellipse.c:def:step', role: 'one step' },
+        { at: 'ellipse.c:code:"bellipse(int y, State *s"', role: 'a thin ellipse' },
+        { at: 'ellipse.c:code:"erect(int x0, int y0"', role: 'a span drawn' },
+      ],
+      joints: [
+        { from: 'ellipse.c:def:memellipse', to: 'ellipse.c:def:newstate', say: 'a, b' },
+        { from: 'ellipse.c:def:memellipse', to: 'ellipse.c:def:step', say: 'each point' },
+        { from: 'ellipse.c:def:memellipse', to: 'ellipse.c:code:"bellipse(int y, State *s"', say: 'thin' },
+        { from: 'ellipse.c:def:memellipse', to: 'ellipse.c:code:"erect(int x0, int y0"', say: 'spans' },
+      ],
+    },
+    mod('cmap.c', 'The colour map', [
+      ['def:def', 'the table, both ways', ''],
+      ['def:memdefcmap', 'the default map', 'used'],
+      ['def:_memmkcmap', 'made at init', 'filled'],
+    ]),
+  ],
+}

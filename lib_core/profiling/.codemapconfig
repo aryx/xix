@@ -1,0 +1,43 @@
+// lib_core/profiling/: what the code map says of it
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "pfff's poor man's profiler: time spent per named category, and a ppx to add it.",
+  files: {
+    'Profiling.mli': {
+      summary: "Wrap a thunk in profile_code \"X.f\" to time it; -profile prints the table.",
+      digest: '1c86f31b35cf',
+      important: [
+        { at: 'def:profile_code', say: 'the one call a program makes', weight: 3 },
+        { at: 'def:profile', say: 'off unless -profile' },
+      ],
+    },
+    'Profiling.ml': {
+      summary: "Timings summed in a table by category, from pfff and semgrep; no xix program uses it yet.",
+      digest: '9cd83f215132',
+      important: [
+        { at: 'def:profile_code', say: 'time f, even when it raises', weight: 3 },
+        { at: 'comment:"subtle: don\'t forget to give all argumens"', say: 'a partial application times nothing', weight: 3 },
+        { at: 'def:adjust_profile_entry', say: 'total time and count per category' },
+        { at: 'def:profile_code_exclusif', say: 'nesting forbidden: a failwith' },
+        { at: 'def:profile_diagnostic', say: 'the table, slowest first' },
+        { at: 'def:flags', say: '-profile, for a CLI.ml to include' },
+        { at: 'def:profile_code_inside_exclusif_ok', say: 'a stub: failwith Todo' },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts('Profiling: the runtime and its rewriter', [
+      ['Profiling.mli', 'profile_code and the table'],
+      ['ppx/', 'writes the profile_code calls from [@@profiling]'],
+    ], [
+      ['ppx/', 'Profiling.mli', 'generates calls to'],
+    ]),
+    skeletons.module('Profiling.ml', 'A category timed', [
+      ['flags', '-profile sets profile', ''],
+      ['profile_code', 'f run between two gettimeofday', 'switched on'],
+      ['adjust_profile_entry', 'the time added to its category', 'the time'],
+      ['profile_diagnostic', 'the table, printed on demand (the exit hook is commented out)', 'the table'],
+    ]),
+  ],
+}

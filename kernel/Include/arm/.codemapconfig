@@ -1,0 +1,45 @@
+// kernel/Include/arm/: what the code map says of it (tinybox codemap).
+// From ~/principia/include/arch/arm/, the syncweb markers removed.
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "ARM's machine-dependent headers for the kernel's C: u.h, first include of every file, and Ureg.",
+  files: {
+    'u.h': {
+      summary: "Plan 9's u.h for ARM (principia's): sized integers, Rune, va_list; xix adds uchar, ulong...",
+      digest: '0858031804a6',
+      capitals: [
+        { at: 'type:ulong', say: "Plan 9's short names, here in u.h itself" },
+        { at: 'type:uintptr', say: 'a pointer as an integer: 32 bits here' },
+        { at: 'def:va_arg', say: 'varargs by pointer arithmetic: args on the stack' },
+      ],
+      important: [
+        { at: 'type:uchar', say: "principia's libc.h had these: moved here", weight: 2 },
+        { at: 'type:u32int', say: 'the sized integers the BCM registers use', weight: 2 },
+        { at: 'type:Rune', say: 'a Unicode character, as libc and fmt see it', weight: 2 },
+        { at: 'type:jmp_buf', say: 'setjmp saves only sp and pc', weight: 1 },
+        { at: 'comment:"VFP FCR"', say: 'the float unit flags vfp3.c sets', weight: 1 },
+        { at: 'def:va_start', say: 'the address just past the last named argument', weight: 1 },
+        { at: 'def:va_arg', say: 'chars and shorts take a full word slot', weight: 3 },
+      ],
+    },
+    'ureg.h': {
+      summary: "Ureg on ARM (principia's): the registers saved on a trap, in the order exceptions.s pushes.",
+      digest: 'eca3b6f8a291',
+      important: [
+        { at: 'comment:"do not change the order"', say: 'Bcm/exceptions.s pushes them in this order', weight: 3 },
+        { at: 'code:"type;"', say: 'which vector: SWI, IRQ, abort...', weight: 2 },
+      ],
+      related: ['../../Bcm/exceptions.s'],
+    },
+  },
+  skeletons: [
+    {
+      name: 'The machine seen by C, and by the kernel on a trap',
+      bones: [
+        { at: 'u.h', role: 'the types every C file is written with' },
+        { at: 'ureg.h', role: 'the saved registers: trap.c and syscall.c read them' },
+      ],
+      joints: [{ from: 'ureg.h', to: 'u.h', say: 'ulong fields' }],
+    },
+  ],
+}

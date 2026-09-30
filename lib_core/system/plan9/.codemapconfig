@@ -1,0 +1,135 @@
+// lib_core/system/plan9/: what the code map says of it
+local skeletons = import '../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Plan 9's own system calls for OCaml (bind, mount) and 9P, what orio serves windows with.",
+  files: {
+    'Plan9.mli': {
+      summary: "Plan 9's API beside Unix: qids, permissions, dir entries, bind and mount under caps.",
+      digest: '61b5415eefa8',
+      capitals: [
+        { at: 'def:bind', say: 'a namespace changed: needs Cap.bind' },
+        { at: 'type:qid', say: "a file's identity, what 9P names" },
+      ],
+      important: [
+        { at: 'type:dir_entry', say: "a stat's fields, sent in 9P", weight: 3 },
+        { at: 'def:mount', say: "orio mounts its file server on /mnt/wsys" },
+        { at: 'type:open_flags' },
+        { at: 'type:namespace_flag', say: 'MREPL, MBEFORE, MAFTER' },
+      ],
+    },
+    'Plan9.ml': {
+      summary: "Plan9's types and the two externals: bind and mount, each guarded by its capability.",
+      digest: '78ac41d6cf42',
+      important: [
+        { at: 'def:bind', say: 'caps#bind: the proof the caller may', weight: 3 },
+        { at: 'def:mount', weight: 2 },
+        { at: 'type:Plan9_error', say: 'registered so C can raise it', weight: 3 },
+        { at: 'def:plan9_bind', say: 'the C stub in bind.c' },
+        { at: 'comment:"alt: use instead the external above"', say: 'errstr bound nowhere: commented out' },
+      ],
+      links: [{ from: 'def:bind', to: 'bind.c:def:plan9_bind' }],
+    },
+    'Protocol_9P.mli': {
+      summary: 'The 9P messages as OCaml variants (Request.t, Response.t), read and written on an fd.',
+      digest: '0f8c8427caa2',
+      capitals: [
+        { at: 'type:message', say: 'a tag and a T or R: what orio serves' },
+        { at: 'def:read_9P_msg', say: "the file server's input" },
+      ],
+      important: [
+        { at: 'module:Request', say: 'the T messages a client sends', weight: 3 },
+        { at: 'module:Response', say: 'the R messages the server answers' },
+        { at: 'def:write_9P_msg' },
+      ],
+    },
+    'Protocol_9P.ml': {
+      summary: "9P encoded by hand, little-endian bytes as in 0intro(5): 9-in-C can talk to it.",
+      digest: '18b2a43e3c24',
+      important: [
+        { at: 'def:read_9P_msg', say: 'size, type, tag, then the rest by type', weight: 3 },
+        { at: 'def:write_9P_msg', say: 'strings concatenated: slow, simple', weight: 3 },
+        { at: 'def:code_of_msg', say: "the numbers of Plan 9's fcall.h" },
+        { at: 'def:pbit32_special', say: 'DMDIR, the top bit of a mode' },
+        { at: 'def:gbit32' },
+        { at: 'def:str_of_msg', say: 'a message dumped for debugging' },
+      ],
+    },
+    'plan9support.c': {
+      summary: "Plan 9's errors raised as Plan9_error from C; a copy of Unix's unixsupport.c.",
+      digest: '353ded65b70b',
+      important: [
+        { at: 'def:plan9_error', say: 'the named exception, found once, raised', weight: 3 },
+        { at: 'def:p9error', say: "errstr: Plan 9's error is a string" },
+      ],
+    },
+    'plan9support.h': {
+      summary: "The stubs' shared declarations: ERRMAX, Nothing, the two error raisers.",
+      digest: 'a167b02656ec',
+      important: [
+        { at: 'def:ERRMAX', say: 'guarded by OS_PLAN9, the others by _APE' },
+      ],
+    },
+    'bind.c': {
+      summary: "bind's stub: APE's _BIND called directly, to dodge libbsd's own bind symbol.",
+      digest: '08f487dd0de4',
+      important: [
+        { at: 'def:plan9_bind', weight: 3 },
+        { at: 'comment:"So call directly the APE syscall _BIND"', say: 'two binds linked, the linker silent' },
+      ],
+    },
+    'mount.c': {
+      summary: "mount's stub: fails with a message outside Plan 9's APE.",
+      digest: '3d54d46edd48',
+      important: [{ at: 'def:plan9_mount', weight: 3 }],
+    },
+    'errstr.c': {
+      summary: "errstr's stub, compiled but bound nowhere: Plan9.ml's external is commented out.",
+      digest: '08be4ee3a137',
+      important: [{ at: 'def:plan9_errstr', say: 'dead: no external names it', weight: 3 }],
+    },
+  },
+  skeletons: [
+    skeletons.parts('Plan 9 from OCaml: types, stubs, 9P', [
+      ['Plan9.mli', 'the API: types, bind, mount'],
+      ['bind.c', 'the C stubs calling the kernel'],
+      ['plan9support.c', "errors: errstr to Plan9_error"],
+      ['Protocol_9P.mli', 'the file protocol, on those types'],
+      ['tests/', 'bind and mount tried, in C and OCaml'],
+    ], [
+      ['Plan9.mli', 'bind.c', 'external'],
+      ['bind.c', 'plan9support.c', 'on failure'],
+      ['Protocol_9P.mli', 'Plan9.mli', 'qids, dir entries'],
+      ['tests/', 'Plan9.mli', 'calls'],
+    ]),
+    skeletons.chain('bind from OCaml to the kernel', [
+      ['Plan9.ml:def:bind', 'checks caps#bind, flags to int', ''],
+      ['bind.c:def:plan9_bind', 'the stub: _BIND', 'external'],
+      ['plan9support.c:def:p9error', 'errstr read on failure', 'ret < 0'],
+      ['plan9support.c:def:plan9_error', 'raises Plan9.Plan9_error', 'the message'],
+    ]),
+    {
+      name: 'Plan9.ml: types, flags as ints, the externals',
+      bones: [
+        { at: 'Plan9.ml:type:namespace_flag', role: 'MREPL, MBEFORE, MAFTER, MCREATE' },
+        { at: 'Plan9.ml:def:int_of_namespace_flag', role: "the kernel's bits" },
+        { at: 'Plan9.ml:def:plan9_bind', role: 'the external, to bind.c' },
+        { at: 'Plan9.ml:def:bind', role: 'the API: caps#bind, then the external' },
+        { at: 'Plan9.ml:type:Plan9_error', role: 'what the stubs raise' },
+      ],
+      joints: [
+        { from: 'Plan9.ml:type:namespace_flag', to: 'Plan9.ml:def:int_of_namespace_flag', say: 'a flag' },
+        { from: 'Plan9.ml:def:int_of_namespace_flag', to: 'Plan9.ml:def:bind', say: 'an int' },
+        { from: 'Plan9.ml:def:bind', to: 'Plan9.ml:def:plan9_bind', say: 'strings, an int' },
+        { from: 'Plan9.ml:def:plan9_bind', to: 'Plan9.ml:type:Plan9_error', say: 'on failure' },
+      ],
+    },
+    skeletons.module('Protocol_9P.ml', 'A 9P message read and written', [
+      ['read_9P_msg', 'size, type, tag; the rest by type', ''],
+      ['gbit32', 'little-endian ints out of bytes', 'fields'],
+      ['write_9P_msg', 'the reverse: a message to bytes', 'a reply'],
+      ['code_of_msg', "the type's number", 'the type'],
+      ['pbit32', 'ints into bytes', 'fields'],
+    ]),
+  ],
+}

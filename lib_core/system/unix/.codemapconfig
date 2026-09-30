@@ -1,0 +1,48 @@
+// lib_core/system/unix/: what the code map says of it
+local skeletons = import '../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "OCaml's Unix library of the 1990s, kept apart as the stdlib did: it needs the C -lunix.",
+  files: {
+    'Unix.mli': {
+      summary: 'POSIX from OCaml: file descriptors, fork and exec, pipes, stat, sockets, time.',
+      digest: '669f4ac74705',
+      capitals: [
+        { at: 'type:file_descr', say: 'what every read, write, pipe is about' },
+        { at: 'type:Unix_error', say: 'every failed call raises it' },
+        { at: 'def:fork', say: 'the shells and omk run commands so' },
+      ],
+      important: [
+        { at: 'type:process_status', say: 'WEXITED, WSIGNALED, WSTOPPED', weight: 3 },
+        { at: 'def:execv', say: 'reached only through CapUnix' },
+        { at: 'def:pipe' },
+        { at: 'type:stats', say: "ogit's index stores these" },
+        { at: 'def:dup2', say: "the shell's redirections" },
+      ],
+    },
+    'Unix.ml': {
+      summary: 'Externals for the system calls, and in OCaml above them: system, popen, servers.',
+      digest: '194231a38921',
+      important: [
+        { at: 'type:Unix_error', weight: 3 },
+        { at: 'code:"Callback.register_exception"', say: 'so C can raise Unix_error', weight: 3 },
+        { at: 'def:create_process', say: 'fork, redirect, execvp: in OCaml' },
+        { at: 'def:open_proc', say: "popen's child: /bin/sh -c" },
+        { at: 'def:popen_processes', say: 'a global table: channel to pid' },
+        { at: 'def:system', say: 'fork, exec /bin/sh, wait' },
+        { at: 'def:establish_server', say: 'a fork per connection' },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.calls('A command run, in OCaml over the calls', 'Unix.ml:def:create_process', 'fork; the child redirects and execs', [
+      ['Unix.ml:def:fork', 'the external: two processes', 'first'],
+      ['Unix.ml:def:perform_redirections', 'dup2 onto stdin, stdout, stderr', 'in the child'],
+      ['Unix.ml:def:execvp', 'the program replaces the child', 'then'],
+      ['Unix.ml:type:file_descr', 'what is redirected', 'descriptors'],
+    ]) + {
+      bones+: [{ at: 'Unix.ml:def:open_proc', role: "popen's variant, pipes and a table" }],
+      joints+: [{ from: 'Unix.ml:def:open_proc', to: 'Unix.ml:def:fork', say: 'the same fork' }],
+    },
+  ],
+}

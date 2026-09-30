@@ -1,0 +1,37 @@
+// kernel/Byterun/config/: what the code map says of it -- the two
+// configuration headers autoconf wrote for OCaml's runtime on a Unix
+// host, kept, then mostly undone by ../plan9.h
+local skeletons = import '../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "ocamlrun's autoconf output from a 64-bit Unix host, kept as is; ../plan9.h undefines most of it.",
+  files: {
+    'm.h': {
+      summary: 'The machine: 64-bit words, little endian -- wrong for the 32-bit ARM, undone by plan9.h.',
+      digest: '864958242af6',
+      important: [
+        { at: 'def:ARCH_SIXTYFOUR', say: 'a host leftover: plan9.h #undefs it for ARM', weight: 3 },
+      ],
+    },
+    's.h': {
+      summary: "The system: a Unix's HAS_* features (sockets, select, termios), all #undef'd by plan9.h.",
+      digest: '9b5e0ae97057',
+      important: [
+        { at: 'def:OCAML_OS_TYPE', say: 'still says Unix: Sys.os_type on the Pi', weight: 2 },
+        { at: 'def:HAS_SOCKETS', say: 'off in plan9.h: the debugger stubbed', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts('The configuration, and what undoes it', [
+      ['m.h', 'the machine, as the host saw it'],
+      ['s.h', 'the system, as the host saw it'],
+      ['../config.h', 'includes both, then plan9.h'],
+      ['../plan9.h', 'the #undefs: what the kernel really has'],
+    ], [
+      ['../config.h', 'm.h', 'includes'],
+      ['../config.h', 's.h', 'includes'],
+      ['../config.h', '../plan9.h', 'then overrides'],
+    ]),
+  ],
+}

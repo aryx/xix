@@ -1,0 +1,58 @@
+// linker/tools/: what the code map says of it
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The binutils of the toolchain: oar and onm, over the marshalled object and library formats.",
+  files: {
+    'ar.ml': {
+      summary: "oar, ar's port: objects checked and saved together as a library; no ar flags, just archive.",
+      digest: 'e1bd089633c1',
+      capitals: [{ at: 'def:archive', say: 'objects loaded, a list marshalled' }],
+      important: [
+        { at: 'comment:"Main limitations compared to ar"', say: "just 'oar objfiles -o lib'", weight: 3 },
+        { at: 'comment:"index the archive a la SYMDEF/ranlib"', say: 'no index: olk loads everything', weight: 1 },
+        { at: 'def:main', say: 'flags, then archive', weight: 1 },
+        { at: 'code:"Cap.main"', say: 'no Main.ml: the program in one file', weight: 1 },
+      ],
+    },
+    'nm.ml': {
+      summary: "onm, nm's port: the symbols an object or library defines and uses, from its assembly AST.",
+      digest: '1a5cf92c5e9c',
+      capitals: [{ at: 'def:visit_obj', say: 'definitions, then uses' }],
+      important: [
+        { at: 'comment:"step1: visit the defs"', say: 'TEXT and GLOBL: T and D', weight: 3 },
+        { at: 'comment:"step2: visit the uses"', say: "Arch_linker's visitor: U", weight: 3 },
+        { at: 'comment:"handle executable too"', say: 'objects and libraries only', weight: 1 },
+        { at: 'def:nm', say: 'an object or a library', weight: 1 },
+      ],
+    },
+    'size.ml': { summary: "Empty: size, still to port (not built).", digest: 'd41d8cd98f00' },
+    'strip.ml': { summary: "Empty: strip, still to port (not built).", digest: 'd41d8cd98f00' },
+  },
+  skeletons: [
+    skeletons.chain('oar: objects to a library', [
+      ['ar.ml:code:"Cap.main"', 'the program: Cap.main', ''],
+      ['ar.ml:def:main', 'the flags', 'the capabilities'],
+      ['ar.ml:def:archive', 'objects loaded, checked', 'the files'],
+      ['../libraries/Library_file.ml:def:save', 'the list marshalled', 'the objects'],
+    ]),
+    skeletons.chain('onm: the symbols of an object', [
+      ['nm.ml:code:"Cap.main"', 'the program: Cap.main', ''],
+      ['nm.ml:def:main', 'the flags', 'the capabilities'],
+      ['nm.ml:def:nm', 'an object or a library', 'each file'],
+      ['nm.ml:def:visit_obj', 'defined, then used, symbols', 'each object'],
+      ['nm.ml:comment:"step2: visit the uses"', "the arch's visitor", 'after the defs'],
+    ]),
+    skeletons.parts('Two tools on the same formats', [
+      ['ar.ml', 'writes libraries'],
+      ['nm.ml', 'reads objects and libraries'],
+      ['../libraries/', 'the library format'],
+      ['../../assembler/objects/', 'the object format'],
+    ], [
+      ['ar.ml', '../libraries/', 'saves'],
+      ['nm.ml', '../libraries/', 'loads'],
+      ['nm.ml', '../../assembler/objects/', 'loads'],
+      ['ar.ml', '../../assembler/objects/', 'loads'],
+    ]),
+  ],
+}

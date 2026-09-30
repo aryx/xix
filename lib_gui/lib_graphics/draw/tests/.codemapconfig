@@ -1,0 +1,25 @@
+// lib_gui/lib_graphics/draw/tests/: hellodraw again, over Graphics.
+local skeletons = import '../../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "libdraw's hello world over Graphics: a window filled magenta (once draw_rect is written).",
+  files: {
+    'hellodraw.ml': {
+      summary: 'A Graphics window filled with a color, three seconds; the line and the flush commented out.',
+      digest: 'bd23471e4a02',
+      capitals: [{ at: 'def:main', say: 'a window and a color' }],
+      important: [
+        { at: 'code:"Draw.draw view view.I.r color None Point.zero"', say: 'reaches draw_rect: raise Todo', weight: 3 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.module('hellodraw.ml', 'hellodraw over Graphics', [
+      ['_', 'the entry', ''],
+      ['main', 'init, a color, draw', 'calls'],
+    ]) + {
+      bones+: [{ at: '../draw.ml:def:draw', role: 'a color onto the screen' }],
+      joints+: [{ from: 'hellodraw.ml:def:main', to: '../draw.ml:def:draw', say: 'the view, the color' }],
+    },
+  ],
+}

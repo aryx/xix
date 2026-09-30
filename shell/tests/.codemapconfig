@@ -1,0 +1,16 @@
+// shell/tests/: orc's regression tests (Testo), run by the suite in
+// ~/github/xix/tests/.
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "orc's regression tests: CLI.main run in a forked child, its exit and output checked.",
+  files: {
+    'Test_shell.ml': {
+      summary: "orc's tests: CLI.main forked per test, its globals never reset (only --help so far).",
+      digest: 'd584b3ab25b3',
+      important: [
+        { at: 'def:run_main', say: 'a child per run: the globals stay clean', weight: 3 },
+        { at: 'def:e2e_tests', say: 'one test, --help: the rest to write', weight: 1 },
+      ],
+    },
+  },
+}

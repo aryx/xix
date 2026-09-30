@@ -1,0 +1,744 @@
+// vcs/: ogit, what the code map says of it (tinybox codemap; the format:
+// ~/github/ocaml-elm-playground/docs/manual/codemap.md, section 12).
+// Not a Plan 9 port: a git written in OCaml after dulwich (Python) and
+// ocaml-git, its book docs/ogit.nw (with Overview.nw, git's concepts).
+// The skeletons follow ogit.nw's "Code organization" (the files by
+// chapter) and "Software architecture" (Main -> Cmds -> Cmd_xxx ->
+// Repository -> Objects, Refs, Index -> Tree, Commit, Blob; below them
+// the algorithms: Sha1, Zip/Unzip, Diff, Diff3). Sha1 and Zip/Unzip now
+// live in lib_core/crypto and lib_core/compression; the mkfile still
+// lists them here (sha1.ml, zip.ml, unzip.ml...) and is stale: dune
+// builds ogit. The C side, git9, is ~/principia/version_control/git9.
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "ogit, git in OCaml (after dulwich and ocaml-git): .git/'s objects, refs and index, one file per command.",
+  dirs: {
+    docs: { summary: "ogit.nw, the book of ogit (Overview.nw: git's concepts, shared with Principia's VCS book)." },
+  },
+  files: {
+    'main.ml': {
+      summary: "ogit's entry: argv[1] names a command of Cmds, its flags parsed, then its f run on the rest.",
+      digest: '8002d21f04e1',
+      capitals: [{ at: 'def:main', say: 'argv[1] picks the command, then its f runs' }],
+      important: [
+        { at: 'comment:"ocamlgit is simpler because"', say: 'what ocaml-git had that ogit drops: KISS', weight: 3 },
+        { at: 'def:commands', say: 'the main commands, the extra ones, help', weight: 2 },
+        { at: 'code:"commands |> List.find"', say: 'the dispatch: a command by its name', weight: 3 },
+        { at: 'code:"Arg_.parse_argv caps argv"', say: "each command's own flags, from its record", weight: 1 },
+        { at: 'code:"cmd.Cmd_.f (caps"', say: 'the command run: a function in a record', weight: 2 },
+        { at: 'code:"Gc.set"', say: 'a big stack: the walks recurse deep', weight: 1 },
+      ],
+      links: [
+        { from: 'def:commands', to: 'cmds.ml:def:main_commands' },
+      ],
+    },
+    'cmds.ml': {
+      summary: 'The list of commands, grouped as the book does: creating, branching, inspecting, networking.',
+      digest: 'e92db7fb98d6',
+      important: [
+        { at: 'def:main_commands', say: 'the book chapter by chapter; no merge yet', weight: 3 },
+        { at: 'def:extra_commands', say: 'test and dump: for debugging ogit itself', weight: 1 },
+      ],
+    },
+    'cmd_.ml': {
+      summary: "A command as a record: its name, usage, flags and function; what every cmd_xxx.ml fills in.",
+      digest: '22a2bce8f45a',
+      capitals: [{ at: 'type:t', say: 'a git command: name, flags, f' }],
+      important: [
+        { at: 'type:caps', say: 'what every command may touch', weight: 2 },
+        { at: 'type:ShowUsage', say: 'a command gives up; Main prints its usage', weight: 1 },
+      ],
+    },
+    'cmd_init.ml': {
+      summary: 'git init: an empty .git/ made in the directory given, or the current one.',
+      digest: 'f08c7f663bf2',
+      important: [{ at: 'def:cmd', say: 'all in Repository.init', weight: 1 }],
+      links: [{ from: 'def:cmd', to: 'repository.ml:def:init' }],
+    },
+    'cmd_add.ml': {
+      summary: "git add: each file's content stored as a blob, and its entry put in the index.",
+      digest: 'cd06b936a4f8',
+      important: [{ at: 'def:add', say: 'blobs written now, the index after', weight: 2 }],
+      links: [{ from: 'def:add', to: 'repository.ml:def:add_in_index' }],
+    },
+    'cmd_rm.ml': {
+      summary: 'git rm: entries removed from the index; the files themselves stay (no -f yet).',
+      digest: '4dd95f71cb3b',
+      important: [{ at: 'def:rm', say: 'the index only; the worktree untouched', weight: 2 }],
+    },
+    'cmd_commit.ml': {
+      summary: 'git commit: the index committed, the author from getlogin and the clock, a message by -m.',
+      digest: '9737a350dfa7',
+      important: [
+        { at: 'def:commit', say: 'all the work is Repository.commit_index', weight: 2 },
+        { at: 'comment:"todo: use localtime vs gmtime"', say: 'the timezone hardcoded: -7, San Francisco', weight: 2 },
+        { at: 'code:"else raise Todo"', say: '--author is parsed by nobody yet', weight: 1 },
+      ],
+      links: [{ from: 'def:commit', to: 'repository.ml:def:commit_index' }],
+    },
+    'cmd_branch.ml': {
+      summary: 'git branch: branches listed (HEAD starred), created at HEAD, or deleted (-d, -D).',
+      digest: '539da88cde67',
+      important: [
+        { at: 'def:list_branches', say: 'refs/heads/*, the one HEAD points to starred', weight: 2 },
+        { at: 'def:create_branch', say: 'a new ref at the commit HEAD names', weight: 2 },
+        { at: 'comment:"todo: detect if fully merged branch"', say: '-d deletes unmerged branches too, like -D', weight: 2 },
+      ],
+    },
+    'cmd_checkout.ml': {
+      summary: 'git checkout: HEAD pointed to a branch or a commit (detached), worktree and index rewritten.',
+      digest: '9d3ab9fc4216',
+      important: [
+        { at: 'def:checkout', say: 'a branch name or a hexsha: HEAD, then files', weight: 3 },
+        { at: 'comment:"todo: order of operation?"', say: 'HEAD moved before the files: not atomic', weight: 1 },
+        { at: 'def:update', say: 'checkout with no argument: Todo', weight: 1 },
+      ],
+      links: [{ from: 'def:checkout', to: 'repository.ml:def:set_worktree_and_index_to_tree' }],
+    },
+    'cmd_reset.ml': {
+      summary: "git reset --hard: worktree and index set back to HEAD's tree; --soft and --mixed not done.",
+      digest: '3b8a1fca6966',
+      important: [
+        { at: 'def:reset_hard', say: "HEAD's tree to the index and the files", weight: 2 },
+        { at: 'code:"String.sub commit.Commit.message 0 40"', say: 'bug: fails on a message under 40 chars', weight: 3 },
+      ],
+    },
+    'cmd_show.ml': {
+      summary: 'git show: a blob printed, a tree listed, a commit shown with its diff from its first parent.',
+      digest: '0da188bcc63c',
+      important: [
+        { at: 'def:show', say: 'by kind of object; a commit with its changes', weight: 3 },
+        { at: 'code:"Repository.parse_objectish str"', say: 'raises Todo: only HEAD can be shown', weight: 2 },
+      ],
+      links: [
+        { from: 'def:show', to: 'changes.ml:def:changes_tree_vs_tree' },
+        { from: 'def:show', to: 'diff_unified.ml:def:show_change' },
+      ],
+    },
+    'cmd_diff.ml': {
+      summary: 'git diff: the worktree against the index, as unified diffs.',
+      digest: '78eb051306f7',
+      important: [{ at: 'def:diff_worktree_vs_index', say: 'changes, then each printed as a diff', weight: 2 }],
+      links: [{ from: 'def:diff_worktree_vs_index', to: 'changes.ml:def:changes_worktree_vs_index' }],
+    },
+    'cmd_log.ml': {
+      summary: "git log: the history from HEAD, each commit printed, with --name-status the files it changed.",
+      digest: '2fd7012349f0',
+      important: [
+        { at: 'def:log', say: 'walk the DAG from HEAD, print each commit', weight: 3 },
+        { at: 'def:print_commit', say: "git's own layout: commit, Author, Date", weight: 1 },
+        { at: 'code:"TODO: log: handle merge"', say: '--name-status fails on a merge commit', weight: 1 },
+      ],
+      links: [{ from: 'def:log', to: 'commit.ml:def:walk_history' }],
+    },
+    'cmd_status.ml': {
+      summary: 'git status: staged (index vs HEAD), unstaged (worktree vs index) and untracked files.',
+      digest: '0a09933e7efb',
+      important: [
+        { at: 'type:status', say: 'three lists: the three comparisons', weight: 3 },
+        { at: 'def:status_of_repository', say: 'the three computed', weight: 2 },
+        { at: 'def:untracked', say: 'every file not in the index: no .gitignore', weight: 2 },
+        { at: 'def:print_status_long', say: "git's long format, its hints commented", weight: 1 },
+      ],
+      links: [
+        { from: 'def:changes_index_vs_HEAD', to: 'changes.ml:def:changes_index_vs_tree' },
+        { from: 'def:status_of_repository', to: 'changes.ml:def:changes_worktree_vs_index' },
+      ],
+    },
+    'cmd_pull.ml': {
+      summary: 'git pull: the missing objects fetched from another repository, then HEAD fast-forwarded.',
+      digest: 'cae31505e58a',
+      important: [
+        { at: 'def:pull', say: 'fetch, then fast-forward if HEAD is an ancestor', weight: 3 },
+        { at: 'code:"git pull need merge"', say: 'no merge: only a fast-forward works', weight: 2 },
+      ],
+      links: [{ from: 'def:pull', to: 'clients.ml:def:client_of_url' }],
+    },
+    'cmd_push.ml': {
+      summary: "git push: a pull the other way round, the local repository the remote's client.",
+      digest: '9510badef2dc',
+      important: [
+        { at: 'def:push', say: 'the destination fetches from us', weight: 3 },
+        { at: 'code:"Clients.client_of_url caps !!url"', say: 'the client is our own worktree: roles swapped', weight: 2 },
+      ],
+    },
+    'cmd_clone.ml': {
+      summary: 'git clone: a repository initialized, every object fetched, HEAD set and the files checked out.',
+      digest: '40e83f765224',
+      important: [
+        { at: 'def:clone', say: 'init, fetch, set HEAD, check out', weight: 3 },
+        { at: 'comment:"todo: when clone then repo should have"', say: 'no refs/remotes/origin: no remote tracking', weight: 1 },
+      ],
+    },
+    'cmd_help.ml': {
+      summary: 'git help: the command names, with -a the extra ones (test, dump) too.',
+      digest: 'f99ab9bc392f',
+      important: [{ at: 'def:cmd', say: 'recursive: help lists itself with -a', weight: 1 }],
+    },
+    'cmd_test.ml': {
+      summary: "ogit test: the algorithms tried alone on files: sha1, diff, diff3, unzip (zip is a failwith).",
+      digest: 'ed1a8da8464a',
+      important: [
+        { at: 'def:test_diff3', say: "diff3's only caller: merge is not a command", weight: 2 },
+        { at: 'def:test_zip', say: 'Zip.deflate never called: a failwith', weight: 1 },
+        { at: 'def:cmd', say: 'the subcommands, by their arguments', weight: 1 },
+      ],
+    },
+    'cmd_dump.ml': {
+      summary: 'ogit dump: an object file or .git/index printed as an OCaml value (like git ls-files --stage).',
+      digest: 'ce727f056c15',
+      important: [
+        { at: 'def:dump_object', say: 'unzipped, then raw bytes or a value', weight: 2 },
+        { at: 'def:dump_index', say: 'the index read and printed as a value', weight: 1 },
+      ],
+    },
+    'dump.ml': {
+      summary: 'Printers of every object and the index as OCaml values, mostly generated by ocamltarzan.',
+      digest: '7d62cc957d8f',
+      important: [
+        { at: 'comment:"mostly auto-generated by ocamltarzan"', say: 'a module per type, its vof_t', weight: 2 },
+        { at: 'def:vof_obj', say: 'what cmd_dump prints for an object', weight: 2 },
+        { at: 'def:vof_index', say: 'and for the index', weight: 2 },
+      ],
+    },
+    'dump.mli': {
+      summary: 'The two printers ogit dump uses: an object, the index.',
+      digest: '51e527ce6445',
+    },
+    'repository.ml': {
+      summary: "The main API over .git/: objects read and added, refs followed and set, the index, checkout.",
+      digest: '54f31f04771c',
+      capitals: [
+        { at: 'def:add_obj', say: 'serialized, hashed, compressed, stored once' },
+        { at: 'def:commit_index', say: 'index to trees, a commit, HEAD moved' },
+      ],
+      important: [
+        { at: 'type:t', say: 'the worktree, its .git/, the index in memory', weight: 3 },
+        { at: 'def:hexsha_to_filename', say: 'a loose object: objects/ab/cdef...', weight: 1 },
+        { at: 'def:read_obj', say: 'decompressed, then parsed by its header', weight: 2 },
+        { at: 'comment:"deduplication!"', say: 'the same content, the same file: shared', weight: 2 },
+        { at: 'def:follow_ref', say: 'HEAD to refs/heads/master to a sha', weight: 2 },
+        { at: 'comment:"todo: create .lock file"', say: 'no lock: a crash leaves half a file', weight: 1 },
+        { at: 'comment:"TODO generate some IO.No_more_input"', say: 'the old value never compared: no CAS', weight: 2 },
+        { at: 'def:set_worktree_and_index_to_tree', say: 'checkout, reset, clone and pull end here', weight: 3 },
+        { at: 'code:"Tree.walk_tree (read_tree caps r)"', say: 'bug? "XXX" replaced "": paths get XXX/', weight: 2 },
+        { at: 'def:parse_objectish', say: 'raises Todo', weight: 1 },
+      ],
+      links: [
+        { from: 'def:add_obj', to: 'objects.ml:def:write' },
+        { from: 'def:read_obj', to: 'objects.ml:def:read' },
+        { from: 'def:commit_index', to: 'index.ml:def:trees_of_index' },
+        { from: 'def:open_', to: 'index.ml:def:read' },
+        { from: 'def:set_worktree_and_index_to_tree', to: 'tree.ml:def:walk_tree' },
+      ],
+    },
+    'repository.mli': {
+      summary: 'What every command calls: open a repository, read and add objects, set refs, change the index.',
+      digest: 'a0b7f2486fc7',
+      capitals: [
+        { at: 'type:t', say: 'a repository opened' },
+        { at: 'def:find_root_open_and_adjust_paths', say: 'how every command starts' },
+        { at: 'def:read_commit', say: 'objects read by kind' },
+      ],
+      important: [
+        { at: 'type:objectish', say: 'what git show accepts: a ref, a hex, a branch', weight: 1 },
+        { at: 'def:init', say: 'git init', weight: 1 },
+        { at: 'def:follow_ref_some', say: 'a ref to its commit, or fail', weight: 2 },
+        { at: 'def:add_in_index', say: 'git add', weight: 1 },
+        { at: 'def:set_worktree_and_index_to_tree', say: 'the files and index made a tree', weight: 2 },
+      ],
+    },
+    'objects.ml': {
+      summary: "A git object, a blob, a tree or a commit, read and written with its 'kind size\\0' header.",
+      digest: '7b5b2c0ea17e',
+      important: [
+        { at: 'type:t', say: 'no tags: three kinds', weight: 3 },
+        { at: 'def:read', say: 'the header says which reader follows', weight: 2 },
+        { at: 'def:write', say: 'the body first, to know its size', weight: 2 },
+      ],
+    },
+    'objects.mli': {
+      summary: 'The object store\'s unit: a blob, a tree or a commit, read and written.',
+      digest: '63770c841179',
+      capitals: [{ at: 'type:t', say: 'blob, tree or commit' }],
+    },
+    'blob.ml': {
+      summary: "A blob: a file's content, a string, no name and no mode (the tree has them).",
+      digest: '738df4cbba61',
+      important: [{ at: 'type:t', say: 'just the bytes', weight: 2 }],
+    },
+    'blob.mli': {
+      summary: "Interface of blobs: the content, its hash, read and written after the object's header.",
+      digest: '72aea83dfa8c',
+    },
+    'tree.ml': {
+      summary: 'A tree: a directory as sorted entries (name, mode, sha); walked one tree or two at once.',
+      digest: '5241e1e438fe',
+      important: [
+        { at: 'type:perm', say: "git's modes; Commit a submodule, unsupported", weight: 2 },
+        { at: 'type:entry', say: 'a name, a sha: a blob or a subtree', weight: 3 },
+        { at: 'def:walk_tree', say: 'sorted order: callers build a sorted index', weight: 2 },
+        { at: 'def:walk_trees', say: 'two trees merged by name: the diffs', weight: 3 },
+        { at: 'code:"| \"44\""', say: 'an odd mode some old gits wrote', weight: 1 },
+        { at: 'def:read', say: 'entries until the input ends', weight: 1 },
+      ],
+    },
+    'tree.mli': {
+      summary: 'Interface of trees: entries and their modes, read, written, walked.',
+      digest: '73095000d726',
+      capitals: [{ at: 'type:t', say: 'a directory, sorted entries' }],
+    },
+    'commit.ml': {
+      summary: 'A commit: a root tree, parents, author, committer, message; its history walked as a DAG.',
+      digest: '682581b79fca',
+      important: [
+        { at: 'type:t', say: 'a tree and parents: the history is a DAG', weight: 3 },
+        { at: 'def:walk_history', say: 'git log: each commit once, depth first', weight: 2 },
+        { at: 'def:collect_ancestors', say: 'git pull: is HEAD an ancestor?', weight: 2 },
+        { at: 'def:read', say: 'tree, parents, author, committer, message', weight: 2 },
+        { at: 'def:write', say: "the text git hashes: field order matters", weight: 1 },
+      ],
+    },
+    'commit.mli': {
+      summary: 'Interface of commits: the record, read and written, walked back through its parents.',
+      digest: '2b2540840ec2',
+      capitals: [{ at: 'type:t', say: 'a snapshot: a tree and its parents' }],
+    },
+    'user.ml': {
+      summary: "An author or committer: name, email, and a date as seconds and a timezone offset.",
+      digest: 'beb53f0759be',
+      important: [
+        { at: 'type:t', say: 'the date travels with the person', weight: 2 },
+        { at: 'def:read', say: 'Name <email> 1234567890 -0700', weight: 2 },
+        { at: 'def:string_of_date', say: "git log's date", weight: 1 },
+      ],
+    },
+    'user.mli': {
+      summary: 'Interface of authors and committers: read, written, their date shown.',
+      digest: '56fe01aa74fc',
+    },
+    'refs.ml': {
+      summary: 'References: HEAD and refs/heads/..., each a sha or a pointer to another ref.',
+      digest: '6615790904fb',
+      important: [
+        { at: 'type:t', say: 'HEAD, or a name under refs/', weight: 2 },
+        { at: 'type:ref_content', say: 'a sha, or "ref: refs/heads/master"', weight: 3 },
+        { at: 'def:default_head_content', say: 'a new repository: HEAD on master', weight: 1 },
+      ],
+    },
+    'refs.mli': {
+      summary: 'Interface of references: names, contents, read and written.',
+      digest: '63479e3d964e',
+      capitals: [{ at: 'type:ref_content', say: 'a sha or a symbolic ref' }],
+    },
+    'index.ml': {
+      summary: "The staging area, .git/index: sorted entries with stat info, turned into trees at commit.",
+      digest: '4fa4dc11fb57',
+      important: [
+        { at: 'type:stat_info', say: 'lstat saved: a changed mtime means changed', weight: 2 },
+        { at: 'type:entry', say: 'a path, a blob sha, its stat', weight: 3 },
+        { at: 'type:t', say: 'a sorted list', weight: 2 },
+        { at: 'def:add_entry', say: 'insertion in order, replacing the same path', weight: 1 },
+        { at: 'def:trees_of_index', say: 'flat paths to nested trees, stored as met', weight: 3 },
+        { at: 'def:write_mode', say: '_ in literals: breaks ocaml-light', weight: 2 },
+        { at: 'def:read', say: 'DIRC, version, count, entries', weight: 1 },
+        { at: 'def:write', say: 'the body hashed, the SHA1 appended', weight: 1 },
+      ],
+    },
+    'index.mli': {
+      summary: 'Interface of the index: entries from lstat, added and removed, read, written, made trees.',
+      digest: '3e82907ec8dc',
+      capitals: [{ at: 'type:entry', say: 'a file staged: path, blob, stat' }],
+    },
+    'hexsha.ml': {
+      summary: 'A SHA1 as 40 hexadecimal characters and back (from ocaml-hex): object names, refs.',
+      digest: 'ca0b191fa318',
+      important: [
+        { at: 'def:of_sha', say: '20 bytes to 40 characters', weight: 2 },
+        { at: 'def:to_sha', say: 'and back', weight: 2 },
+        { at: 'def:is_hexsha', say: 'checkout: a branch or a commit?', weight: 1 },
+      ],
+    },
+    'hexsha.mli': {
+      summary: 'Interface of hex SHA1s: to and from binary, read and written.',
+      digest: 'eb8f8acda81a',
+      capitals: [{ at: 'def:of_sha', say: 'how a sha is shown' }],
+    },
+    'IO_.ml': {
+      summary: "The readers git's text formats need: up to a stop char, an int then \\0, key value.",
+      digest: '0dc3e9ca3fee',
+      important: [
+        { at: 'def:read_string_and_stop_char', say: 'the lexer of every object', weight: 2 },
+        { at: 'def:with_close_out', say: 'output to bytes, closed, returned', weight: 1 },
+      ],
+    },
+    'IO_.mli': {
+      summary: 'Interface of the binary IO helpers ogit adds to lib_core IO.',
+      digest: '9d83ba54722f',
+    },
+    'change.ml': {
+      summary: "A file's change between two versions: added, deleted, modified, its content read lazily.",
+      digest: '6ac5802519f5',
+      important: [
+        { at: 'type:entry', say: 'a path, a mode, content read only if shown', weight: 2 },
+        { at: 'type:t', say: 'Add, Del, Modify: what status and log say', weight: 3 },
+      ],
+    },
+    'change.mli': {
+      summary: 'Interface of file changes.',
+      digest: 'ec6c0094d643',
+    },
+    'changes.ml': {
+      summary: 'The changes between two trees, the worktree and the index, or the index and a tree.',
+      digest: '2864f1749621',
+      important: [
+        { at: 'def:changes_tree_vs_tree', say: 'git show, git log: two trees walked together', weight: 3 },
+        { at: 'def:changes_worktree_vs_index', say: 'git diff: files lstat-ed against entries', weight: 3 },
+        { at: 'code:"new_stat.Index.mtime = old_stat.Index.mtime"', say: 'same mtime: unchanged, not even read', weight: 2 },
+        { at: 'def:changes_index_vs_tree', say: 'git status: staged changes', weight: 2 },
+        { at: 'comment:"file type changed reported as delete/add"', say: 'a mode change is a delete and an add', weight: 1 },
+      ],
+    },
+    'changes.mli': {
+      summary: 'Interface of the three comparisons of versions.',
+      digest: '8218a91f72a0',
+    },
+    'diff.ml': {
+      summary: "A file's content changed line by line: each line equal, added or deleted.",
+      digest: '861641bef2ca',
+      important: [{ at: 'type:diff_elem', say: 'Equal, Added, Deleted', weight: 3 }],
+    },
+    'diff.mli': {
+      summary: 'Interface of line diffs, the type all diff algorithms return.',
+      digest: '783e1cf35424',
+      capitals: [{ at: 'type:diff', say: 'a line diff' }],
+    },
+    'diffs.ml': {
+      summary: 'Two files diffed by lines, with Myers; its header compares the diff algorithms.',
+      digest: 'ebc77ae66887',
+      important: [
+        { at: 'comment:"Compute the differences between two files"', say: 'basic, Hunt-McIlroy, Myers, patience', weight: 2 },
+        { at: 'def:split_lines', say: "lines keep their '\\n'", weight: 1 },
+        { at: 'def:diff', say: 'lines, then Myers', weight: 2 },
+      ],
+      links: [{ from: 'def:diff', to: 'diff_myers.ml:def:diff' }],
+    },
+    'diffs.mli': {
+      summary: 'Interface of the line diff of two strings.',
+      digest: 'e2ca2fe92c2a',
+    },
+    'diff_myers.ml': {
+      summary: "Myers' O(ND) diff (1986), ported from Gauche Scheme: the diff ogit uses.",
+      digest: 'ab62e09fe3fa',
+      important: [
+        { at: 'def:lcs', say: 'furthest reaching paths, diagonal by diagonal', weight: 3 },
+        { at: 'def:diff', say: 'the LCS turned into Equal, Added, Deleted', weight: 2 },
+      ],
+    },
+    'diff_myers.mli': {
+      summary: "Interface of Myers' diff, over arrays of lines.",
+      digest: '88521e725ab3',
+    },
+    'diff_basic.ml': {
+      summary: 'The textbook diff by edit distance, O(nm) (Gusfield): kept for teaching, called by nobody.',
+      digest: '420a1ecb06c7',
+      important: [
+        { at: 'def:matrix_distance', say: 'D(i,j): the whole n by m matrix', weight: 3 },
+        { at: 'def:traceback_transcript', say: 'the path back is the diff', weight: 2 },
+        { at: 'def:hash_strings', say: 'an optimization measured useless, unused', weight: 1 },
+        { at: 'comment:"good bench: sqlite aggalmation"', say: 'why Myers: 0.1s against 104s', weight: 2 },
+      ],
+    },
+    'diff_basic.mli': {
+      summary: 'Interface of the basic diff; nothing links against it.',
+      digest: '101172009b16',
+    },
+    'diff_unified.ml': {
+      summary: 'A diff printed in unified format: hunks of context, - and + lines.',
+      digest: '63d8aa58c11e',
+      important: [
+        { at: 'def:show_unified_diff', say: 'hunks: changes with nContext lines around', weight: 3 },
+        { at: 'def:show_change', say: 'a Change.t: both contents read, diffed, shown', weight: 2 },
+      ],
+      links: [{ from: 'def:show_change', to: 'diffs.ml:def:diff' }],
+    },
+    'diff_unified.mli': {
+      summary: 'Interface of the unified diff printer.',
+      digest: 'ed8bcc5e2b4f',
+    },
+    'diff3.ml': {
+      summary: 'Three-way merge (diff3) after Pierce et al.: stable, changed on one side, or conflicts.',
+      digest: '70b571b74b10',
+      important: [
+        { at: 'type:chunk', say: "the paper's result: stable, one side, conflict", weight: 3 },
+        { at: 'def:identical_lines', say: 'lines unchanged in both diffs: anchors', weight: 2 },
+        { at: 'code:"if lo < leno || la < lenb || lb < lenb"', say: 'bug: la < lenb should be la < lena', weight: 3 },
+        { at: 'def:final_chunks', say: 'which side changed; both alike: no conflict', weight: 2 },
+        { at: 'def:merge', say: '<<<<<<< ======= >>>>>>> around conflicts', weight: 2 },
+      ],
+    },
+    'diff3.mli': {
+      summary: 'Interface of the three-way merge: chunks, and the merged text.',
+      digest: '77e1eda09723',
+    },
+    'client.ml': {
+      summary: 'A remote as a record of functions: its url, and fetch, which fills a local repository.',
+      digest: '39dce3b7be51',
+      important: [{ at: 'type:t', say: 'fetch: the objects in, the remote HEAD out', weight: 3 }],
+    },
+    'client.mli': {
+      summary: 'Interface of a remote repository client.',
+      digest: '3ba63baefacd',
+    },
+    'clients.ml': {
+      summary: 'A client chosen by URL: a local path works; git:// is a stub, ssh and http refused.',
+      digest: '5c5ccf1a1202',
+      important: [{ at: 'def:client_of_url', say: 'only a local directory really works', weight: 3 }],
+    },
+    'clients.mli': {
+      summary: 'Interface of the client factory.',
+      digest: 'e859d98048f4',
+    },
+    'client_local.ml': {
+      summary: "Fetching from a repository on disk: the common commits found, the missing objects copied.",
+      digest: 'fd3ae2ee5263',
+      important: [
+        { at: 'type:graph_walker', say: "dulwich's protocol: next, and ack when known", weight: 2 },
+        { at: 'def:find_top_common_commits', say: 'the frontier both repositories have', weight: 3 },
+        { at: 'def:iter_missing_objects', say: 'what dst lacks: commits, trees, blobs', weight: 3 },
+        { at: 'comment:"bugfix: do not forget Hashtbl.copy"', say: 'collect_ancestors mutates its table', weight: 1 },
+        { at: 'def:fetch_objects', say: 'each object re-added: its sha must match', weight: 2 },
+      ],
+    },
+    'client_local.mli': {
+      summary: 'Interface of the local-path client.',
+      digest: '9f9fb4aae9a5',
+    },
+    'client_git.ml': {
+      summary: 'The git:// protocol client: a stub that raises Todo.',
+      digest: '202bef85be98',
+      important: [{ at: 'def:mk_client', say: 'raise Todo: no network protocol yet', weight: 2 }],
+    },
+    'client_git.mli': {
+      summary: 'Interface of the git:// client, not implemented.',
+      digest: 'ce6ccb6a931a',
+    },
+  },
+  skeletons: [
+    skeletons.parts("ogit's architecture (ogit.nw's figure)", [
+      ['main.ml', 'entry point: argv[1] names the command'],
+      ['cmds.ml', 'dispatch: the list of commands'],
+      ['cmd_add.ml', 'a command (init, add, commit, pull...)'],
+      ['repository.ml', 'the main API: everything under .git/'],
+      ['objects.ml', 'storage: .git/objects/'],
+      ['refs.ml', 'storage: HEAD, .git/refs/'],
+      ['index.ml', 'storage: .git/index'],
+      ['commit.ml', 'git objects: commit, tree, blob'],
+      ['tree.ml', 'git objects: a directory'],
+      ['../lib_core/crypto/sha1.ml', 'algorithms: the names of objects'],
+      ['../lib_core/compression/', 'algorithms: zlib, objects compressed'],
+      ['diffs.ml', 'algorithms: diff (Myers), diff3'],
+    ], [
+      ['main.ml', 'cmds.ml', 'finds the command'],
+      ['cmds.ml', 'cmd_add.ml', 'cmd.f called'],
+      ['cmd_add.ml', 'repository.ml', 'the API'],
+      ['repository.ml', 'objects.ml', 'read_obj, add_obj'],
+      ['repository.ml', 'refs.ml', 'follow_ref, set_ref'],
+      ['repository.ml', 'index.ml', 'read, write, trees_of_index'],
+      ['objects.ml', 'commit.ml', 'by the header'],
+      ['objects.ml', 'tree.ml', 'by the header'],
+      ['repository.ml', '../lib_core/crypto/sha1.ml', 'hash the object'],
+      ['repository.ml', '../lib_core/compression/', 'compress, decompress'],
+      ['cmd_add.ml', 'diffs.ml', 'diff, show, log: through Changes'],
+    ]),
+    skeletons.cli('git add: a file becomes a blob and an index entry', [
+      ['cmds.ml:def:main_commands', 'the command found by its name', 'argv[1]'],
+      ['cmd_add.ml:def:cmd', "add's record: its f, called through the record", 'cmd.f'],
+      ['repository.ml:def:add_in_index', 'each path: lstat, content, a blob', 'relative paths'],
+      ['repository.ml:def:add_obj', 'hashed, compressed, stored once', 'the blob'],
+      ['objects.ml:def:write', "'blob size\\0' then the bytes", 'serialize'],
+      ['index.ml:def:add_entry', 'the entry in sorted place', 'path, sha, stat'],
+    ], main='main.ml:code:"Cap.main (fun"', cli='main.ml:def:main'),
+    skeletons.chain('git commit: the index to trees, a commit, HEAD moved', [
+      ['cmd_commit.ml:def:cmd', 'author, committer, message', ''],
+      ['repository.ml:def:commit_index', 'the whole commit, in the API', 'the message'],
+      ['index.ml:def:trees_of_index', 'paths grouped by directory', 'the index'],
+      ['index.ml:def:build_trees', 'deepest first: a subtree sha before its parent', 'the directories'],
+      ['repository.ml:def:add_obj', 'each tree, then the commit, stored', 'a tree'],
+      ['repository.ml:def:set_ref_if_same_old', 'HEAD branch to the new commit', 'the commit sha'],
+    ]),
+    skeletons.chain('git pull: objects fetched, then a fast-forward', [
+      ['cmd_pull.ml:def:pull', 'fetch, then fast-forward or fail', ''],
+      ['clients.ml:def:client_of_url', 'a local path: Client_local', 'the url'],
+      ['client_local.ml:def:fetch_objects', "client.fetch: called through the record", 'Client.fetch'],
+      ['client_local.ml:def:find_top_common_commits', 'what both already have', 'src, dst'],
+      ['client_local.ml:def:iter_missing_objects', 'what dst lacks, added', 'the frontier'],
+      ['commit.ml:def:collect_ancestors', 'is HEAD behind the remote one?', 'the remote HEAD'],
+      ['repository.ml:def:set_worktree_and_index_to_tree', 'files and index follow HEAD', 'the new tree'],
+    ]),
+    {
+      name: 'The repository: .git/ read and written',
+      bones: [
+        { at: 'repository.ml:type:t', role: 'worktree, .git/, the index in memory' },
+        { at: 'repository.ml:def:open_', role: '.git/ found, the index read' },
+        { at: 'repository.ml:def:read_obj', role: 'objects/ab/cd..., inflated, parsed' },
+        { at: 'repository.ml:def:add_obj', role: 'the reverse; content-addressed' },
+        { at: 'repository.ml:def:follow_ref', role: 'HEAD -> refs/heads/x -> sha' },
+        { at: 'repository.ml:def:add_in_index', role: 'git add' },
+        { at: 'repository.ml:def:commit_index', role: 'git commit' },
+        { at: 'repository.ml:def:set_worktree_and_index_to_tree', role: 'checkout, reset, clone, pull' },
+      ],
+      joints: [
+        { from: 'repository.ml:def:open_', to: 'repository.ml:type:t', say: 'a repository' },
+        { from: 'repository.ml:def:add_in_index', to: 'repository.ml:def:add_obj', say: 'a blob per file' },
+        { from: 'repository.ml:def:commit_index', to: 'repository.ml:def:add_obj', say: 'trees and the commit' },
+        { from: 'repository.ml:def:follow_ref', to: 'repository.ml:def:commit_index', say: 'the parent: HEAD' },
+        { from: 'repository.ml:def:read_obj', to: 'repository.ml:def:set_worktree_and_index_to_tree', say: 'trees and blobs' },
+      ],
+    },
+    {
+      name: 'The index: sorted entries, then trees',
+      bones: [
+        { at: 'index.ml:type:entry', role: 'path, blob sha, stat info' },
+        { at: 'index.ml:type:t', role: 'the entries, sorted by path' },
+        { at: 'index.ml:def:add_entry', role: 'git add: in sorted place' },
+        { at: 'index.ml:def:trees_of_index', role: 'git commit: dirs gathered' },
+        { at: 'index.ml:def:build_trees', role: 'each dir a tree, bottom up' },
+        { at: 'index.ml:def:read', role: '.git/index parsed' },
+        { at: 'index.ml:def:write', role: 'and written, its SHA1 last' },
+      ],
+      joints: [
+        { from: 'index.ml:def:read', to: 'index.ml:type:t', say: 'the entries' },
+        { from: 'index.ml:def:add_entry', to: 'index.ml:type:t', say: 'a new entry' },
+        { from: 'index.ml:type:t', to: 'index.ml:def:trees_of_index', say: 'the entries' },
+        { from: 'index.ml:def:trees_of_index', to: 'index.ml:def:build_trees', say: 'the directories' },
+        { from: 'index.ml:type:t', to: 'index.ml:def:write', say: 'saved' },
+      ],
+    },
+    {
+      name: 'Trees: entries, walked alone or in pairs',
+      bones: [
+        { at: 'tree.ml:type:entry', role: 'name, mode, sha' },
+        { at: 'tree.ml:type:t', role: 'a directory, sorted' },
+        { at: 'tree.ml:def:read', role: 'from the object bytes' },
+        { at: 'tree.ml:def:walk_tree', role: 'every path under a tree, in order' },
+        { at: 'tree.ml:def:walk_trees', role: 'two trees side by side: diffs' },
+        { at: 'tree.ml:def:write', role: 'to the object bytes' },
+      ],
+      joints: [
+        { from: 'tree.ml:def:read', to: 'tree.ml:type:t', say: 'entries' },
+        { from: 'tree.ml:type:t', to: 'tree.ml:def:walk_tree', say: 'a subtree read per Dir' },
+        { from: 'tree.ml:type:t', to: 'tree.ml:def:walk_trees', say: 'merged by name' },
+        { from: 'tree.ml:type:t', to: 'tree.ml:def:write', say: 'stored' },
+      ],
+    },
+    {
+      name: 'Commits: the history as a DAG',
+      bones: [
+        { at: 'commit.ml:type:t', role: 'tree, parents, people, message' },
+        { at: 'commit.ml:def:read', role: 'from the object text' },
+        { at: 'commit.ml:def:write', role: 'to the object text' },
+        { at: 'commit.ml:def:walk_history', role: 'git log: parents, each once' },
+        { at: 'commit.ml:def:collect_ancestors', role: 'pull and fetch: all ancestors' },
+      ],
+      joints: [
+        { from: 'commit.ml:def:read', to: 'commit.ml:type:t', say: 'a commit' },
+        { from: 'commit.ml:type:t', to: 'commit.ml:def:write', say: 'stored' },
+        { from: 'commit.ml:type:t', to: 'commit.ml:def:walk_history', say: 'its parents' },
+        { from: 'commit.ml:type:t', to: 'commit.ml:def:collect_ancestors', say: 'its parents' },
+      ],
+    },
+    skeletons.calls('Changes: three comparisons of versions', 'changes.ml:def:changes_tree_vs_tree', 'two trees: show, log', [
+      ['tree.ml:def:walk_trees', 'both trees walked together', 'pairs of entries'],
+      ['changes.ml:def:skip_tree_and_adjust_path', 'dirs skipped, blobs made lazy', 'each entry'],
+    ]) + {
+      bones+: [
+        { at: 'changes.ml:def:changes_worktree_vs_index', role: 'files against the index: diff' },
+        { at: 'changes.ml:def:content_from_path_and_stat_index', role: "a worktree file's content" },
+        { at: 'changes.ml:def:changes_index_vs_tree', role: 'index against HEAD: status' },
+        { at: 'tree.ml:def:walk_tree', role: 'one tree walked' },
+      ],
+      joints+: [
+        { from: 'changes.ml:def:changes_worktree_vs_index', to: 'changes.ml:def:content_from_path_and_stat_index', say: 'lazily, if shown' },
+        { from: 'changes.ml:def:changes_index_vs_tree', to: 'tree.ml:def:walk_tree', say: "HEAD's paths, in order" },
+      ],
+    },
+    skeletons.calls('Fetching from a local repository', 'client_local.ml:def:fetch_objects', 'the fetch: find, then copy', [
+      ['client_local.ml:def:find_top_common_commits', 'the frontier of known commits', 'src, dst'],
+      ['client_local.ml:def:iter_missing_objects', 'commits, trees, blobs dst lacks', 'the frontier'],
+    ]) + {
+      bones+: [
+        { at: 'client_local.ml:def:mk_client', role: 'the Client.t record' },
+        { at: 'client_local.ml:def:mk_graph_walker', role: "dst's heads, back through parents" },
+        { at: 'client_local.ml:def:collect_filetree', role: 'every object under a tree' },
+      ],
+      joints+: [
+        { from: 'client_local.ml:def:mk_client', to: 'client_local.ml:def:fetch_objects', say: 'fetch' },
+        { from: 'client_local.ml:def:find_top_common_commits', to: 'client_local.ml:def:mk_graph_walker', say: 'next and ack' },
+        { from: 'client_local.ml:def:iter_missing_objects', to: 'client_local.ml:def:collect_filetree', say: 'what the common commits hold' },
+      ],
+    },
+    skeletons.module('cmd_status.ml', 'git status: three comparisons, then printed', [
+      ['cmd', 'the flags: --short, --long', ''],
+      ['status', 'compute, then print', 'the repository'],
+      ['status_of_repository', 'staged, unstaged, untracked', 'the repository'],
+      ['changes_index_vs_HEAD', "staged: the index against HEAD's tree", 'HEAD'],
+    ]) + {
+      bones+: [
+        { at: 'cmd_status.ml:def:untracked', role: 'the worktree walked, minus the index' },
+        { at: 'cmd_status.ml:def:print_status_long', role: "git's long format" },
+      ],
+      joints+: [
+        { from: 'cmd_status.ml:def:status_of_repository', to: 'cmd_status.ml:def:untracked', say: 'files not in the index' },
+        { from: 'cmd_status.ml:def:status', to: 'cmd_status.ml:def:print_status_long', say: 'the status record' },
+      ],
+    },
+    skeletons.calls('diff3: two diffs from a base, aligned into chunks', 'diff3.ml:def:diff3', 'base, A, B: the merge chunks', [
+      ['diff3.ml:def:matching_lines_of_diff', 'a diff as matched line numbers', 'O->A, O->B (Myers)'],
+      ['diff3.ml:def:identical_lines', 'lines matched in both', 'the two matchings'],
+      ['diff3.ml:def:basic_chunks', 'same lines, and changed spans between', 'the anchors'],
+      ['diff3.ml:def:final_chunks', 'which side changed each span', 'the spans'],
+    ]) + {
+      bones+: [{ at: 'diff3.ml:def:merge', role: 'chunks to text, conflict markers' }],
+      joints+: [{ from: 'diff3.ml:def:diff3', to: 'diff3.ml:def:merge', say: "the chunks (the caller's)" }],
+    },
+    skeletons.module('diff_basic.ml', 'The basic diff: a matrix, then a path back', [
+      ['diff', 'the entry, called by nobody', ''],
+      ['matrix_distance', 'D(i,j) for all i, j', 'two arrays of lines'],
+      ['traceback_transcript', 'from D(n,m) back to D(0,0)', 'the matrix'],
+    ]),
+    skeletons.calls('dump: a printer per type', 'dump.ml:def:vof_obj', 'an object printed', [
+      ['dump.ml:module:Commit', "a commit's fields", 'Commit'],
+      ['dump.ml:module:Tree', "a tree's entries", 'Tree'],
+      ['dump.ml:module:Blob', 'the bytes', 'Blob'],
+    ]) + {
+      bones+: [
+        { at: 'dump.ml:def:vof_index', role: 'the index printed' },
+        { at: 'dump.ml:module:Index', role: 'entries and stat info' },
+      ],
+      joints+: [{ from: 'dump.ml:def:vof_index', to: 'dump.ml:module:Index', say: 'Index' }],
+    },
+  ],
+  tours: [
+    {
+      name: 'A commit, from ogit commit to .git/',
+      stops: [
+        { at: 'main.ml:def:main', say: 'argv[1] is looked up in the list of commands; its flags are parsed from its record.' },
+        { at: 'cmd_.ml:type:t', say: 'Every command is such a record: Main calls its f with the rest of the arguments.' },
+        { at: 'cmd_commit.ml:def:cmd', say: 'The author comes from getlogin and the clock, with a timezone written in by hand.' },
+        { at: 'repository.ml:def:commit_index', say: 'The commit is built in the API: trees from the index, then the commit, then HEAD.' },
+        { at: 'index.ml:def:trees_of_index', say: 'The flat, sorted paths of the index are grouped into one tree per directory.' },
+        { at: 'repository.ml:def:add_obj', say: 'Each object is serialized, hashed with SHA1, compressed and stored once.' },
+        { at: 'objects.ml:def:write', say: 'The bytes hashed are the header "commit <size>\\0" and the body: what git itself hashes.' },
+        { at: 'repository.ml:def:set_ref_if_same_old', say: 'HEAD, through refs/heads/master, now names the new commit; the old one is its parent.' },
+      ],
+    },
+  ],
+  views: [
+    { name: 'The API and its storage', files: ['repository.ml', 'objects.ml', 'refs.ml', 'index.ml'] },
+    { name: 'The objects', files: ['blob.ml', 'tree.ml', 'commit.ml', 'user.ml'] },
+    { name: 'The diffs', files: ['diff.ml', 'diffs.ml', 'diff_myers.ml', 'diff_basic.ml', 'diff_unified.ml', 'diff3.ml', 'change.ml', 'changes.ml'] },
+    { name: 'Exchanging commits', files: ['client.ml', 'clients.ml', 'client_local.ml', 'client_git.ml', 'cmd_pull.ml', 'cmd_push.ml', 'cmd_clone.ml'] },
+  ],
+}

@@ -1,0 +1,33 @@
+// lib_graphics/: libdraw in OCaml, what the code map says of it. The C
+// original is ~/principia/lib_graphics/ (libdraw, libmemdraw,
+// libmemlayer, the book Graphics.nw); here only the client side exists:
+// the drawing is messages written to /dev/draw, drawn by the kernel's
+// server (kernel/Libmemdraw/, kernel/Libmemlayer/, in C). The mkfile
+// builds geometry, draw, input, ui, in that order.
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "libdraw in OCaml: drawing as messages to the kernel's /dev/draw, and the mouse and keyboard as threads.",
+  dirs: {
+    memdraw: { summary: "libmemdraw's place, empty: the drawing itself is the kernel's (kernel/Libmemdraw/, C)." },
+    memlayer: { summary: "libmemlayer's place, empty: layers are the kernel's (kernel/Libmemlayer/, C)." },
+  },
+  skeletons: [
+    skeletons.parts('libdraw: geometry, drawing, input, a menu', [
+      ['geometry/', 'points and rectangles: what everything is measured in'],
+      ['draw/', 'the display, images, layers, fonts: messages to /dev/draw'],
+      ['input/', 'the mouse and keyboard, each read by a thread'],
+      ['ui/', "a menu: rio's right-button one"],
+      ['../kernel/Libmemdraw/', 'the server side: the pixels drawn'],
+      ['../windows/', 'orio, the main client'],
+    ], [
+      ['draw/', 'geometry/', 'written with'],
+      ['input/', 'geometry/', 'positions'],
+      ['ui/', 'draw/', 'draws with'],
+      ['ui/', 'input/', 'tracks the mouse'],
+      ['draw/', '../kernel/Libmemdraw/', 'messages on /dev/draw/n/data'],
+      ['../windows/', 'draw/', 'draws with'],
+      ['../windows/', 'input/', 'reads'],
+    ]),
+  ],
+}

@@ -1,0 +1,84 @@
+// lib_core/regexps/tests/: what the code map says of it
+// ocaml-re's own test suite (lib_test/), moved from Fort to Testo;
+// run by the project's tests/Test.ml.
+local skeletons = import '../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "ocaml-re's regression tests, ported from its Fort harness to Testo: each syntax and the Str API.",
+  files: {
+    'Test_re_utils.ml': {
+      summary: "The adapter from ocaml-re's Fort harness to Testo and OUnit: expect_pass, expect_equal_app.",
+      digest: 'e76962108d0e',
+      capitals: [
+        { at: 'def:expect_pass', say: 'a named test: Testo.create' },
+        { at: 'def:expect_equal_app', say: 'f x and g y agree, or raise alike' },
+      ],
+      important: [
+        { at: 'def:try_with', say: 'exceptions compared as values', weight: 1 },
+        { at: 'def:expect_eq_arr_ofs', say: 'group offsets compared', weight: 1 },
+      ],
+    },
+    'Test_re.ml': {
+      summary: 'Tests of the core: builders, match semantics (longest, shortest, first), groups, sets, case.',
+      digest: '19126f06d77e',
+      important: [
+        { at: 'def:re_match', say: 'a regexp, a string, the expected groups', weight: 3 },
+        { at: 'def:match_semantics_tests', say: 'the subtle part: which match wins', weight: 3 },
+        { at: 'def:group_tests', weight: 1 },
+        { at: 'def:tests', say: "the suite tests/Test.ml runs", weight: 1 },
+      ],
+    },
+    'Test_re_emacs.ml': {
+      summary: "Emacs-syntax parsing checked: each pattern against the AST built by hand.",
+      digest: '547aba1202a7',
+      important: [{ at: 'def:eq_re', say: 'parsed pattern = hand-built AST', weight: 3 }],
+    },
+    'Test_re_perl.ml': {
+      summary: 'Perl-syntax parsing checked against hand-built ASTs, after perlre.',
+      digest: '5effb02eed54',
+      important: [
+        { at: 'def:eq_re', say: 'parsed pattern = hand-built AST', weight: 3 },
+        { at: 'def:basic_tests', weight: 1 },
+      ],
+    },
+    'Test_re_str.ml': {
+      summary: "The Str API checked against the core: same groups' offsets for each pattern and string.",
+      digest: '88e5b836f7d6',
+      important: [
+        { at: 'def:eq_match', say: 'Str and Re_emacs must find the same groups', weight: 3 },
+        { at: 'def:basic_tests', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts('The suites and their adapter', [
+      ['Test_re_utils.ml', 'Fort to Testo: the assertions'],
+      ['Test_re.ml', 'the core: builders and semantics'],
+      ['Test_re_perl.ml', 'the Perl syntax'],
+      ['Test_re_emacs.ml', 'the Emacs syntax'],
+      ['Test_re_str.ml', 'the Str API against the core'],
+    ], [
+      ['Test_re.ml', 'Test_re_utils.ml', 'asserts with'],
+      ['Test_re_perl.ml', 'Test_re_utils.ml', 'asserts with'],
+      ['Test_re_emacs.ml', 'Test_re_utils.ml', 'asserts with'],
+      ['Test_re_str.ml', 'Test_re_utils.ml', 'asserts with'],
+    ]),
+    skeletons.module('Test_re.ml', 'The core suite', [
+      ['tests', 'the suite, categorized re', ''],
+      ['match_semantics_tests', 'longest, shortest, first, greedy', 'a group'],
+      ['re_match', 'one regexp, one string, the groups', 'each case'],
+    ]) + { bones+: [{ at: 'Test_re.ml:def:group_tests', role: 'groups and their offsets' }],
+           joints+: [{ from: 'Test_re.ml:def:tests', to: 'Test_re.ml:def:group_tests', say: 'a group' },
+                     { from: 'Test_re.ml:def:group_tests', to: 'Test_re.ml:def:re_match', say: 'each case' }] },
+    skeletons.module('Test_re_perl.ml', 'The Perl suite', [
+      ['tests', 'the suite', ''],
+      ['basic_tests', 'the cases, after perlre', 'the cases'],
+      ['eq_re', 'parsed = built by hand', 'each pattern'],
+    ]),
+    skeletons.module('Test_re_str.ml', 'The Str suite', [
+      ['tests', 'the suite', ''],
+      ['basic_tests', 'the cases', 'the cases'],
+      ['eq_match', 'Str and the core agree', 'each pattern'],
+    ]),
+  ],
+}

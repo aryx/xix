@@ -1,0 +1,318 @@
+// kernel/Port/: what the code map says of it (tinybox codemap).
+// Plan 9's portable kernel C that xix kept under its OCaml kernel,
+// copied from an older ~/principia/kernel/ (memory/, time/,
+// concurrency/, console/, devices/screen/, and the portdat_/portfns_
+// headers), the syncweb markers gone. Most differences with today's
+// principia are principia's later renamings (kern_vp for kern_addr3,
+// Tfast for Tval); xix's own changes are named in the summaries.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Plan 9's portable kernel C kept under the OCaml kernel: allocators, locks, timers, the console.",
+  files: {
+    // the library and the errors
+    'lib.h': {
+      summary: "The kernel's libc (~/principia's lib.h): pad's bool, strings, print, Qid, re-exported from Libc.",
+      digest: 'aab32e35426b',
+      important: [
+        { at: 'comment:"Some functions in libc are also"', say: 'print.c overrides fmt locks by linking first', weight: 2 },
+        { at: 'type:bool', say: 'pad types: here too, not only in libc.h', weight: 1 },
+      ],
+    },
+    'error.h': {
+      summary: "The kernel's error strings declared (~/principia's), for the files that raise them.",
+      digest: '373308b2dda8',
+    },
+    'error.c': {
+      summary: "The kernel's errors as strings, one global each (~/principia's): the OCaml kernel has its own.",
+      digest: 'dacf460b839e',
+      important: [{ at: 'def:Enomem', say: 'the one the allocators raise', weight: 1 }],
+    },
+    'print.c': {
+      summary: "libc's fmt lock overridden for the kernel (~/principia's): a spin lock, and no floats printed.",
+      digest: 'd0e2354ad917',
+      important: [
+        { at: 'def:_fmtlock', say: 'libc calls it; the kernel links its own', weight: 2 },
+        { at: 'def:_efgfmt', say: '%e %f %g print nothing in the kernel', weight: 1 },
+      ],
+    },
+
+    // memory: xalloc, the pools, malloc
+    'xalloc.c': {
+      summary: "The lowest allocator (~/principia's): physical memory as holes, carved at boot for the pools.",
+      digest: 'fd764fd22748',
+      important: [
+        { at: 'def:xinit', say: "main.c calls it: conf.mem's banks become holes", weight: 3 },
+        { at: 'def:xallocz', say: 'first fit in the hole list', weight: 2 },
+        { at: 'code:"xhole(phys_addr addr"', say: 'a freed range merged back with its neighbours', weight: 1 },
+      ],
+    },
+    'pool.c': {
+      summary: "The kernel's two pools, Main and Image (~/principia's), libc's pool.c growing them by xalloc.",
+      digest: 'f9dda9d688ee',
+      important: [
+        { at: 'def:mainmem', say: 'where malloc takes from: the GC heap too', weight: 3 },
+        { at: 'def:imagmem', say: "memdraw's images", weight: 1 },
+        { at: 'code:".lock= plock"', say: 'the pool locks with the kernel Lock', weight: 1 },
+      ],
+      related: ['../Libc/port/pool.c', '../Include/pool.h'],
+    },
+    'alloc.c': {
+      summary: "malloc for the kernel over mainmem (~/principia's): the C runtime's heap under the OCaml GC.",
+      digest: '02849ea713bb',
+      important: [
+        { at: 'def:malloc', say: 'Byterun/memory.c and major_gc.c call it', weight: 3 },
+        { at: 'def:smalloc', say: 'Plan 9 sleeps until it succeeds', weight: 1 },
+        { at: 'def:setmalloctag', say: 'who allocated: the caller pc, for leaks', weight: 1 },
+        { at: 'def:free', weight: 1 },
+      ],
+    },
+
+    // concurrency
+    'taslock.c': {
+      summary: "Spin locks on test-and-set (~/principia's, reordered): lock spins, ilock turns interrupts off.",
+      digest: 'c352852660aa',
+      important: [
+        { at: 'def:lock', say: 'arch_tas until it is ours, then who holds it', weight: 3 },
+        { at: 'def:ilock', say: 'splhi first: safe against the clock interrupt', weight: 2 },
+        { at: 'comment:"pad\'s third bugfix"', say: "the holder's cpu recorded", weight: 1 },
+        { at: 'def:iunlock', weight: 1 },
+      ],
+    },
+
+    // time
+    'portclock.c': {
+      summary: "Timers and the tick (~/principia's): xix's hzclock raises SIGVTALRM for the OCaml threads.",
+      digest: 'e38b681d6914',
+      capitals: [{ at: 'def:hzclock', say: 'each tick: the OCaml scheduler told' }],
+      important: [
+        { at: 'code:"handle_signal(20)"', say: 'Byterun/signals.c: preempts the OCaml thread', weight: 3 },
+        { at: 'comment:"todo: checkalarms();"', say: "Plan 9's scheduling, left for OCaml", weight: 2 },
+        { at: 'def:timerintr', say: 'Bcm/clock.c calls it: due timers run', weight: 2 },
+        { at: 'def:tadd', say: 'insert sorted by when', weight: 1 },
+        { at: 'code:"t->tns = 3000000000 / Arch_HZ"', say: 'a tick 3x slower, TODO to put back', weight: 2 },
+        { at: 'code:"panic(\"TODO: addclock0link\")"', say: 'disabled: no clock0 links yet', weight: 1 },
+      ],
+    },
+    'tod.c': {
+      summary: "The time of day from the fast clock (~/principia's), its periodic todfix turned off in xix.",
+      digest: '4f7d6755dd82',
+      important: [
+        { at: 'def:todinit', say: 'the multiplier from fastticks to ns', weight: 2 },
+        { at: 'def:todget', say: 'ticks times a 32.32 fraction', weight: 2 },
+        { at: 'comment:"addclock0link(todfix, 100)"', say: 'turned off: less noise with IRQs', weight: 2 },
+      ],
+    },
+    'mul64fract.c': {
+      summary: "A 64-bit integer times a 32.32 fraction (~/principia's), for tod.c.",
+      digest: '97beef7ad8ff',
+    },
+
+    // the console
+    'devcons.c': {
+      summary: "print, iprint and panic for the boot (xix's simplified devcons): all go to screenputs.",
+      digest: '12c5748795e6',
+      capitals: [{ at: 'def:devcons_print', say: "the kernel's print: main.c sets the pointer" }],
+      important: [
+        { at: 'comment:"Simplified versions!!"', say: "Plan 9's devcons kept in comments", weight: 2 },
+        { at: 'def:putstrn', say: 'no kmesg, no serial: the screen only', weight: 2 },
+        { at: 'def:devcons_panic', say: 'prints then spins forever', weight: 2 },
+      ],
+    },
+    'swconsole.c': {
+      summary: "Text on the screen with memdraw's default font (~/principia's): what print shows at boot.",
+      digest: 'd73e3f5729be',
+      important: [
+        { at: 'comment:"The main entry point of this module"', say: 'screenputs = swconsole_screenputs', weight: 2 },
+        { at: 'def:swconsole_init', say: 'Bcm/screen.c calls it: a framed white window', weight: 2 },
+        { at: 'def:swconsole_screenputc', say: 'one character: memimagestring on gscreen', weight: 2 },
+        { at: 'def:swconsole_scroll', say: 'the text moved up by memimagedraw', weight: 1 },
+      ],
+    },
+    'portscreen.c': {
+      summary: 'gscreen, the framebuffer as a Memimage (~/principia\'s): shared by the driver and the console.',
+      digest: '2fad4cd88a02',
+      important: [{ at: 'def:gscreen', say: 'Bcm/screen.c fills it from the GPU', weight: 2 }],
+    },
+    'portscreen.h': {
+      summary: "What a screen driver implements, and the cursor (~/principia's portscreen.h).",
+      digest: '5f2fa7681c76',
+    },
+
+    // the headers, mostly Plan 9's structures the OCaml kernel redefines
+    'portdat_forward.h': {
+      summary: "Every kernel structure named once (~/principia's), so the headers can point at each other.",
+      digest: '563566eeb37d',
+    },
+    'portdat_core.h': {
+      summary: "Conf, Cpu and Label (~/principia's): cpu and conf are what main.c and the C still use.",
+      digest: '77fa3281d479',
+      important: [
+        { at: 'code:"struct Cpu"', say: 'per processor: ticks, the current proc', weight: 2 },
+        { at: 'code:"struct Conf"', say: 'memory banks found at boot', weight: 2 },
+      ],
+    },
+    'portdat_concurrency.h': {
+      summary: "The lock types (~/principia's): Lock, QLock, RWlock, Ref, Rendez, Sema.",
+      digest: 'ad9c65c66e80',
+      important: [{ at: 'code:"struct Lock"', say: 'taslock.c: key, holder pc, isilock', weight: 2 }],
+    },
+    'portdat_memory.h': {
+      summary: "Page, Pagetable, Segment, KImage (~/principia's): sizes for main.c, redone in OCaml.",
+      digest: '41ba673c3fcc',
+    },
+    'portdat_files.h': {
+      summary: "Chan, Dev, Block, Queue, the mount table (~/principia's): unused by xix's C.",
+      digest: '9096a83cad6a',
+    },
+    'portdat_time.h': {
+      summary: "Timer and Timers (~/principia's, Tval ticks): what portclock.c sorts.",
+      digest: '844263392b8b',
+      important: [{ at: 'code:"struct Timer"', say: 'when, mode and the callback', weight: 1 }],
+    },
+    'portdat_processes.h': {
+      summary: "The Proc, the big one (~/principia's): here for sizes; the OCaml kernel has its own.",
+      digest: '534ae2e9f6e8',
+      important: [{ at: 'code:"struct Proc"', say: 'up points to one: R9 in the C', weight: 1 }],
+    },
+    'portdat_console.h': {
+      summary: "The console's queues (~/principia's), kept only for the header's order.",
+      digest: '7b2b85b0dc7e',
+    },
+    'portdat_devices.h': {
+      summary: "DevConf, the keyboard's Kbscan, the mouse type (~/principia's): unused by xix's C.",
+      digest: '1b2a029d3fd2',
+    },
+    'portdat_misc.h': {
+      summary: "Cmdbuf and Cmdtab, parsed control messages (~/principia's).",
+      digest: '9c3d1156a434',
+    },
+    'portdat_buses.h': {
+      summary: "Uart and PhysUart, the serial lines (~/principia's): no serial console in xix.",
+      digest: 'd2b672821944',
+    },
+    'portfns_core.h': {
+      summary: "The core functions as pointers main.c fills (print, panic...) and the rounding macros.",
+      digest: '43cb1782ef3f',
+    },
+    'portfns_concurrency.h': {
+      summary: "The locks' functions and the arch's primitives, arch_tas and spl (~/principia's).",
+      digest: '73afcda0aae0',
+    },
+    'portfns_memory.h': {
+      summary: "The memory functions and the arch_ MMU hooks (~/principia's).",
+      digest: '416857ce26cd',
+    },
+    'portfns_files.h': {
+      summary: "Blocks, queues, channels, the dev* defaults, declared (~/principia's).",
+      digest: '9cc5551b4ec1',
+    },
+    'portfns_processes.h': {
+      summary: "Processes' functions and the arch_ hooks (~/principia's).",
+      digest: '67dfb8614f19',
+    },
+    'portfns_time.h': {
+      summary: "Timers, tod and the tick conversions, declared (~/principia's).",
+      digest: 'c754f5d4fd09',
+    },
+    'portfns_console.h': {
+      summary: "The console's functions; screenputs a pointer the screen driver fills (~/principia's).",
+      digest: 'bc6060c9b2a4',
+      important: [{ at: 'code:"(*screenputs)"', say: 'Bcm/screen.c: swconsole_screenputs', weight: 2 }],
+    },
+    'portfns_devices.h': {
+      summary: "The drivers' functions and the arch_ hooks (~/principia's).",
+      digest: '8b6d182265cf',
+    },
+    'portfns_buses.h': { summary: "devuart.c's functions (~/principia's): no uart here.", digest: '6e9c746f999a' },
+    'portfns_init.h': { summary: "What the portable code calls of init (~/principia's).", digest: '8fc6f0222f01' },
+    'portfns_interrupts.h': { summary: "What the portable code asks of trap.c (~/principia's).", digest: '4683625f0453' },
+    'portfns_misc.h': { summary: "The functions of parse.c and random.c (~/principia's).", digest: '7c85d2973f45' },
+    'portfns_network.h': { summary: "Byte order, network to host and back (~/principia's).", digest: '3e6b978496d6' },
+    'portfns_security.h': { summary: "The writes of auth.c (~/principia's): no auth in xix.", digest: 'de2e2442e697' },
+    'portfns_syscalls.h': { summary: "The system call tracing hooks (~/principia's).", digest: 'd35412c5b0b4' },
+  },
+  skeletons: [
+    skeletons.parts("Plan 9's portable C under the OCaml kernel", [
+      ['lib.h', 'the libc subset the kernel C is written with'],
+      ['portdat_core.h', 'Cpu and Conf: what boot fills'],
+      ['xalloc.c', 'physical memory, carved at boot'],
+      ['pool.c', 'the pools: mainmem, imagmem'],
+      ['alloc.c', 'malloc: the OCaml runtime heap comes from here'],
+      ['taslock.c', 'spin locks under all the above'],
+      ['portclock.c', 'the tick: timers, and the OCaml preemption'],
+      ['devcons.c', 'print and panic, straight to the screen'],
+      ['swconsole.c', 'text drawn with memdraw'],
+    ], [
+      ['pool.c', 'xalloc.c', 'arenas grown'],
+      ['alloc.c', 'pool.c', 'poolalloc(mainmem)'],
+      ['pool.c', 'taslock.c', 'plock'],
+      ['portclock.c', 'taslock.c', 'ilock on the timer list'],
+      ['devcons.c', 'swconsole.c', 'screenputs'],
+      ['xalloc.c', 'portdat_core.h', "conf.mem's banks"],
+      ['alloc.c', 'lib.h', 'declared for the C'],
+    ]),
+    skeletons.module('alloc.c', "malloc: tagged, over libc's pool", [
+      ['malloc', 'the one the runtime calls', ''],
+      ['setmalloctag', 'the caller recorded, for leaks', 'tags the block'],
+    ]) + { bones+: [{ at: 'pool.c:def:mainmem', role: 'the pool allocated from' }], joints+: [{ from: 'alloc.c:def:malloc', to: 'pool.c:def:mainmem', say: 'poolalloc' }] },
+    skeletons.module('xalloc.c', 'Physical memory as a list of holes', [
+      ['xinit', 'boot: the banks become holes', ''],
+      ['xalloc', 'a block, zeroed', 'after boot'],
+      ['xallocz', 'first fit, the hole shrunk', 'calls'],
+    ]) + { bones+: [{ at: 'xalloc.c:code:"xhole(phys_addr addr"', role: 'a range given back, merged' }], joints+: [{ from: 'xalloc.c:def:xinit', to: 'xalloc.c:code:"xhole(phys_addr addr"', say: 'each bank' }] },
+    skeletons.module('taslock.c', 'Spin locks, with and without interrupts', [
+      ['lock', 'spin on arch_tas', ''],
+      ['lockloop', 'too long: say who holds it', 'stuck'],
+    ]) + {
+      bones+: [
+        { at: 'taslock.c:def:ilock', role: 'splhi, then spin' },
+        { at: 'taslock.c:def:unlock', role: 'release' },
+        { at: 'taslock.c:def:iunlock', role: 'release, then splx' },
+      ],
+      joints+: [
+        { from: 'taslock.c:def:ilock', to: 'taslock.c:def:iunlock', say: 'paired' },
+        { from: 'taslock.c:def:lock', to: 'taslock.c:def:unlock', say: 'paired' },
+      ],
+    },
+    skeletons.module('portclock.c', 'The clock interrupt to the OCaml scheduler', [
+      ['timersinit', 'boot: the tick timer added', ''],
+      ['timeradd', 'a timer queued', 'the hz timer'],
+      ['tadd', 'sorted by when', 'inserts'],
+    ]) + {
+      bones+: [
+        { at: 'portclock.c:def:timerintr', role: 'the interrupt: due timers run' },
+        { at: 'portclock.c:def:hzclock', role: 'the tick: SIGVTALRM for OCaml' },
+        { at: '../Byterun/signals.c:def:handle_signal', role: "the runtime's signal: a thread switch" },
+      ],
+      joints+: [
+        { from: 'portclock.c:def:timerintr', to: 'portclock.c:def:hzclock', say: 'the hz timer is due' },
+        { from: 'portclock.c:def:hzclock', to: '../Byterun/signals.c:def:handle_signal', say: 'signal 20' },
+        { from: 'portclock.c:def:timerintr', to: 'portclock.c:def:tadd', say: 'periodic: requeued' },
+      ],
+    },
+    skeletons.module('tod.c', 'Time of day from the fast clock', [
+      ['todinit', 'the frequency, the multiplier', ''],
+      ['todget', 'ticks to nanoseconds', 'multiplier'],
+    ]) + { bones+: [{ at: 'mul64fract.c', role: 'the 32.32 multiply' }], joints+: [{ from: 'tod.c:def:todget', to: 'mul64fract.c', say: 'mul64fract' }] },
+    skeletons.module('devcons.c', 'print and panic, simplified', [
+      ['devcons_print', 'print, set as a pointer by main.c', ''],
+      ['putstrn', 'straight to screenputs', 'formatted by vseprint'],
+    ]) + {
+      bones+: [
+        { at: 'devcons.c:def:devcons_panic', role: 'print, then spin' },
+        { at: 'swconsole.c:def:swconsole_screenputs', role: 'the screenputs Bcm/screen.c set' },
+      ],
+      joints+: [
+        { from: 'devcons.c:def:devcons_panic', to: 'devcons.c:def:putstrn', say: 'the message' },
+        { from: 'devcons.c:def:putstrn', to: 'swconsole.c:def:swconsole_screenputs', say: 'through screenputs' },
+      ],
+    },
+    skeletons.module('swconsole.c', 'Text drawn on gscreen', [
+      ['swconsole_init', 'a white window framed in black', ''],
+      ['swconsole_screenputs', 'a string, under the screen lock', 'then'],
+      ['swconsole_screenputc', 'a character: newline, tab, glyph', 'each'],
+      ['swconsole_scroll', 'the text moved up', 'at the bottom'],
+    ]),
+  ],
+}

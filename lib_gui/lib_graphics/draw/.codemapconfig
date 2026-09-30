@@ -1,0 +1,77 @@
+// lib_gui/lib_graphics/draw/: libdraw's drawing over OCaml's Graphics,
+// what the code map says of it. Copied from ../../../lib_graphics/draw
+// and cut down: an image is the screen or a color; draw fills a
+// rectangle with a color, and even that stops at Draw_graphics' raise
+// Todo. Not built: the parent's mkfile leaves draw out.
+local skeletons = import '../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "libdraw's drawing over OCaml's Graphics: the screen and colors only, the rest TODO; not built.",
+  files: {
+    'draw.ml': {
+      summary: 'init opens a Graphics window; draw only a color onto the screen, else it fails.',
+      digest: '51f3e8b3520e',
+      important: [
+        { at: 'def:init', say: 'a Graphics window, titled', weight: 2 },
+        { at: 'def:draw', say: 'the one case: a color on the screen', weight: 3 },
+      ],
+    },
+    'draw_graphics.ml': {
+      summary: "The bridge to Graphics: points, rectangles and colors converted; all of it raise Todo.",
+      digest: 'a5917c09cfd4',
+      important: [
+        { at: 'comment:"Graphics uses a mathematical coordinate system"', say: 'y up there, down here', weight: 3 },
+        { at: 'def:conv_point', say: 'no flip yet, despite the comment', weight: 2 },
+        { at: 'def:draw_rect', say: 'raise Todo: nothing is drawn', weight: 2 },
+      ],
+    },
+    'display.ml': {
+      summary: 'The display: a 1000x1000 Graphics window as the screen image.',
+      digest: 'f7bf219114ac',
+      important: [{ at: 'code:"Graphics.open_graph"', weight: 2 }],
+    },
+    'image.ml': {
+      summary: "Images: the screen or a 1x1 color, the only kinds allowed; Plan 9's uniformity given up.",
+      digest: 'd54caa558bdd',
+      important: [
+        { at: 'comment:"In OCaml we cheat"', say: 'a subset of draw() only', weight: 3 },
+        { at: 'type:t', weight: 2 },
+      ],
+    },
+    'channel.ml': {
+      summary: 'Channels: a unit, rgb24 the only one.',
+      digest: 'b85f86a550e5',
+    },
+    'color.ml': {
+      summary: "Colors, copied from lib_graphics' Color.",
+      digest: 'f2ea28afe715',
+      important: [{ at: 'type:t', weight: 1 }],
+    },
+    'line.ml': {
+      summary: 'line: raise Todo.',
+      digest: 'b1c34a9a4950',
+    },
+    'polygon.ml': {
+      summary: "border: raise Todo, lib_graphics' code kept in a comment.",
+      digest: 'ed9786a685f3',
+    },
+    'arc.ml': { summary: 'Arcs: empty.', digest: 'd41d8cd98f00' },
+    'ellipse.ml': { summary: 'Ellipses: empty.', digest: 'd41d8cd98f00' },
+    'font.ml': { summary: 'Fonts: empty.', digest: 'd41d8cd98f00' },
+    'text.ml': { summary: 'Strings: empty.', digest: 'd41d8cd98f00' },
+  },
+  skeletons: [
+    skeletons.parts('draw over Graphics', [
+      ['display.ml', 'the Graphics window'],
+      ['image.ml', 'the screen, or a color'],
+      ['draw.ml', 'init and draw'],
+      ['draw_graphics.ml', 'the calls to Graphics'],
+      ['color.ml', 'colors'],
+    ], [
+      ['draw.ml', 'display.ml', 'init'],
+      ['display.ml', 'image.ml', 'the screen image'],
+      ['draw.ml', 'draw_graphics.ml', 'set_color, draw_rect'],
+      ['image.ml', 'color.ml', 'a color image'],
+    ]),
+  ],
+}

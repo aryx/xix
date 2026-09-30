@@ -1,0 +1,23 @@
+// kernel/ipc/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). 9's pipes (devpipe.c) and notes (sysnotify, sysnoted in
+// sysproc.c), not begun.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Communication between processes to come: pipe, and notes (9's signals); empty files.",
+  files: {
+    'syspipe.ml': { summary: 'Empty: pipe(2), two channels joined.', digest: 'd41d8cd98f00' },
+    'sysnotify.ml': { summary: "Empty: notify(2), a process's note handler registered.", digest: 'd41d8cd98f00' },
+    'sysnoted.ml': { summary: 'Empty: noted(2), back from a note handler.', digest: 'd41d8cd98f00' },
+  },
+  skeletons: [
+    skeletons.parts('Pipes and notes, placeholders', [
+      ['syspipe.ml', 'bytes between processes'],
+      ['sysnotify.ml', 'a handler for notes'],
+      ['sysnoted.ml', 'the handler done'],
+    ], [
+      ['sysnoted.ml', 'sysnotify.ml', 'returns from its handler'],
+    ]),
+  ],
+}

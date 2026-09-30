@@ -1,0 +1,102 @@
+// kernel/Libgeometry/: what the code map says of it. The pieces of Plan
+// 9's libdraw (~/principia/lib_graphics/libdraw/) that libmemdraw and
+// libmemlayer need in the kernel -- points and rectangles, pixel
+// formats, integer trigonometry, the default font's bytes -- none of
+// the client side (no /dev/draw messages). Diffed with principia: the
+// syncweb markers dropped; chan.c defines its own isspace (its
+// copy includes no ctype.h).
+local skeletons = import '../../skeletons.libsonnet';
+local mod(file, name, steps) = skeletons.chain(name, [[file + ':' + s[0], s[1], s[2]] for s in steps]);
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Plan 9's libdraw cut down to its geometry: points, rectangles, pixel formats, the font, for the kernel.",
+  files: {
+    'arith.c': {
+      summary: "Points and rectangles (Pt, Rect, addpt, rectXrect), from libdraw's arith.c unchanged.",
+      digest: '1602ae5b2da2',
+      important: [
+        { at: 'def:Rect', say: 'min inclusive, max exclusive', weight: 2 },
+        { at: 'def:rectXrect', say: 'do they overlap: the layers split by it', weight: 1 },
+        { at: 'def:rectinrect', weight: 1 },
+        { at: 'def:canonrect', say: 'corners reordered after a sweep', weight: 1 },
+      ],
+    },
+    'replclipr_geom.c': {
+      summary: "rectclip and drawrepl, libdraw's replclipr.c's pure geometry, apart so the kernel links it.",
+      digest: 'f794fb85da3c',
+      important: [{ at: 'def:rectclip', say: 'every draw clipped by it', weight: 2 }],
+    },
+    'chan.c': {
+      summary: "Pixel formats: a chan to and from 'r8g8b8', its depth; from libdraw, with its own isspace.",
+      digest: '8f181350896c',
+      important: [{ at: 'def:chantodepth', weight: 1 }, { at: 'def:isspace', say: 'xix: uncommented, no ctype.h here', weight: 1 }],
+    },
+    'resolution.c': {
+      summary: 'How many bytes or words a line of an image takes, by its depth; libdraw unchanged.',
+      digest: '3a9823092934',
+    },
+    'defont.c': {
+      summary: "The default font compiled in as bytes, from libdraw unchanged: the console's letters.",
+      digest: '846f8678f46f',
+      important: [
+        { at: 'comment:"one of the very few files linked by the kernel"', say: 'why it must stay dependency-free', weight: 2 },
+        { at: 'def:defontdata', weight: 1 },
+      ],
+    },
+    'icossin.c': {
+      summary: 'Integer sine and cosine by degree, from tables (for arcs); libdraw unchanged.',
+      digest: '7f19081ba04f',
+    },
+    'icossin2.c': {
+      summary: 'Integer sine and cosine of an arctangent, tables and interpolation (for lines); libdraw unchanged.',
+      digest: '8cf38de5dad4',
+    },
+    'fmt.c': {
+      summary: "print's %P and %R: points and rectangles printed; libdraw unchanged.",
+      digest: '5a226f329923',
+    },
+    'misc.c': {
+      summary: 'drawld2chan: old log-depths to pixel formats; libdraw unchanged.',
+      digest: 'ec257b2b77d3',
+    },
+  },
+  skeletons: [
+    skeletons.parts('What libmemdraw borrows from libdraw', [
+      ['arith.c', 'points and rectangles: the vocabulary'],
+      ['replclipr_geom.c', 'clipping and tiling rectangles'],
+      ['chan.c', 'pixel formats and their depth'],
+      ['defont.c', 'the font, as bytes'],
+      ['icossin2.c', 'trigonometry without floats (with icossin.c)'],
+      ['../Libmemdraw/', 'the user of all of it'],
+    ], [
+      ['../Libmemdraw/', 'arith.c', 'every coordinate'],
+      ['../Libmemdraw/', 'replclipr_geom.c', 'drawclip'],
+      ['../Libmemdraw/', 'chan.c', 'image formats'],
+      ['../Libmemdraw/', 'defont.c', 'getmemdefont'],
+      ['../Libmemdraw/', 'icossin2.c', 'line ends, arcs'],
+    ]),
+    mod('arith.c', 'Points and rectangles', [
+      ['def:Pt', 'a point', ''],
+      ['def:addpt', 'points added', 'points'],
+      ['def:Rect', 'a rectangle', 'its corners'],
+      ['def:rectXrect', 'rectangles overlapping', 'rectangles'],
+    ]),
+    mod('defont.c', 'The default font as data', [
+      ['def:defontdata', 'the bytes: an image and a Fontchar table', ''],
+      ['def:sizeofdefont', 'their size', 'measured'],
+      ['def:_unpackinfo', 'its Fontchar table unpacked', 'the table'],
+    ]),
+    {
+      name: 'Sine and cosine of an arctangent',
+      bones: [
+        { at: 'icossin2.c:def:sinus', role: 'the sine table' },
+        { at: 'icossin2.c:def:cosinus', role: 'the cosine table' },
+        { at: 'icossin2.c:def:icossin2', role: 'looked up, interpolated' },
+      ],
+      joints: [
+        { from: 'icossin2.c:def:sinus', to: 'icossin2.c:def:icossin2', say: 'values' },
+        { from: 'icossin2.c:def:cosinus', to: 'icossin2.c:def:icossin2', say: 'values' },
+      ],
+    },
+  ],
+}

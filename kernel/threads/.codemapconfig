@@ -1,0 +1,54 @@
+// kernel/threads/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). Objective Caml's bytecode threads (Xavier Leroy, 1996-97), over the
+// primitives of Byterun/scheduler.c: the mkfile's Thread, compiled into
+// the kernel. dune builds against the system's threads library instead,
+// which has no sleep or wakeup: hence the failing stubs in
+// scheduler/Scheduler.ml, Rendez.ml and Test.ml.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Objective Caml's 1997 bytecode threads, over Byterun's scheduler.c: each process's kernel stack is one.",
+  files: {
+    'thread.ml': {
+      summary: "Threads as externals of Byterun's scheduler.c, and preemption on SIGVTALRM, as in Objective Caml 1997.",
+      digest: '3a90b61561d4',
+      important: [
+        { at: 'def:critical_section', say: 'set, no preemption until sleep', weight: 3 },
+        { at: 'comment:"It is mucho important that the primitives"', say: "Byterun keeps the old pc: why the wrappers", weight: 3 },
+        { at: 'def:create', say: 'thread_new; always ends by exit', weight: 1 },
+        { at: 'def:sleep', say: 'critical section off, then suspended', weight: 1 },
+        { at: 'def:preempt', say: 'a signal: yield unless critical', weight: 1 },
+        { at: 'code:"Sys.signal Sys.sigvtalrm"', say: 'preemption by a Unix signal, as ocamlrun', weight: 1 },
+      ],
+    },
+    'thread.mli': {
+      summary: 'Lightweight threads: create, self, sleep, wakeup, critical_section, and Unix waits.',
+      digest: '61da5c31cd0c',
+      capitals: [{ at: 'def:create', say: "a thread: a process's kernel stack" }],
+      important: [
+        { at: 'def:critical_section', say: 'what the scheduler sets before a switch', weight: 3 },
+        { at: 'def:wakeup', say: 'what sched needs, and dune lacks', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.calls('Threads: OCaml wrappers over Byterun primitives', 'thread.ml:def:create', 'a thread, running fn arg', [
+      ['thread.ml:def:thread_new', "the external: Byterun's thread_new", 'the closure'],
+      ['thread.ml:def:exit', 'the end of every thread', 'after fn'],
+      ['thread.mli:def:create', 'the interface the kernel uses', 'declared'],
+    ]) + {
+      bones+: [
+        { at: 'thread.ml:def:sleep', role: 'the running thread suspended' },
+        { at: 'thread.ml:def:thread_sleep', role: "Byterun's switch" },
+        { at: 'thread.ml:def:preempt', role: 'the timer signal: yield' },
+        { at: 'thread.ml:def:critical_section', role: 'no switch while set' },
+      ],
+      joints+: [
+        { from: 'thread.ml:def:sleep', to: 'thread.ml:def:thread_sleep', say: 'after clearing' },
+        { from: 'thread.ml:def:preempt', to: 'thread.ml:def:critical_section', say: 'checked' },
+        { from: 'thread.ml:def:sleep', to: 'thread.ml:def:critical_section', say: 'reset' },
+      ],
+    },
+  ],
+}

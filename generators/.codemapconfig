@@ -1,0 +1,23 @@
+// generators/: olex and oyacc, what the code map says of it. The book,
+// generators/docs/CompilerGenerator.nw, has a "Code organization" and a
+// "Software architecture" still empty; its chapters (Core data
+// structures, main, Lexing, Parsing, Compiling, Generating, Running)
+// give the pipeline of each: a spec parsed to an AST, compiled to an
+// automaton (a DFA for lex, LR tables for yacc), printed as OCaml.
+// The C originals are ~/principia/generators/.
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: 'olex and oyacc: the compiler generators, a .mll to a DFA in OCaml, a .mly to SLR tables and a parser.',
+  dirs: {
+    docs: { summary: 'The book, CompilerGenerator.nw: lex and yacc explained, the sources tangled from it.' },
+  },
+  skeletons: [
+    skeletons.parts('The two generators, side by side', [
+      ['lex/', 'olex: regexps to a DFA, as tables'],
+      ['yacc/', 'oyacc: a grammar to SLR(1) tables'],
+    ], [
+      ['lex/', 'yacc/', 'its tokens are what the parser reads'],
+    ]),
+  ],
+}

@@ -1,0 +1,5 @@
+// lib_core/concurrency/: only todo/, OCaml 1.x's threads, not built
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Threads for ocaml-light, still to do: todo/ keeps OCaml 1.x's library, built by nothing.",
+}

@@ -1,0 +1,57 @@
+// lib_graphics/geometry/: libdraw's points and rectangles (draw.h's
+// Point and Rectangle, libdraw's arith.c), what the code map says of it.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Points and rectangles in pixels, screen coordinates (y down): what libdraw and rio measure with.",
+  files: {
+    'Point.ml': {
+      summary: 'Points: x and y in pixels, and their arithmetic (arith.c).',
+      digest: '903e195f5593',
+      important: [
+        { at: 'type:t', say: 'x, y: the origin top-left', weight: 3 },
+        { at: 'def:binary', say: 'add and sub from one helper', weight: 1 },
+      ],
+    },
+    'Point.mli': {
+      summary: 'The point type, p, zero and arithmetic.',
+      digest: 'eb367d7d8bf3',
+      capitals: [{ at: 'type:t', say: 'a pixel position: x, y' }],
+      important: [{ at: 'def:zero', weight: 1 }, { at: 'def:p', weight: 1 }],
+    },
+    'Rectangle.ml': {
+      summary: "Rectangles (min, max excluded): builders, dx and dy, inclusion, inset; also windows' layout.",
+      digest: '7d7c42d20dd4',
+      important: [
+        { at: 'type:t', say: 'min included, max excluded', weight: 3 },
+        { at: 'def:canonical', say: 'two corners in any order', weight: 1 },
+        { at: 'def:pt_in_rect', weight: 2 },
+        { at: 'def:insetrect', say: "a window's inside: its border removed", weight: 2 },
+      ],
+    },
+    'Rectangle.mli': {
+      summary: 'The rectangle type and its operations.',
+      digest: 'dc2ea7b52f15',
+      capitals: [{ at: 'type:t', say: 'a rectangle: min, max' }],
+      important: [{ at: 'comment:"does not belong to the rectangle"', say: '(0,0)-(100,100) ends at 99', weight: 2 }],
+    },
+    'Vector.ml': {
+      summary: 'Vectors: points read as directions; unused so far.',
+      digest: '45ee3ffc041a',
+    },
+    'Vector.mli': {
+      summary: 'The vector type.',
+      digest: '64dba857ad8f',
+    },
+  },
+  skeletons: [
+    skeletons.parts('Geometry: points, rectangles, vectors', [
+      ['Point.ml', 'a position'],
+      ['Rectangle.ml', 'two points: min and max'],
+      ['Vector.ml', 'a point as a direction'],
+    ], [
+      ['Point.ml', 'Rectangle.ml', 'its corners'],
+      ['Point.ml', 'Vector.ml', 'the same data'],
+    ]),
+  ],
+}

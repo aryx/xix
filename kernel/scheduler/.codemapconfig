@@ -1,0 +1,83 @@
+// kernel/scheduler/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). 9's scheduler in proc.c (runq, ready, sched, schedinit, sleep,
+// wakeup, hzsched; ~/principia/kernel/processes/proc.c). What changes: 9
+// switches stacks with setlabel/gotolabel; here every process is an OCaml
+// bytecode thread, the scheduler the CPU's main thread, and a switch is
+// one thread waking another and sleeping (Scheduler.ml's comment "How to
+// write the scheduler written in OCaml?").
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The scheduler (9's proc.c): priority run queues, sched as threads handing over, sleep and wakeup.",
+  files: {
+    'Scheduler.ml': {
+      summary: "Run queues by priority, ready, and sched: a process's thread wakes the scheduler's and sleeps.",
+      digest: 'fd1c3bba71df',
+      capitals: [
+        { at: 'def:sched', say: 'a process gives up the CPU' },
+        { at: 'def:_scheduler', say: "9's schedinit: the loop choosing who runs" },
+      ],
+      important: [
+        { at: 'type:runq', say: 'a queue per priority, a bit per non-empty', weight: 1 },
+        { at: 'code:"for i = Scheduler_.nb_priorities -1 to 0 do"', say: 'a bug: to, not downto; never iterates', weight: 3 },
+        { at: 'comment:"How to write the scheduler written in OCaml?"', say: 'the design: threads, one awake at a time', weight: 3 },
+        { at: 'def:thread_wakeup', say: "a stub failing: dune's Thread lacks it", weight: 1 },
+        { at: 'code:"cpu.sched_ticks <- cpu.ticks + (Arch.hz / 10)"', say: 'HZ is 1: a quantum of 0 ticks', weight: 1 },
+        { at: 'comment:"todo: adjust Hooks.Scheduler"', say: 'the hooks are never set: locks fail', weight: 1 },
+      ],
+    },
+    'Scheduler.mli': {
+      summary: 'What the rest may call: any_ready, ready, yield (sched stays inside, reached by Hooks).',
+      digest: 'abd5d5c72c84',
+    },
+    'Rendez.ml': {
+      summary: "Sleep and wakeup (9's sleep, wakeup): a process sleeps on a Rendez until its condition holds.",
+      digest: '17b40c47b97a',
+      capitals: [{ at: 'def:sleep', say: 'wait for a condition, no wakeup lost' }],
+      important: [
+        { at: 'code:"let cond = fcond () in"', say: 'tested under both locks: no lost wakeup', weight: 3 },
+        { at: 'def:wakeup', say: 'the sleeper readied, its pid returned', weight: 1 },
+        { at: 'code:"double sleep for %s %d"', say: "9's double sleep panic, as failwith", weight: 1 },
+      ],
+    },
+    'Rendez.mli': { summary: 'Rendezvous: alloc, sleep with a condition, wakeup.', digest: 'a0996abfd1a0' },
+    'Hz_sched.ml': {
+      summary: "The clock tick's reschedule (9's hzsched): a higher priority ready, or the quantum spent; Todo.",
+      digest: '2510d96f57ef',
+      important: [{ at: 'def:any_higher', say: 'raises Todo: every tick would', weight: 3 }],
+    },
+    'Hz_sched.mli': { summary: 'hz_sched, called by the clock tick.', digest: '1c136fc1ce24' },
+  },
+  skeletons: [
+    skeletons.parts('The scheduler and who calls it', [
+      ['Scheduler.ml', 'the run queues and the switch'],
+      ['Rendez.ml', 'sleep on a condition, wake a sleeper'],
+      ['Hz_sched.ml', 'preemption at a tick'],
+    ], [
+      ['Rendez.ml', 'Scheduler.ml', 'ready the woken'],
+      ['Hz_sched.ml', 'Scheduler.ml', 'any_ready'],
+    ]),
+    {
+      name: 'A switch: threads handing over the CPU',
+      bones: [
+        { at: 'Scheduler.ml:def:sched', role: 'the running process gives up' },
+        { at: 'Scheduler.ml:def:_scheduler', role: "the CPU's thread: the loop" },
+        { at: 'Scheduler.ml:def:ready', role: 'back to Ready, in its queue' },
+        { at: 'Scheduler.ml:def:add', role: 'queued, its bit set' },
+        { at: 'Scheduler.ml:type:runq', role: 'the queues by priority' },
+        { at: 'Scheduler.ml:def:find_proc', role: 'the highest priority ready' },
+        { at: 'Scheduler.ml:def:dequeue', role: 'taken off its queue' },
+      ],
+      joints: [
+        { from: 'Scheduler.ml:def:sched', to: 'Scheduler.ml:def:_scheduler', say: "wakes the CPU's thread" },
+        { from: 'Scheduler.ml:def:_scheduler', to: 'Scheduler.ml:def:ready', say: 'the old one, if Running' },
+        { from: 'Scheduler.ml:def:ready', to: 'Scheduler.ml:def:add', say: 'the process' },
+        { from: 'Scheduler.ml:def:add', to: 'Scheduler.ml:type:runq', say: 'queued' },
+        { from: 'Scheduler.ml:type:runq', to: 'Scheduler.ml:def:find_proc', say: 'the non-empty queues' },
+        { from: 'Scheduler.ml:def:find_proc', to: 'Scheduler.ml:def:dequeue', say: 'a priority' },
+        { from: 'Scheduler.ml:def:dequeue', to: 'Scheduler.ml:def:_scheduler', say: 'the next up, its thread woken' },
+      ],
+    },
+  ],
+}

@@ -1,0 +1,18 @@
+// compiler/tests/: what the code map says of it
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "occ's regression tests: small C files compiled for ARM, MIPS and RISC-V, their assembly snapshotted.",
+  files: {
+    'Test_compiler.ml': {
+      summary: "The e2e and codegen suites: each tests/compiler/codegen/*.c through o5c, ovc, oic with -S.",
+      digest: 'a2b5785b98da',
+      important: [
+        { at: 'comment:"Regression tests for rc"', say: "stale: copied from rc's tests, these are occ's", weight: 1 },
+        { at: 'def:run_main', say: 'in a child process: CLI.main sets globals', weight: 3 },
+        { at: 'def:codegen_tests', say: 'every file times every arch, snapshotted', weight: 3 },
+        { at: 'comment:"array.c"', say: 'arrays, pointers, arithmetic: not yet', weight: 1 },
+        { at: 'def:tests', say: "the suite, run by tests/Test.ml", weight: 1 },
+      ],
+    },
+  },
+}

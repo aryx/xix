@@ -1,0 +1,65 @@
+// kernel/concurrency_/: what the code map says of it (tinybox codemap;
+// the format: ~/github/ocaml-elm-playground/docs/manual/codemap.md,
+// section 12). The trailing _ is the port's convention (base/ too): X_
+// holds a type, 9's portdat_*.h; X, elsewhere, its functions, the .c.
+// OCaml forbids a cycle between modules, and the locks and the Proc name
+// each other: so the types come first, here.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The lock types alone (9's portdat_concurrency.h), split from their code to break a cycle with the Proc.",
+  files: {
+    'Spinlock_.ml': {
+      summary: "A spin lock: a flag set by test-and-set, and the pid holding it, for checks (9's Lock).",
+      digest: 'f63dfe19b628',
+      capitals: [{ at: 'type:t', say: 'the lock inside every other lock' }],
+      important: [
+        { at: 'comment:"we can not put this type in concurrency/"', say: 'why this directory exists', weight: 3 },
+        { at: 'comment:"really \'pid option\' but"', say: 'pid 0: the fake proc before any process', weight: 1 },
+      ],
+    },
+    'Ilock_.ml': {
+      summary: "A spin lock taken with interrupts off, which it gives back on unlock (9's ilock).",
+      digest: 'd6fc09810dcb',
+      important: [
+        { at: 'comment:"We could factorize with spinlock.ml as done in C"', say: "9 has one Lock with an isilock flag", weight: 1 },
+        { at: 'type:t', say: 'the interrupt level saved at lock', weight: 1 },
+      ],
+    },
+    'Qlock_.ml': {
+      summary: "A queueing lock: who waits for it sleep in a queue of pids instead of spinning (9's QLock).",
+      digest: '216e9ba1b528',
+      important: [{ at: 'type:t', say: 'pids, not Procs: the cycle again', weight: 1 }],
+    },
+    'Ref_.ml': {
+      summary: "A reference count and its spin lock (9's Ref), often the lock of the record holding it.",
+      digest: 'bfe680f6c98a',
+    },
+    'Rendez_.ml': {
+      summary: "A rendezvous: where one process sleeps until another wakes it (9's Rendez).",
+      digest: 'ace51677ed48',
+      important: [
+        { at: 'comment:"!lock ordering!"', say: 'the Rendez before the Proc: no deadlock', weight: 1 },
+      ],
+    },
+    'Spl_.ml': {
+      summary: "The interrupt level: Low or High, all 9 ever uses of spl's levels.",
+      digest: 'b547037a778b',
+    },
+  },
+  skeletons: [
+    skeletons.parts('The lock types, each on a spin lock', [
+      ['Spinlock_.ml', 'the flag everything else holds'],
+      ['Spl_.ml', 'interrupts on or off'],
+      ['Ilock_.ml', 'a spin lock with interrupts off'],
+      ['Qlock_.ml', 'a lock whose waiters sleep'],
+      ['Ref_.ml', 'a count under a spin lock'],
+      ['Rendez_.ml', 'a place to sleep'],
+    ], [
+      ['Qlock_.ml', 'Spinlock_.ml', 'guards its queue'],
+      ['Ref_.ml', 'Spinlock_.ml', 'guards its count'],
+      ['Rendez_.ml', 'Spinlock_.ml', 'guards its sleeper'],
+      ['Ilock_.ml', 'Spl_.ml', 'the level saved'],
+    ]),
+  ],
+}

@@ -1,0 +1,142 @@
+// kernel/base/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). 9's portdat_*.h and dat.h as OCaml records, the X_ half of each
+// subsystem (see concurrency_/): types first, their functions in
+// memory/, processes/, scheduler/, time/.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The kernel's data (9's dat.h): Proc, Page, Segment, Chan, Cpu as records, the globals, the hooks.",
+  files: {
+    'Process_.ml': {
+      summary: "The Proc, 9's big structure, as an OCaml record: state, children, segments, a thread for its stack.",
+      digest: 'b3a026a30642',
+      capitals: [
+        { at: 'type:t', say: 'the process: what the kernel is about' },
+        { at: 'type:state', say: 'Running, Ready, Wakeme, Queueing...' },
+      ],
+      important: [
+        { at: 'comment:"kernel stack of process"', say: "an OCaml thread, not 9's kstack", weight: 3 },
+        { at: 'code:"parent: pid option"', say: 'a pid, not a pointer: looked up', weight: 1 },
+        { at: 'code:"mutable seg: (section, Segment_.t) Hashtbl.t"', say: "9's seg[NSEG] array, by name", weight: 1 },
+        { at: 'type:wait_msg', say: "a child's exit, for the parent's await", weight: 1 },
+        { at: 'comment:"9 is not really a multi-user OS"', say: 'no uid: a user name only', weight: 1 },
+      ],
+    },
+    'Globals.ml': {
+      summary: "The kernel's globals: the CPUs, devtab, conf, eve, and up(), the current process.",
+      digest: '4650c8810c14',
+      capitals: [
+        { at: 'def:up', say: "9's up: the running process" },
+        { at: 'def:cpu', say: "9's m: this processor" },
+      ],
+      important: [
+        { at: 'def:fakeproc', say: 'a sentinel: up() is never nil', weight: 3 },
+        { at: 'def:devtab', say: "the devices' methods: empty so far", weight: 1 },
+        { at: 'comment:"A few important globals spread in other files"', say: 'runq, timers, alarms: elsewhere', weight: 1 },
+        { at: 'comment:"a special register"', say: '9 keeps m and up in registers', weight: 1 },
+      ],
+    },
+    'Hooks.ml': {
+      summary: "Forward references as refs (9's function pointers): sched, ready, sleep, wakeup, namec, close.",
+      digest: 'f2906731aebe',
+      important: [
+        { at: 'def:sched', say: 'never set: Scheduler.ml ends in a todo', weight: 3 },
+        { at: 'comment:"mutual dependency problem"', say: 'why refs: the locks call the scheduler', weight: 1 },
+        { at: 'def:close', say: 'its message says chan_of_filename: a slip', weight: 1 },
+      ],
+    },
+    'Syscall.ml': {
+      summary: "The system calls as data: a Request variant in, an Answer out, marshalled like 9P (planned).",
+      digest: '1bd4ff384d74',
+      capitals: [{ at: 'module:Request', say: 'a system call: a constructor, not a number' }],
+      important: [
+        { at: 'comment:"The generalized interface for syscall is"', say: 'one call, bytes in and out', weight: 1 },
+        { at: 'type:rfork_flags', say: "rfork's bits as a type: Fork or NoFork", weight: 3 },
+        { at: 'module:Answer', say: 'what comes back, errors included', weight: 1 },
+      ],
+    },
+    'Cpu.ml': {
+      summary: "A processor, 9's Mach: its current process, its ticks, and the main thread that schedules.",
+      digest: '3e8a3dd608e2',
+      important: [
+        { at: 'code:"mutable proc: Process_.t option"', say: 'up: the process scheduled here', weight: 1 },
+        { at: 'code:"thread: Thread.t"', say: "the scheduler's own thread", weight: 3 },
+      ],
+    },
+    'Chan_.ml': {
+      summary: "A channel, 9's Chan: an open file, its qid, device, offset and path; no fds use it yet.",
+      digest: 'f4eb83b6a43c',
+      important: [{ at: 'type:t', say: 'the file as the kernel sees it', weight: 1 }],
+    },
+    'Device_.ml': {
+      summary: "A device, 9's Dev: its letter and methods (attach, open, read, write...) in a record.",
+      digest: '5f657ab194e9',
+      important: [{ at: 'type:t', say: "9's devtab entry: a record of functions", weight: 1 }],
+    },
+    'Page_.ml': {
+      summary: "A physical page: its address, the user address mapped to it, a count, dirty bits (9's Page).",
+      digest: '3148c6f0ebac',
+      important: [{ at: 'type:t', say: 'a portable PTE with its reverse map', weight: 1 }],
+    },
+    'Pagetable_.ml': {
+      summary: "A page table: 256 pages (1 MB), with the first and last used, 9's Pte.",
+      digest: '6c541a4ec668',
+    },
+    'Segment_.ml': {
+      summary: "A segment: text, data, bss or stack, its range and its pages in a two-level table (9's Segment).",
+      digest: 'e7006c984a29',
+      important: [
+        { at: 'code:"mutable pagedir: Pagetable_.t option array"', say: 'sparse: pages come on fault', weight: 3 },
+        { at: 'type:kind', say: 'what copy does at rfork depends on it', weight: 1 },
+      ],
+    },
+    'Scheduler_.ml': {
+      summary: "Priorities: 20 levels, normal 10, kernel processes 13, checked at creation.",
+      digest: '7360c947ea60',
+      important: [{ at: 'def:mk_prio', say: 'stricter: 9 clamps, this fails', weight: 1 }],
+    },
+    'Timer_.ml': {
+      summary: "A timer: relative or periodic, in ns and fast ticks, calling back or ticking the clock (9's Timer).",
+      digest: '9ffcebb27f24',
+      important: [{ at: 'type:callback', say: "HzClock: the tick is a timer, as in 9", weight: 1 }],
+    },
+    'Memory.ml': {
+      summary: "Memory's constants: KB, MB, the page size, KZERO, the user text and stack; conversions Todo.",
+      digest: 'd217fa77f627',
+      important: [
+        { at: 'def:ustktop', say: 'the user stack top, 32 MB', weight: 1 },
+        { at: 'def:virt_to_phys', say: 'raises Todo', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts("The kernel's data: records naming records", [
+      ['Process_.ml', 'the Proc: at the centre'],
+      ['Cpu.ml', 'a processor, its current process'],
+      ['Globals.ml', 'the CPUs, up(), devtab: the roots'],
+      ['Segment_.ml', "a process's memory: a range"],
+      ['Pagetable_.ml', "a segment's pages, 1 MB at a time"],
+      ['Page_.ml', 'a physical page'],
+      ['Chan_.ml', 'an open file: slash, dot'],
+      ['Device_.ml', "a channel's methods"],
+      ['Scheduler_.ml', 'priorities'],
+      ['Timer_.ml', 'a timer'],
+      ['Syscall.ml', 'what a process asks'],
+      ['Hooks.ml', 'calls upwards, as refs'],
+      ['Memory.ml', 'constants'],
+    ], [
+      ['Globals.ml', 'Cpu.ml', 'cpus'],
+      ['Cpu.ml', 'Process_.ml', 'its proc'],
+      ['Globals.ml', 'Process_.ml', 'up(), fakeproc'],
+      ['Process_.ml', 'Segment_.ml', 'text, data, bss, stack'],
+      ['Segment_.ml', 'Pagetable_.ml', 'its pagedir'],
+      ['Pagetable_.ml', 'Page_.ml', 'its pages'],
+      ['Process_.ml', 'Chan_.ml', 'slash and dot'],
+      ['Device_.ml', 'Chan_.ml', 'opened, read, written'],
+      ['Process_.ml', 'Scheduler_.ml', 'its priority'],
+      ['Syscall.ml', 'Process_.ml', 'wait_msg'],
+      ['Hooks.ml', 'Chan_.ml', 'namec'],
+    ]),
+  ],
+}

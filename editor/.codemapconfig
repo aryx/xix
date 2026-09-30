@@ -1,0 +1,267 @@
+// editor/: oed, the OCaml port of Plan 9's ed, what the code map says of
+// it. The book, editor/docs/oed.nw (an appendix to the C ed's, no "Code
+// organization" or "Software architecture" section), gives the design:
+// the same backing store as ed (the lines appended to a temporary file,
+// zero the array of their offsets, dot and dol the cursors), but the
+// input lexed (Lexer.mll, not a source to the map) and parsed by
+// peek/consume (Parser, Address) before being run, the globals packed
+// in one Env.t, and -r, GNU ed's restricted mode, done by wrapping the
+// capabilities (CLI.restrict_caps). The loop: CLI.main, commands (an
+// address range parsed and evaluated, a command letter dispatched to
+// Commands), global for g/re/cmd running commands again on each marked
+// line. The C original is ~/principia/editors/.
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "oed, ed ported to OCaml: lines in a temporary file, commands parsed then run, -r by capabilities.",
+  files: {
+    'Main.ml': {
+      summary: "oed's entry: Cap.main hands out every capability, CLI.main gets them with argv.",
+      digest: '88fed5654d31',
+    },
+    'CLI.ml': {
+      summary: "The flags, the capabilities restricted by -r, and the command loop: address, letter, action.",
+      digest: '50b94f144887',
+      capitals: [
+        { at: 'def:commands', say: 'the loop: a range, then a command letter' },
+        { at: 'def:restrict_caps', say: '-r: the capabilities themselves refuse' },
+      ],
+      important: [
+        { at: 'comment:"Limitations compared to Plan 9 version"', say: 'no &, \\1, marks, unicode', weight: 2 },
+        { at: 'type:caps', say: "stdin, files for r and w, forkew for '!'", weight: 2 },
+        { at: 'code:"let (addr1, addr2) = Address.eval_range e range in"', say: 'parsed, then evaluated: two steps', weight: 2 },
+        { at: 'def:global', say: 'g/re/cmd: mark, then run cmd per mark', weight: 3 },
+        { at: 'comment:"need to restart from scratch"', say: 'cmd may delete lines: rescan from 1', weight: 1 },
+        { at: 'comment:"TODO: use range.set_dot!"', say: 'a;b does not move dot yet', weight: 1 },
+        { at: 'code:"with Error.Error s ->"', say: "ed's famous ?: the error, then on", weight: 2 },
+        { at: 'code:"env.in_.globp <- Some (Lexing.from_string \"r\")"', say: 'ed file: an r command preloaded', weight: 1 },
+      ],
+      links: [
+        { from: 'def:commands', to: 'Address.ml:def:parse_range' },
+        { from: 'def:commands', to: 'Commands.ml:def:printcom' },
+      ],
+    },
+    'CLI.mli': {
+      summary: "Interface of oed: its capabilities, and main.",
+      digest: 'defb6453743f',
+    },
+    'Env.ml': {
+      summary: "ed's globals in one record: the temporary file, zero, dot and dol, the saved file, the flags.",
+      digest: 'd67143960771',
+      capitals: [
+        { at: 'comment:"The globals"', say: 'Env.t: every command reads and changes it' },
+        { at: 'def:init', say: 'the temporary file opened, the input set' },
+      ],
+      important: [
+        { at: 'def:tfname', say: 'one fixed name: two oeds share it', weight: 2 },
+        { at: 'type:offset_and_mark', say: "a line: its offset, and g's mark", weight: 2 },
+        { at: 'comment:"Growing array of line offsets in tfile"', say: 'zero: line numbers to offsets', weight: 3 },
+        { at: 'comment:"This is the opened temporary tfname file"', say: 'lines only appended, never rewritten', weight: 2 },
+        { at: 'type:lineno', say: '1-indexed; 0 a sentinel', weight: 1 },
+        { at: 'comment:"TODO: works on Linux? /fd/1 exists?"', say: '-o writes to /fd/1: Plan 9 only', weight: 1 },
+      ],
+    },
+    'Parser.ml': {
+      summary: 'The input as tokens, peeked and consumed; globp, a string read before stdin (ed file, g).',
+      digest: 'f268e031deb7',
+      capitals: [{ at: 'def:consume', say: 'the next token, from globp or stdin' }],
+      important: [
+        { at: 'type:state', say: 'the lexbuf, one token of lookahead, globp', weight: 3 },
+        { at: 'def:next_token', say: 'globp first, then the real input', weight: 2 },
+        { at: 'comment:"alt: yacc, but overkill"', say: 'peek/consume, not ocamlyacc', weight: 1 },
+      ],
+    },
+    'Parser.mli': {
+      summary: "Interface of the parser state, what every part of oed reads its input through.",
+      digest: '08bdc1732094',
+      capitals: [{ at: 'type:state', say: 'the input: stdin, lookahead, globp' }],
+      important: [{ at: 'def:consume', say: 'a token taken', weight: 2 }],
+    },
+    'Token.ml': {
+      summary: "The tokens: command letters, the pieces of addresses (numbers, . $ , ; + -), /re/ and ?re?.",
+      digest: '842f93b6a76a',
+      important: [{ at: 'type:t', say: 'no token for filenames and text: read raw', weight: 2 }],
+    },
+    'Lexer.mli': {
+      summary: "Interface of the ocamllex lexer (Lexer.mll): tokens, and raw reads of a regexp, a line, a filename.",
+      digest: 'f94f0ddb072e',
+      important: [{ at: 'def:buf', say: 'its buffer exported: ugly, it says', weight: 1 }],
+    },
+    'Address.ml': {
+      summary: "Addresses parsed to a type (., $, n, +, /re/, ?re?), then evaluated to line numbers.",
+      digest: 'e20ee94e8dad',
+      capitals: [{ at: 'def:parse_range', say: '1,3 or ; or nothing: a range' }],
+      important: [
+        { at: 'type:t', say: 'an address, symbolic until evaluated', weight: 2 },
+        { at: 'def:eval_address', say: 'an address to a line of the buffer', weight: 3 },
+        { at: 'comment:"wrap around start/end of buffer"', say: '/re/ searches past the end, from 1', weight: 2 },
+        { at: 'def:eval_range', say: 'both ends, checked', weight: 1 },
+        { at: 'def:parse_relatives', say: '+, -, ^ after an address', weight: 1 },
+      ],
+    },
+    'Address.mli': {
+      summary: "Interface of the addresses: their type, the range, parse and eval.",
+      digest: 'f0bd7cdf3b22',
+      important: [{ at: 'type:range', say: 'addr1, addr2, and whether given', weight: 2 }],
+    },
+    'Commands.ml': {
+      summary: "The commands: p, a, i, d, c, r, w, s, q, !; lines appended to the temporary file, zero shifted.",
+      digest: '2e44c40a4dc9',
+      capitals: [{ at: 'def:append', say: 'lines to tfile, their offsets into zero' }],
+      important: [
+        { at: 'def:printcom', say: "'p': lines read back from tfile", weight: 1 },
+        { at: 'def:read', say: "'r': a file appended after a line", weight: 2 },
+        { at: 'def:write', say: "'w': the lines to a file", weight: 2 },
+        { at: 'def:rdelete', say: "'d': zero's entries shifted up", weight: 2 },
+        { at: 'def:substitute', say: "'s': first match only, no &, no g", weight: 2 },
+        { at: 'code:"e.zero.(a1) <- { offset = tl; mark = false }"', say: "no fchange: q won't warn after s", weight: 2 },
+        { at: 'def:quit', say: 'a first q warns if changed', weight: 1 },
+        { at: 'def:callunix', say: "'!': rflag checked again for ocaml-light", weight: 1 },
+        { at: 'def:file_in_current_dir', say: '-r: a name without /', weight: 1 },
+      ],
+      links: [
+        { from: 'def:append', to: 'Disk.ml:def:putline' },
+        { from: 'def:read', to: 'Disk.ml:def:getfile' },
+      ],
+    },
+    'Commands.mli': {
+      summary: "Interface of the commands, and the capabilities each needs.",
+      digest: '050294726c31',
+    },
+    'Disk.ml': {
+      summary: 'Lines put into and got from the temporary file by offset; the saved file read and written.',
+      digest: '48f0d75709db',
+      important: [
+        { at: 'def:putline', say: 'appended at tline; its offset returned', weight: 3 },
+        { at: 'def:getline', say: 'a line read back at its offset', weight: 2 },
+        { at: 'def:getfile', say: "the user's file, a line at a time", weight: 1 },
+      ],
+    },
+    'Disk.mli': {
+      summary: 'Interface of the temporary and saved files.',
+      digest: 'a8a4eeea5200',
+    },
+    'In.ml': {
+      summary: "What is read besides commands: the newline ending one, a filename, the text of a and i.",
+      digest: '1c5fd1a232d7',
+      important: [
+        { at: 'def:newline', say: 'EOF counts as a newline', weight: 1 },
+        { at: 'def:gettty', say: "a's text up to the lone .", weight: 2 },
+        { at: 'def:filename', say: 'the saved file remembered', weight: 1 },
+      ],
+    },
+    'In.mli': { summary: 'Interface of the input helpers.', digest: 'bfcc0274082a' },
+    'Out.ml': {
+      summary: "The output: characters, strings, numbers, to stdout, or stderr under -o.",
+      digest: 'f946077c84ba',
+    },
+    'Out.mli': { summary: 'Interface of the output.', digest: 'b3c98d173c54' },
+    'Error.ml': {
+      summary: "ed's errors: raised to the loop, which prints ? and the message.",
+      digest: '4034057f4a7f',
+      important: [{ at: 'def:e_legacy', say: "ed's old terse ?", weight: 1 }],
+    },
+    'Regex.ml': {
+      summary: 'A regexp searched anywhere in a line (Str, not anchored).',
+      digest: '59b17943e4d5',
+    },
+  },
+  dirs: {
+    docs: { summary: 'The book, oed.nw: the port explained after the C ed, the sources tangled from it.' },
+  },
+  skeletons: [
+    skeletons.cli('oed: a command read, addressed, run', [
+      ['CLI.ml:def:restrict_caps', '-r: the capabilities wrapped', 'rflag'],
+      ['Env.ml:def:init', 'the temporary file, the input', 'the caps'],
+      ['CLI.ml:def:commands', 'the loop: range, then letter', 'the env'],
+      ['Address.ml:def:parse_range', 'the range parsed', 'the input'],
+      ['Address.ml:def:eval_range', 'to line numbers', 'the range'],
+    ]) + {
+      bones+: [
+        { at: 'Commands.ml:def:append', role: "a, i, r: lines into zero" },
+        { at: 'CLI.ml:def:global', role: 'g/re/: commands again per line' },
+        { at: 'Disk.ml:def:putline', role: 'a line into the temporary file' },
+      ],
+      joints+: [
+        { from: 'CLI.ml:def:commands', to: 'Commands.ml:def:append', say: 'a, i, r' },
+        { from: 'Commands.ml:def:append', to: 'Disk.ml:def:putline', say: 'each line' },
+        { from: 'CLI.ml:def:commands', to: 'CLI.ml:def:global', say: 'g, v' },
+        { from: 'CLI.ml:def:global', to: 'CLI.ml:def:commands', say: 'globp: the command' },
+      ],
+    },
+    skeletons.parts("oed's files: input, buffer, commands", [
+      ['Parser.ml', 'the input as tokens'],
+      ['Address.ml', 'the lines a command acts on'],
+      ['CLI.ml', 'the loop and dispatch'],
+      ['Commands.ml', 'the commands'],
+      ['Env.ml', 'the buffer: zero, dot, dol'],
+      ['Disk.ml', 'the temporary file'],
+    ], [
+      ['Parser.ml', 'Address.ml', 'tokens'],
+      ['Address.ml', 'CLI.ml', 'addr1, addr2'],
+      ['CLI.ml', 'Commands.ml', 'the letter'],
+      ['Commands.ml', 'Env.ml', 'changes'],
+      ['Commands.ml', 'Disk.ml', 'lines in, lines out'],
+    ]),
+    skeletons.module('CLI.ml', 'The loop: main, commands, global', [
+      ['main', 'flags, restricted caps, env', ''],
+      ['commands', 'range, letter, action, until q', 'the env'],
+      ['global', 'mark, then commands per mark', 'g/re/'],
+    ]) + {
+      bones+: [{ at: 'CLI.ml:def:restrict_caps', role: '-r by capabilities' }],
+      joints+: [
+        { from: 'CLI.ml:def:main', to: 'CLI.ml:def:restrict_caps', say: 'rflag' },
+        { from: 'CLI.ml:def:global', to: 'CLI.ml:def:commands', say: 'each marked line' },
+      ],
+    },
+    skeletons.module('Commands.ml', 'The buffer changed: append, delete, read, write', [
+      ['read', "'r': the file's lines", ''],
+      ['append', 'into tfile and zero', 'getfile'],
+    ]) + {
+      bones+: [
+        { at: 'Commands.ml:def:rdelete', role: "'d': zero shifted" },
+        { at: 'Commands.ml:def:write', role: "'w'" },
+        { at: 'Commands.ml:def:substitute', role: "'s'" },
+        { at: 'Disk.ml:def:putline', role: 'the line stored' },
+      ],
+      joints+: [
+        { from: 'Commands.ml:def:append', to: 'Disk.ml:def:putline', say: 'each line' },
+        { from: 'Commands.ml:def:substitute', to: 'Disk.ml:def:putline', say: 'the new line' },
+      ],
+    },
+    skeletons.module('Address.ml', 'Addresses: parsed, then evaluated', [
+      ['parse_range', 'a, b or one or none', ''],
+      ['parse_address', 'one address', 'each end'],
+      ['parse_relatives', '+n, -n after it', 'the base'],
+    ]) + {
+      bones+: [
+        { at: 'Address.ml:def:eval_range', role: 'the range to lines' },
+        { at: 'Address.ml:def:eval_address', role: 'an address to a line' },
+      ],
+      joints+: [{ from: 'Address.ml:def:eval_range', to: 'Address.ml:def:eval_address', say: 'each end' }],
+    },
+    skeletons.module('Env.ml', "ed's state, one record", [
+      ['init', 'the record built', ''],
+      ['tfname', 'the temporary file', 'opened'],
+    ]) + {
+      bones+: [
+        { at: 'Env.ml:type:offset_and_mark', role: "zero's entries" },
+        { at: 'Env.ml:type:lineno', role: 'dot, dol, addr1, addr2' },
+      ],
+      joints+: [],
+    },
+  ],
+  tours: [
+    {
+      name: 'ed file, then 1,3p',
+      stops: [
+        { at: 'CLI.ml:def:main', say: '-r wraps the capabilities; ed file preloads an r command in globp.' },
+        { at: 'Env.ml:def:init', say: 'The temporary file is opened: every line will be appended to it.' },
+        { at: 'Commands.ml:def:append', say: "r's lines go to the temporary file, their offsets into zero." },
+        { at: 'CLI.ml:def:commands', say: '1,3p: the range parsed and evaluated, then the letter p.' },
+        { at: 'Address.ml:def:eval_address', say: 'Symbolic addresses become line numbers here, /re/ searched.' },
+        { at: 'Commands.ml:def:printcom', say: 'Each line read back from the temporary file by its offset.' },
+      ],
+    },
+  ],
+}

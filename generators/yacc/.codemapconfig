@@ -1,0 +1,209 @@
+// generators/yacc/: oyacc, a yacc written anew in OCaml (ocaml-light's
+// yacc2; ocamlyacc and Plan 9's yacc are C), what the code map says of
+// it. The pipeline, from CLI.main: the .mly parsed (Parser.mly over
+// Lexer.mll, not sources to the map) to an Ast.parser_definition, the
+// grammar augmented, its canonical LR(0) automaton built (Lr0), FIRST
+// and FOLLOW computed (First_follow), the SLR(1) action and goto tables
+// made (Slr), dumped, and printed with the actions as OCaml (Output),
+// run by lib_parsing's yyparse_simple. Each algorithm is the dragon
+// book's, chapter 4. Lalr.ml is empty (SLR only), Check.ml is called by
+// no one, no conflict is reported, and Main.ml calls CLI.main without
+// Cap.main.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "oyacc, yacc written anew: a .mly's grammar to an LR(0) automaton, SLR(1) tables and a parser in OCaml.",
+  files: {
+    'Main.ml': {
+      summary: "oyacc's entry: CLI.main, then exit 0; the unit tests' calls left commented out.",
+      digest: '2fddc096897a',
+    },
+    'CLI.ml': {
+      summary: "oyacc x.mly: parsed, LR(0) automaton, FIRST and FOLLOW, SLR tables, written to x.ml.",
+      digest: '4b8aaeaceabd',
+      capitals: [{ at: 'def:main', say: "the dragon book's pipeline, step by step" }],
+      important: [
+        { at: 'comment:"handle priorities, precedences"', say: 'no %left or %prec: conflicts stay', weight: 2 },
+        { at: 'code:"Lr0.canonical_lr0_automaton env"', say: 'the sets of items', weight: 3 },
+        { at: 'code:"Slr.lr_tables env automaton follow"', say: 'reduce on FOLLOW: SLR(1)', weight: 3 },
+        { at: 'code:"Dump.dump_lr0_automaton env automaton"', say: 'always printed, on every run', weight: 1 },
+      ],
+    },
+    'CLI.mli': { summary: 'Interface of main.', digest: 'df63c25652dc' },
+    'Ast.ml': {
+      summary: 'A parser definition: header, directives (%token, %type, %start), rules with their actions, trailer.',
+      digest: '774fa161c66f',
+      capitals: [
+        { at: 'type:rule', say: 'lhs -> rhs symbols, and its action' },
+        { at: 'type:symbol', say: 'a terminal or a nonterminal' },
+        { at: 'type:parser_definition', say: 'what the .mly parses to' },
+      ],
+      important: [
+        { at: 'type:grammar', say: 'the rules, in order: their index is their id', weight: 2 },
+        { at: 'type:directive', say: '%token, %start, %type, %left...', weight: 1 },
+        { at: 'def:start_nonterminal', say: "$S, the augmented grammar's start", weight: 1 },
+        { at: 'def:dollar_terminal', say: '$, the end of input', weight: 1 },
+      ],
+    },
+    'Lr0.ml': {
+      summary: 'The canonical LR(0) automaton: items, closure, goto, the sets of items as states (dragon book 4.6).',
+      digest: '5827bd3af3a6',
+      capitals: [{ at: 'def:canonical_lr0_automaton', say: 'closure of the start, then goto until fixpoint' }],
+      important: [
+        { at: 'def:closure', say: 'B after the dot: all B rules added', weight: 3 },
+        { at: 'def:goto', say: 'the dot moved over a symbol, closed', weight: 3 },
+        { at: 'def:mk_env_augmented_grammar', say: '$S -> start added as rule 0', weight: 2 },
+        { at: 'comment:"opti: use kernel items"', say: 'full item sets kept: slower', weight: 1 },
+        { at: 'type:automaton', say: 'states numbered, transitions by symbol', weight: 2 },
+      ],
+    },
+    'Lr0.mli': {
+      summary: "Interface of LR(0): items, the automaton and its env, what every other part of oyacc reads.",
+      digest: 'd817f3132d50',
+      capitals: [
+        { at: 'type:item', say: 'a rule and a dot position' },
+        { at: 'type:automaton', say: 'item sets to state ids, and their moves' },
+        { at: 'type:env', say: 'the augmented grammar, as an array' },
+      ],
+    },
+    'First_follow.ml': {
+      summary: 'FIRST and FOLLOW of a grammar by fixpoint (dragon book 4.4), epsilon kept in a set of its own.',
+      digest: 'b1239445b2b1',
+      capitals: [{ at: 'def:compute_follow', say: 'what may follow each nonterminal' }],
+      important: [
+        { at: 'def:compute_first', say: 'first terminals, and who derives epsilon', weight: 2 },
+        { at: 'comment:"split their"', say: 'epsilon never in FIRST: a set of its own', weight: 1 },
+        { at: 'def:first_of_sequence', say: 'FIRST of a rule tail', weight: 1 },
+      ],
+    },
+    'First_follow.mli': { summary: 'Interface of FIRST, epsilon and FOLLOW.', digest: 'dfd52745276c' },
+    'Slr.ml': {
+      summary: 'The SLR(1) tables: shift on terminals, reduce on FOLLOW, accept on $, goto on nonterminals.',
+      digest: 'aced4567538c',
+      capitals: [{ at: 'def:lr_tables', say: "each state's items to actions" }],
+      important: [
+        { at: 'comment:"a reduction"', say: "reduce for all FOLLOW(lhs): SLR's weakness", weight: 2 },
+        { at: 'code:"then ((stateid, Ast.dollar_terminal), Accept)::acc"', say: '$S -> start . : accept', weight: 1 },
+        { at: 'code:"(xs |> List.map (fun t -> (stateid, t), Reduce (R ridx))) @ acc"', say: 'a list: a conflict is two entries, unseen', weight: 2 },
+      ],
+    },
+    'Slr.mli': { summary: 'Interface of lr_tables.', digest: 'c3d4c31dd26c' },
+    'Lrtables.ml': {
+      summary: 'The LR tables: action (shift, reduce, accept, error) and goto, what the output and the engine read.',
+      digest: '7d2a8e09fdc7',
+      capitals: [{ at: 'type:lr_tables', say: 'action and goto' }],
+      important: [{ at: 'type:action', say: 'Shift, Reduce, Accept, Error', weight: 2 }],
+    },
+    'Output.ml': {
+      summary: 'The .ml written: token type, the actions as closures over $n, the tables, the entry calling yyparse.',
+      digest: '5c20b70c2d8f',
+      capitals: [{ at: 'def:output_parser', say: 'tokens, actions, tables, entry' }],
+      important: [
+        { at: 'def:extract_dollars_set', say: 'which $n an action uses', weight: 2 },
+        { at: 'def:replace_dollar_underscore', say: '$1 becomes _1, a let-bound value', weight: 2 },
+        { at: 'code:"pf \"let user_actions = [|\\n\""', say: 'an action per rule, by its index', weight: 1 },
+        { at: 'code:"Parsing.yyparse_simple lrtables"', say: "lib_parsing's engine runs the tables", weight: 2 },
+      ],
+    },
+    'Output.mli': { summary: 'Interface of output_parser.', digest: '48578b8cac8a' },
+    'Dump.ml': {
+      summary: 'The automaton and the tables printed for debugging, items with their dots.',
+      digest: '0719f973d049',
+      important: [
+        { at: 'def:dump_lr0_automaton', say: 'each state: its items', weight: 2 },
+        { at: 'def:dump_lrtables', say: 'the action and goto tables', weight: 2 },
+        { at: 'def:dump_item', say: 'A -> b . c', weight: 1 },
+        { at: 'comment:"does not indent things correctly"', say: 'Format boxes not working here', weight: 1 },
+      ],
+    },
+    'Dump.mli': { summary: 'Interface of the dumpers.', digest: '7c5f013e74c6' },
+    'Check.ml': {
+      summary: "The grammar's checks, to come: its type and error; check is called by no one.",
+      digest: 'eed5dd6eaa55',
+      important: [{ at: 'def:check', say: 'unused: undefined symbols not reported', weight: 2 }],
+    },
+    'Check.mli': { summary: 'Interface of the checks, unused.', digest: '78a0357d1d01' },
+    'Lalr.ml': { summary: 'LALR(1), to come: an empty file (yacc builds LALR tables; oyacc SLR).', digest: '92294f03b54d' },
+    'Lalr.mli': { summary: 'LALR(1), to come: an empty interface.', digest: 'abdbed96c9f4' },
+    'Tests.ml': {
+      summary: "Unit tests on the dragon book's expression grammar: LR(0), FIRST/FOLLOW, SLR, the engine.",
+      digest: '381c402ea2a1',
+      important: [
+        { at: 'def:arith', say: 'E -> E + T | T ..., the book 4.1', weight: 2 },
+        { at: 'def:test_slr', say: 'the tables of arith dumped', weight: 1 },
+        { at: 'def:test_lr_engine', say: 'the engine on hand-written tables', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.cli('oyacc: a .mly to an .ml', [
+      ['Ast.ml:type:parser_definition', 'the .mly parsed (Parser.mly)', 'the file'],
+      ['Lr0.ml:def:mk_env_augmented_grammar', "$S -> start: the grammar's array", 'the grammar'],
+      ['Lr0.ml:def:canonical_lr0_automaton', 'the LR(0) automaton', 'the env'],
+      ['Slr.ml:def:lr_tables', 'the SLR(1) tables', 'the automaton'],
+      ['Output.ml:def:output_parser', 'the .ml written', 'the tables'],
+    ]) + {
+      bones+: [{ at: 'First_follow.ml:def:compute_follow', role: 'FOLLOW' }],
+      joints+: [{ from: 'First_follow.ml:def:compute_follow', to: 'Slr.ml:def:lr_tables', say: 'where to reduce' }],
+    },
+    skeletons.module('Lr0.ml', 'The canonical collection of LR(0) items', [
+      ['canonical_lr0_automaton', 'a worklist of item sets', ''],
+      ['goto', 'a set moved over a symbol', 'each symbol'],
+      ['closure', 'a set closed', 'the kernel'],
+      ['after_dot', 'the symbol after the dot', 'each item'],
+    ]),
+    skeletons.module('First_follow.ml', 'FIRST, epsilon, FOLLOW: fixpoints', [
+      ['compute_follow', 'FOLLOW until nothing changes', ''],
+      ['first_of_sequence', 'FIRST of what follows B', 'a rule tail'],
+    ]) + {
+      bones+: [{ at: 'First_follow.ml:def:compute_first', role: 'FIRST and epsilon' }],
+      joints+: [{ from: 'First_follow.ml:def:compute_first', to: 'First_follow.ml:def:compute_follow', say: 'first, eps' }],
+    },
+    skeletons.module('Output.ml', 'A parser printed: tokens, actions, tables', [
+      ['output_parser', 'the whole .ml', ''],
+      ['extract_dollars_set', 'the $n an action uses', 'an action'],
+    ]) + {
+      bones+: [
+        { at: 'Output.ml:def:replace_dollar_underscore', role: '$n to _n' },
+        { at: 'Output.ml:def:copy_chunk', role: 'header and trailer copied' },
+      ],
+      joints+: [
+        { from: 'Output.ml:def:output_parser', to: 'Output.ml:def:replace_dollar_underscore', say: 'each action' },
+        { from: 'Output.ml:def:output_parser', to: 'Output.ml:def:copy_chunk', say: 'the header' },
+      ],
+    },
+    skeletons.module('Dump.ml', 'The automaton and tables printed', [
+      ['dump_lr0_automaton', 'each state', ''],
+      ['dump_items', 'its items', 'a state'],
+      ['dump_item', 'one item, with its dot', 'each'],
+    ]) + {
+      bones+: [{ at: 'Dump.ml:def:dump_lrtables', role: 'the tables' }],
+      joints+: [],
+    },
+    skeletons.module('Tests.ml', "The dragon book's grammar, tested", [
+      ['arith', 'E, T, F', ''],
+      ['test_lr0', 'its automaton', 'the grammar'],
+    ]) + {
+      bones+: [
+        { at: 'Tests.ml:def:test_slr', role: 'its tables' },
+        { at: 'Tests.ml:def:test_first_follow', role: 'FIRST and FOLLOW' },
+        { at: 'Tests.ml:def:test_lr_engine', role: 'the engine alone' },
+      ],
+      joints+: [{ from: 'Tests.ml:def:arith', to: 'Tests.ml:def:test_slr', say: 'the grammar' }],
+    },
+    skeletons.parts("oyacc's files: the dragon book's chapter 4", [
+      ['Ast.ml', 'the grammar'],
+      ['Lr0.ml', 'LR(0) items and automaton'],
+      ['First_follow.ml', 'FIRST and FOLLOW'],
+      ['Slr.ml', 'the SLR(1) tables'],
+      ['Lrtables.ml', 'the tables, as types'],
+      ['Output.ml', 'the parser printed'],
+    ], [
+      ['Ast.ml', 'Lr0.ml', 'augmented'],
+      ['Lr0.ml', 'Slr.ml', 'the automaton'],
+      ['First_follow.ml', 'Slr.ml', 'FOLLOW'],
+      ['Slr.ml', 'Lrtables.ml', 'fills'],
+      ['Lrtables.ml', 'Output.ml', 'printed'],
+    ]),
+  ],
+}

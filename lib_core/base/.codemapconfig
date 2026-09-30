@@ -1,0 +1,162 @@
+// lib_core/base/: what the code map says of it (tinybox codemap)
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The stdlib's basic types (strings, chars, options, buffers) for the mk build by ocaml-light.",
+  files: {
+    'Bool.ml': { summary: "Booleans as a module, backported from OCaml 4.08 to ocaml-light's stdlib.", digest: '728b3bb64a97' },
+    'Bool.mli': { summary: 'The Bool interface: not, equal, compare, conversions to int, float, string.', digest: '0fdbb362d926' },
+    'Buffer.ml': {
+      summary: "Extensible buffers from OCaml 1.07: a string grown by doubling, and $ident substitution.",
+      digest: '9af8f7b1f95f',
+      important: [
+        { at: 'comment:"partial copy of sys.ml"', say: 'no dependency on lib_core/system from here', weight: 1 },
+        { at: 'type:t', say: 'a string, its fill position, its size', weight: 3 },
+        { at: 'def:resize', say: 'doubles until it fits: amortized O(1) adds', weight: 3 },
+        { at: 'def:add_char', say: 'the hot path: resize only when full', weight: 1 },
+        { at: 'def:add_substitute', say: '$x, $(x), ${x}: the shell-like expansion', weight: 1 },
+      ],
+      links: [{ from: 'def:add_char', to: 'def:resize' }],
+    },
+    'Buffer.mli': {
+      summary: 'The Buffer interface: create, add_char, add_string, contents; what Printf and IO fill.',
+      digest: '060930e09acb',
+      important: [
+        { at: 'def:create', say: 'the initial size is only a guess', weight: 3 },
+        { at: 'def:contents', say: 'a copy: the buffer stays usable', weight: 1 },
+      ],
+    },
+    'Bytes.ml': {
+      summary: "A shim: Bytes over string (bytes = string in ocaml-light), just enough to compile 4.02-era code.",
+      digest: 'a41387e2409a',
+      capitals: [
+        { at: 'type:t', say: "bytes are strings: ocaml-light's mutable ones" },
+      ],
+      important: [
+        { at: 'comment:"partial port of 4.02 bytes.ml"', say: 'why a module with no .mli: a shim', weight: 3 },
+        { at: 'def:set', say: 'mutates a string: ocaml-light has no immutability', weight: 1 },
+      ],
+    },
+    'Char.ml': { summary: "Characters from OCaml 1.07: code, chr, escaped, ASCII case; primitives over %identity.", digest: 'e3df84bb27db' },
+    'Char.mli': { summary: 'The Char interface: code and chr, the conversions every lexer and codec uses.', digest: 'bb400cb03624' },
+    'Digest.ml': { summary: "MD5 digests of strings and channels, through the runtime's C md5; seeds Random.", digest: 'c3a4d5d090a0' },
+    'Digest.mli': { summary: 'The Digest interface: a 16-byte string, from a string, substring or channel.', digest: 'bd233843ae0f' },
+    'Either.ml': {
+      summary: "Either from OCaml 4.12, reduced to its type: the functions are commented out for ocaml-light.",
+      digest: '2380418a7a52',
+      important: [{ at: 'type:t', say: 'only the type is live: the rest is in a comment', weight: 3 }],
+    },
+    'Either.mli': { summary: "Either's interface, the type only: Left or Right, the linkers' two kinds of operand.", digest: '759508b24e9f' },
+    'Float.ml': { summary: 'Float as a module, from OCaml 4.07, trimmed to the arithmetic and compare.', digest: '5a0d2a358e00' },
+    'Float.mli': { summary: 'The Float interface: arithmetic, classification and comparison of floats.', digest: '619acbc61b6c' },
+    'Fun.ml': {
+      summary: 'Fun from OCaml 4.08: id, const, flip, negate, and protect, the try-finally.',
+      digest: 'eab30e13e226',
+      important: [
+        { at: 'def:protect', say: 'finally runs once, even if work raises', weight: 3 },
+        { at: 'comment:"TODO: last version is below"', say: "4.08's version needs backtraces: not ported", weight: 1 },
+      ],
+    },
+    'Fun.mli': { summary: 'The Fun interface: protect, what FS and the kernel locks release resources with.', digest: 'f5f32434343f' },
+    'Int.ml': { summary: 'Int as a module, from OCaml 4.08: arithmetic, bits, conversions to and from strings.', digest: '57bf132c4e3f' },
+    'Int.mli': { summary: 'The Int interface: min_int, max_int, logical operations, compare, to_string.', digest: 'a7cfb25abccc' },
+    'Lazy.ml': { summary: 'Deferred computations as a record: Delayed, Value or Exception, forced once.', digest: 'e1696ff1bbda' },
+    'Lazy.mli': { summary: "The Lazy interface: 'a t and force, without the compiler's lazy keyword support.", digest: '13093b90636b' },
+    'Option.ml': {
+      summary: 'Option from OCaml 4.08, its labels dropped: value takes the default by position.',
+      digest: '569593cad188',
+      important: [{ at: 'def:value', say: 'no ~default: ocaml-light has no punned labels', weight: 3 }],
+    },
+    'Option.mli': {
+      summary: "The Option interface: map, bind, value, iter; the compiler's checker leans on it most.",
+      digest: 'a32d4a11dd81',
+      capitals: [
+        { at: 'type:t', say: "the option type, the stdlib's own re-exported" },
+        { at: 'def:value', say: 'the default by position, not ~default' },
+        { at: 'def:map', say: 'map over Some' },
+      ],
+      important: [{ at: 'def:bind', say: 'chains optional steps', weight: 1 }],
+    },
+    'Random.ml': {
+      summary: "OCaml 1.07's generator: a lagged-Fibonacci register of 55 words, seeded through MD5.",
+      digest: '401c80b7a218',
+      important: [
+        { at: 'def:state', say: 'the 55 words: init 27182818 on a 32-bit machine', weight: 3 },
+        { at: 'def:bits', say: 'x[j] += x[j+24]: 30 bits a call', weight: 3 },
+        { at: 'def:intaux', say: 'rejects the top slice: no modulo bias', weight: 1 },
+        { at: 'def:full_init', say: 'the seed stirred by Digest.string', weight: 1 },
+        { at: 'comment:"Test functions.  Not included in the library."', say: 'chi-square tests, dead in a comment', weight: 1 },
+      ],
+    },
+    'Random.mli': { summary: 'The Random interface: init, full_init, int, float; what CapRandom wraps.', digest: 'f8ac88acb766' },
+    'Result.ml': { summary: 'Result from OCaml 4.08: Ok or Error, with bind, map, value (the default by position).', digest: '8cc5c606b63d' },
+    'Result.mli': { summary: 'The Result interface; the type itself is in Stdlib, as 4.02.2 put it.', digest: '5bf88ca4e89b' },
+    'String.ml': {
+      summary: "Strings from OCaml 1.07 (mutable, bytes = string) with 4.x names added: trim, starts_with.",
+      digest: 'dcbd2f62402a',
+      important: [
+        { at: 'def:create', say: 'a fresh mutable string: the C primitive', weight: 3 },
+        { at: 'def:concat', say: 'two passes: measure, then blit', weight: 3 },
+        { at: 'comment:"duplicated List.iter to avoid mutual deps"', say: 'base must not depend on collections', weight: 1 },
+        { at: 'def:escaped', say: 'OCaml-lexer escapes, char by char', weight: 1 },
+        { at: 'def:index_rec', say: 'raises Not_found: no index_opt here', weight: 1 },
+        { at: 'comment:"duplicated in bytes.ml"', say: 'stale: Bytes.ml has no starts_with', weight: 1 },
+      ],
+    },
+    'String.mli': {
+      summary: 'The String interface every program uses: sub, concat, index, trim, starts_with.',
+      digest: '73dee9f73efb',
+      capitals: [
+        { at: 'def:sub', say: 'a copy of a slice' },
+        { at: 'def:concat', say: 'join with a separator' },
+        { at: 'def:index', say: 'first occurrence, or Not_found' },
+      ],
+      important: [
+        { at: 'comment:"--"', say: 'below: the unsafe primitives and 4.x additions', weight: 1 },
+        { at: 'def:starts_with', say: 'the prefix by position, no ~prefix', weight: 1 },
+      ],
+    },
+    'Uchar.ml': { summary: 'Unicode scalar values from OCaml 4.03: valid ranges, succ, pred, Latin-1 conversions.', digest: 'b6faa4e48729' },
+    'Uchar.mli': { summary: 'The Uchar interface: of_int, to_int, is_valid, bom, rep; unused by xix so far.', digest: '87b0f894252e' },
+  },
+  skeletons: [
+    skeletons.parts('The base types, below the collections', [
+      ['../core/Stdlib.ml', 'the primitives and types they all stand on'],
+      ['Char.ml', 'characters: what strings are made of'],
+      ['String.ml', 'strings, mutable: the hub'],
+      ['Bytes.ml', 'a shim over String for 4.02-era code'],
+      ['Buffer.ml', 'strings grown: what Printf and IO write into'],
+      ['Digest.ml', 'MD5 of strings'],
+      ['Random.ml', 'numbers seeded through Digest'],
+      ['Option.ml', 'the 4.08 helpers over option, result, either'],
+    ], [
+      ['String.ml', '../core/Stdlib.ml', 'externals and exceptions'],
+      ['String.ml', 'Char.ml', 'case, escapes'],
+      ['Bytes.ml', 'String.ml', 'every function a String one'],
+      ['Buffer.ml', 'String.ml', 'blits into its string'],
+      ['Digest.ml', 'String.ml', 'hashes strings'],
+      ['Random.ml', 'Digest.ml', 'the seed stirred'],
+    ]),
+    skeletons.module('Buffer.ml', 'A buffer: a string grown by doubling', [
+      ['create', 'the first string, the size a guess', ''],
+      ['add_char', 'one char in, resizing when full', 'the buffer'],
+      ['resize', 'a new string twice as big, the old blitted', 'when full'],
+      ['contents', 'the filled prefix, copied out', 'the chars added'],
+    ]) + { bones+: [{ at: 'Buffer.ml:type:t', role: 'the string, its position, its length' }], joints+: [{ from: 'Buffer.ml:type:t', to: 'Buffer.ml:def:create', say: 'made' }] },
+    skeletons.module('Random.ml', 'Random: 55 words stepped, 30 bits a call', [
+      ['init', 'a seed to full_init', ''],
+      ['full_init', 'the state stirred by MD5', 'an array of seeds'],
+      ['state', 'the lagged-Fibonacci register', 'filled'],
+      ['bits', 'one step: 30 random bits', 'read and updated'],
+      ['intaux', 'rejection below a multiple of the bound', 'bits'],
+      ['int', 'a number below the bound', 'unbiased'],
+    ]),
+    skeletons.calls('Strings: C allocates, OCaml fills', 'String.ml:def:create', 'a fresh string, from the runtime', [
+      ['String.ml:def:make', 'create, then fill', 'a fresh string'],
+      ['String.ml:def:sub', 'create, then blit', 'a fresh string'],
+      ['String.ml:def:concat', 'measure, create, blit each', 'a fresh string'],
+      ['String.ml:def:map', 'create, then set each char', 'a fresh string'],
+      ['String.ml:def:escaped', 'measure the escapes, create, fill', 'a fresh string'],
+    ]),
+  ],
+}

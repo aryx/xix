@@ -1,0 +1,70 @@
+// lib_graphics/ui/: libdraw's small user interfaces, what the code map
+// says of it. Only the menu (menuhit.c) is written; Frame_ui (libframe),
+// Text_ui and Selection_ui (getrect.c) are placeholders, still empty.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "libdraw's widgets: a pop-up menu (menuhit.c) used by rio; frames, text and selection to come.",
+  files: {
+    'Menu_ui.ml': {
+      summary: "A pop-up menu (menuhit.c): a layer over the desktop, the item under the mouse lit until release.",
+      digest: '449f966c41be',
+      capitals: [{ at: 'def:menu', say: "rio's right-button menu" }],
+      important: [
+        { at: 'type:items', say: 'a label and its action each', weight: 2 },
+        { at: 'code:"Layer.alloc desktop menur Color.white"', say: 'the menu is a layer: the server restores under it', weight: 3 },
+        { at: 'def:scan_items', say: 'while the button is held: highlight', weight: 3 },
+        { at: 'type:action', say: 'the item under the highlight saved and restored', weight: 2 },
+        { at: 'def:menu_selection', say: 'a point to an item index', weight: 1 },
+        { at: 'def:paint_item', weight: 1 },
+        { at: 'def:rect_of_menu_entry', weight: 1 },
+      ],
+    },
+    'Menu_ui.mli': {
+      summary: 'menu: items, a position, a button, the devices.',
+      digest: '8014eabd9336',
+      important: [{ at: 'def:menu', weight: 2 }],
+    },
+    'Frame_ui.ml': {
+      summary: "libframe's place (text frames, frinsert...): empty.",
+      digest: 'd41d8cd98f00',
+    },
+    'Text_ui.ml': {
+      summary: "A text widget's place: empty (the terminal's text is in windows/Terminal.ml).",
+      digest: '68b329da9893',
+    },
+    'Selection_ui.ml': {
+      summary: "getrect.c's place (a rectangle swept): empty, rio's own is in Mouse_action.",
+      digest: '1a62f33b590f',
+    },
+  },
+  skeletons: [
+    skeletons.parts('UI: a menu, and places for more', [
+      ['Menu_ui.ml', 'the pop-up menu'],
+      ['Frame_ui.ml', 'text frames, to come'],
+      ['Selection_ui.ml', 'a rectangle swept, to come'],
+      ['../draw/Layer.ml', 'what the menu is drawn on'],
+      ['../input/Mouse.ml', 'what it follows'],
+    ], [
+      ['Menu_ui.ml', '../draw/Layer.ml', 'a layer'],
+      ['Menu_ui.ml', '../input/Mouse.ml', 'flush_and_read'],
+    ]),
+    {
+      name: 'The menu: a layer, a loop while the button is held',
+      bones: [
+        { at: 'Menu_ui.ml:def:menu', role: 'sizes, layer, paint, interact' },
+        { at: 'Menu_ui.ml:def:scan_items', role: 'the highlight follows the mouse' },
+        { at: 'Menu_ui.ml:def:menu_selection', role: 'which item' },
+        { at: 'Menu_ui.ml:def:paint_item', role: 'an item drawn, lit or not' },
+        { at: 'Menu_ui.ml:def:rect_of_menu_entry', role: "an item's rectangle" },
+      ],
+      joints: [
+        { from: 'Menu_ui.ml:def:menu', to: 'Menu_ui.ml:def:paint_item', say: 'all items' },
+        { from: 'Menu_ui.ml:def:menu', to: 'Menu_ui.ml:def:scan_items', say: 'button down' },
+        { from: 'Menu_ui.ml:def:scan_items', to: 'Menu_ui.ml:def:menu_selection', say: 'the position' },
+        { from: 'Menu_ui.ml:def:scan_items', to: 'Menu_ui.ml:def:paint_item', say: 'old off, new on' },
+        { from: 'Menu_ui.ml:def:paint_item', to: 'Menu_ui.ml:def:rect_of_menu_entry', say: 'where' },
+      ],
+    },
+  ],
+}

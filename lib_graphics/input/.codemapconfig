@@ -1,0 +1,88 @@
+// lib_graphics/input/: libdraw's mouse, keyboard and cursor (mouse.c,
+// keyboard.c; the C used an I/O proc per device, here a Thread each
+// sending on an Event channel), what the code map says of it.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: 'The mouse and the keyboard, each read by a thread sending on a channel; the cursor set.',
+  files: {
+    'Mouse.ml': {
+      summary: "The mouse (mouse.c): /dev/mouse read by a thread, each 'm' message a state on a channel.",
+      digest: '70e35d342b88',
+      important: [
+        { at: 'type:state', say: 'position, buttons, time', weight: 3 },
+        { at: 'type:ctl', say: 'the device and its channel', weight: 2 },
+        { at: 'def:thread_mouse', say: "the device's thread: /dev/mouse to states", weight: 3 },
+        { at: 'code:"failwith \"Mouse.thread: resize event: TODO\""', say: "'r': a resize kills the thread", weight: 2 },
+        { at: 'def:init', say: '/dev/mouse, /dev/cursor, the thread started', weight: 2 },
+        { at: 'def:flush_and_read', say: 'drawing flushed before waiting', weight: 1 },
+        { at: 'def:set_cursor', say: 'written to /dev/cursor', weight: 1 },
+      ],
+    },
+    'Mouse.mli': {
+      summary: 'Mouse states and the controller: init, receive, read, the cursor.',
+      digest: '19355c824413',
+      capitals: [
+        { at: 'type:state', say: 'a mouse state: where, which buttons' },
+        { at: 'type:ctl', say: 'the mouse, as a channel of states' },
+      ],
+      important: [{ at: 'def:receive', say: 'an event, for Event.select', weight: 2 }],
+    },
+    'Keyboard.ml': {
+      summary: 'The keyboard (keyboard.c): /dev/cons in raw mode, read by a thread, a key per byte on a channel.',
+      digest: '3a2a6230563e',
+      important: [
+        { at: 'def:thread_keyboard', say: 'bytes, not runes: UTF-8 split', weight: 3 },
+        { at: 'code:"Bytes.of_string \"rawon\""', say: 'raw: no line editing by the kernel', weight: 2 },
+        { at: 'def:init', weight: 2 },
+        { at: 'def:receive', weight: 1 },
+      ],
+    },
+    'Keyboard.mli': {
+      summary: 'Keys and the keyboard controller.',
+      digest: '8609188f9985',
+      capitals: [{ at: 'type:ctl', say: 'the keyboard, as a channel of keys' }],
+      important: [{ at: 'type:key', say: 'a Rune.t, a char for now', weight: 2 }],
+    },
+    'Cursor.ml': {
+      summary: "Cursor bitmaps (cursor.h's Cursor) and the default arrow.",
+      digest: '516f3d3ef7cc',
+      important: [{ at: 'type:t', say: 'offset, clear and set bits', weight: 2 }, { at: 'def:arrow', weight: 1 }],
+    },
+    'Cursor.mli': {
+      summary: 'The cursor type and the arrow.',
+      digest: 'bcc757e153af',
+    },
+  },
+  skeletons: [
+    skeletons.parts('Input: a thread per device, a channel each', [
+      ['Mouse.ml', 'the mouse: states on a channel'],
+      ['Keyboard.ml', 'the keyboard: keys on a channel'],
+      ['Cursor.ml', "the mouse's picture"],
+      ['../../windows/Thread_mouse.ml', "rio's reader of the mouse"],
+      ['../../windows/Thread_keyboard.ml', "rio's reader of the keyboard"],
+    ], [
+      ['Cursor.ml', 'Mouse.ml', 'set_cursor'],
+      ['Mouse.ml', '../../windows/Thread_mouse.ml', 'receive'],
+      ['Keyboard.ml', '../../windows/Thread_keyboard.ml', 'receive'],
+    ]),
+    {
+      name: 'The mouse: a device, a thread, a channel',
+      bones: [
+        { at: 'Mouse.ml:type:ctl', role: 'fd, cursor fd, channel' },
+        { at: 'Mouse.ml:def:init', role: 'opens, starts the thread' },
+        { at: 'Mouse.ml:def:thread_mouse', role: "/dev/mouse's 49 bytes to a state" },
+        { at: 'Mouse.ml:type:state', role: 'the state sent' },
+        { at: 'Mouse.ml:def:receive', role: 'the event for the client' },
+        { at: 'Mouse.ml:def:read', role: 'or waited for' },
+      ],
+      joints: [
+        { from: 'Mouse.ml:def:init', to: 'Mouse.ml:type:ctl', say: 'builds' },
+        { from: 'Mouse.ml:def:init', to: 'Mouse.ml:def:thread_mouse', say: 'Thread.create' },
+        { from: 'Mouse.ml:def:thread_mouse', to: 'Mouse.ml:type:state', say: 'parsed' },
+        { from: 'Mouse.ml:type:state', to: 'Mouse.ml:def:receive', say: 'on the channel' },
+        { from: 'Mouse.ml:def:receive', to: 'Mouse.ml:def:read', say: 'synced' },
+      ],
+    },
+  ],
+}

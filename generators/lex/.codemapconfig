@@ -1,0 +1,134 @@
+// generators/lex/: olex, ocaml-light's ocamllex (Xavier Leroy's, kept in
+// sync, pad.txt says), what the code map says of it. The pipeline, from
+// CLI.main and the book's chapters: the .mll parsed (Parser.mly over
+// Lexer.mll, not sources to the map) to an Ast.lexer_definition,
+// compiled to a DFA (Lexgen.make_dfa: the regexps of an entry made one,
+// each action a final marker, then followpos, the dragon book's direct
+// construction), the transitions compacted (Compact), and the tables
+// and actions printed (Output), run by Lexing's engine. Main.ml calls
+// CLI.main without Cap.main: no capabilities, Sys.argv and open_in.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "olex, ocamllex's port: a .mll's regexps compiled to one DFA per entry, its tables printed as OCaml.",
+  files: {
+    'Main.ml': {
+      summary: "olex's entry: CLI.main, then exit 0 (no Cap.main: this port predates the capabilities).",
+      digest: 'e47fafe593ee',
+    },
+    'CLI.ml': {
+      summary: 'olex x.mll: parsed, compiled to a DFA, compacted, written to x.ml; errors located by char.',
+      digest: '46f5c4425561',
+      capitals: [{ at: 'def:main', say: 'parse, make_dfa, compact, output' }],
+      important: [
+        { at: 'code:"Parser.lexer_definition Lexer.main lexbuf"', say: 'the .mll to its AST, by ocamlyacc', weight: 2 },
+        { at: 'code:"Lexgen.make_dfa def"', say: 'the regexps to an automaton', weight: 3 },
+        { at: 'comment:"CONFIG"', say: 'the other output: states as functions', weight: 1 },
+        { at: 'code:"Sys.argv"', say: 'argv read directly: no capability', weight: 1 },
+      ],
+    },
+    'CLI.mli': { summary: 'Interface of main.', digest: 'f5edc2f9dc5d' },
+    'Ast.ml': {
+      summary: "A lexer definition: header, entries of (regexp, action) cases, trailer; regexps over chars.",
+      digest: 'f87707793209',
+      capitals: [
+        { at: 'type:regular_expression', say: 'Epsilon, Characters, Sequence, Alternative, Repetition' },
+        { at: 'type:lexer_definition', say: 'what the .mll parses to' },
+      ],
+      important: [
+        { at: 'type:location', say: 'an action as a slice of the source file', weight: 2 },
+        { at: 'type:rule', say: 'an entry: its name and its cases', weight: 1 },
+      ],
+    },
+    'Lexgen.ml': {
+      summary: "Regexps to a DFA directly, by followpos (the dragon book): each entry's cases made one regexp.",
+      digest: 'e48fa8956b04',
+      capitals: [{ at: 'def:make_dfa', say: 'encode the regexps, then the automaton' }],
+      important: [
+        { at: 'def:encode_casedef', say: 'the cases one regexp, actions as end markers', weight: 2 },
+        { at: 'type:regexp', say: 'positions numbered: Chars and Action leaves', weight: 2 },
+        { at: 'def:followpos', say: 'which position may follow which', weight: 3 },
+        { at: 'def:firstpos', say: 'nullable, firstpos, lastpos: the book', weight: 1 },
+        { at: 'def:encode_lexentries', say: 'the DFA: sets of positions made states', weight: 3 },
+        { at: 'def:translate_state', say: 'a state: its moves per char, or its action', weight: 2 },
+        { at: 'type:automata_matrix', say: 'the result: one row per state', weight: 1 },
+      ],
+    },
+    'Lexgen.mli': {
+      summary: "Interface of the DFA: its states, moves and entries, all olex's other parts read.",
+      digest: 'b829a7ee9442',
+      capitals: [
+        { at: 'type:automata_row', say: 'a state: perform an action, or shift' },
+        { at: 'type:automata_entry', say: 'an entry point: its initial state, its actions' },
+      ],
+      important: [{ at: 'def:make_dfa', say: 'the one function', weight: 2 }],
+    },
+    'Compact.ml': {
+      summary: 'The transition matrix packed into base, default, check and trans vectors, as Lexing reads them.',
+      digest: '567b421d0b98',
+      capitals: [{ at: 'def:compact_tables', say: 'rows packed, overlapping where they can' }],
+      important: [
+        { at: 'def:pack_moves', say: "a row: its default, then a free slot for the rest", weight: 3 },
+        { at: 'def:most_frequent_elt', say: "the row's default move", weight: 1 },
+        { at: 'type:lex_tables', say: "the five arrays of Lexing's engine", weight: 2 },
+      ],
+    },
+    'Compact.mli': { summary: 'Interface of the compaction: lex_tables and compact_tables.', digest: 'c5e6df8b8cb3' },
+    'Output.ml': {
+      summary: 'The .ml written: header, the tables as strings, an entry function per rule, the actions, trailer.',
+      digest: '440bd2500a93',
+      capitals: [{ at: 'def:output_lexdef', say: 'header, tables, entries, trailer' }],
+      important: [
+        { at: 'def:output_tables', say: 'the arrays as string literals', weight: 2 },
+        { at: 'def:output_entry', say: 'an entry: Lexing.engine, then match on the action', weight: 2 },
+        { at: 'def:copy_chunk', say: 'the actions copied from the .mll', weight: 1 },
+        { at: 'section:Simpler version', say: 'unused: the DFA as mutually recursive functions', weight: 2 },
+      ],
+    },
+    'Output.mli': { summary: 'Interface of the two outputs: tables, or functions.', digest: 'd64d09e844b4' },
+  },
+  skeletons: [
+    skeletons.cli('olex: a .mll to an .ml', [
+      ['Ast.ml:type:lexer_definition', 'the .mll parsed (Parser.mly)', 'the file'],
+      ['Lexgen.ml:def:make_dfa', 'the regexps to a DFA', 'the definition'],
+      ['Compact.ml:def:compact_tables', 'the DFA packed', 'the transitions'],
+      ['Output.ml:def:output_lexdef', 'the .ml written', 'tables, entries'],
+    ]),
+    skeletons.module('Lexgen.ml', 'Regexps to a DFA: positions, followpos, states', [
+      ['make_dfa', 'the entry', ''],
+      ['encode_lexdef', 'regexps numbered, actions as markers', 'the definition'],
+      ['encode_lexentries', 'the states built from position sets', 'the regexps'],
+      ['followpos', 'what may follow each position', 'a regexp'],
+      ['translate_state', 'a state to a row', 'each state'],
+    ]),
+    skeletons.module('Compact.ml', 'A matrix packed into overlapping vectors', [
+      ['compact_tables', 'each row packed in turn', ''],
+      ['pack_moves', 'the default out, the rest at a free base', 'a row'],
+      ['grow_transitions', 'the vectors grown when full', 'no room'],
+    ]),
+    skeletons.module('Output.ml', 'The .ml printed', [
+      ['output_lexdef', 'header, tables, entries, trailer', ''],
+      ['output_tables', 'the vectors as strings', 'the tables'],
+      ['output_array', 'one vector', 'each'],
+    ]) + {
+      bones+: [
+        { at: 'Output.ml:def:output_entry', role: 'an entry and its actions' },
+        { at: 'Output.ml:def:output_lexdef_simple', role: 'the other way, unused' },
+      ],
+      joints+: [{ from: 'Output.ml:def:output_lexdef', to: 'Output.ml:def:output_entry', say: 'each entry' }],
+    },
+    skeletons.parts("olex's files: parse, compile, compact, print", [
+      ['CLI.ml', 'the driver'],
+      ['Ast.ml', 'the definition'],
+      ['Lexgen.ml', 'the DFA'],
+      ['Compact.ml', 'the packed tables'],
+      ['Output.ml', 'the .ml'],
+    ], [
+      ['CLI.ml', 'Ast.ml', 'parses to'],
+      ['Ast.ml', 'Lexgen.ml', 'compiled'],
+      ['Lexgen.ml', 'Compact.ml', 'the matrix'],
+      ['Compact.ml', 'Output.ml', 'the tables'],
+      ['Lexgen.ml', 'Output.ml', 'the entries'],
+    ]),
+  ],
+}

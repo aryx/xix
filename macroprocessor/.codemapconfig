@@ -1,0 +1,122 @@
+// macroprocessor/: what the code map says of it
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "cpp as a library, Plan 9's built-in preprocessor: #include, #define, #ifdef, for occ and oas alike.",
+  files: {
+    'Parse_cpp.ml': {
+      summary: "The preprocessor as a token filter: a stack of lexbufs between a language's lexer and grammar.",
+      digest: '2fe8e2fba56c',
+      capitals: [{ at: 'def:parse', say: 'cpp inside the parser, not before it' }],
+      important: [
+        { at: 'type:hook', say: "a language's lexer and grammar, plugged in", weight: 3 },
+        { at: 'code:"let rec lexfunc () ="', say: 'what the grammar pulls: directives done here', weight: 3 },
+        { at: 'comment:"allow any number of arguments for macros"', say: 'no 25-argument or 8K-body limits', weight: 1 },
+        { at: 'type:macro', say: 'bodies with #1, #2 for parameters', weight: 1 },
+        { at: 'def:hmacros', say: 'global: cleared at each parse', weight: 1 },
+        { at: 'def:find_include', say: '"x.h" also looks beside the source', weight: 1 },
+        { at: 'def:_cwd', say: 'dead, its comment wonders too', weight: 1 },
+      ],
+    },
+    'Parse_cpp.mli': {
+      summary: "cpp's entry: a language's hooks, the -D and -I conf, a file, back an AST and its line history.",
+      digest: 'ffa05935c66d',
+      important: [
+        { at: 'type:token_category', say: 'all cpp must know of a token', weight: 3 },
+        { at: 'def:parse', say: 'used by occ and every oas parser', weight: 3 },
+      ],
+    },
+    'Lexer_cpp.mll': {
+      summary: "The directives lexed (ocamllex): #define bodies, macro arguments, and skipping for #ifdef.",
+      digest: 'a2ffcf68fe4a',
+      important: [
+        { at: 'comment:"stricter:"', say: 'no space after #: a choice, not a lack', weight: 3 },
+        { at: 'def:token', say: 'one directive, after the #', weight: 3 },
+        { at: 'def:define_body', say: 'parameters renamed #1, #2...', weight: 1 },
+        { at: 'def:subst_args_in_macro_body', say: 'the arguments put back in', weight: 1 },
+        { at: 'def:skip_for_ifdef', say: 'nested ifdefs counted while skipping', weight: 1 },
+      ],
+    },
+    'Ast_cpp.ml': {
+      summary: "The directives as data: #include, #define, #undef, #line, #pragma, #ifdef, #else, #endif.",
+      digest: '1f49f52f1ed0',
+      important: [
+        { at: 'type:directive', say: "what Lexer_cpp's token returns", weight: 3 },
+        { at: 'type:macro', say: 'params, varargs, body', weight: 1 },
+      ],
+    },
+    'Location_cpp.ml': {
+      summary: "One global line number across all included files, and its history to find file and line back.",
+      digest: 'e64383400c20',
+      important: [
+        { at: 'def:final_loc_of_loc', say: 'the history replayed, includes as a stack', weight: 3 },
+        { at: 'comment:"bugfix: wrong!! TODO"', say: 'the line after an #include ends may be off', weight: 3 },
+        { at: 'def:add_event', say: 'Include, Line, Eof: at the global line', weight: 1 },
+        { at: 'def:history', say: 'global, saved in the object file', weight: 1 },
+      ],
+    },
+    'Location_cpp.mli': {
+      summary: "Locations after preprocessing, shared by occ, oas and olk's error messages.",
+      digest: '1f05cbb3e6b5',
+      capitals: [
+        { at: 'type:loc', say: 'a global line number: what every AST keeps' },
+        { at: 'def:final_loc_of_loc', say: 'back to a file and a line' },
+      ],
+      important: [
+        { at: 'type:location_history', say: 'marshalled in objects: olk reports lines', weight: 3 },
+        { at: 'type:Error', say: 'every tool catches it in its CLI', weight: 1 },
+      ],
+    },
+    'Preprocessor.ml': {
+      summary: "cpp's configuration from the command line: -D definitions, -I paths, the source's directory.",
+      digest: '992e2fe6900d',
+      important: [{ at: 'type:conf', say: 'built by occ and oas, the same flags', weight: 3 }],
+    },
+    'Flags_cpp.ml': {
+      summary: "Debugging switches: #line events, include lookups, macro expansions printed.",
+      digest: '662c15354599',
+    },
+    'CLI.ml': {
+      summary: "Not built: a comment planning cpp as a program of its own (dune's executable is commented out).",
+      digest: 'c4d1cc1f6b83',
+      important: [{ at: 'comment:"make it an independent program"', say: 'a todo: only the library exists', weight: 1 }],
+    },
+    'CLI.mli': { summary: "Empty: the standalone cpp is still to write.", digest: 'd41d8cd98f00' },
+    'Main.ml': { summary: "Empty: the standalone cpp is still to write.", digest: 'd41d8cd98f00' },
+  },
+  skeletons: [
+    {
+      name: 'cpp between the lexer and the grammar',
+      bones: [
+        { at: 'Parse_cpp.ml:def:parse', role: 'the entry: a stack of lexbufs' },
+        { at: 'Parse_cpp.ml:type:hook', role: "the language's lexer and parser" },
+        { at: 'Lexer_cpp.mll:def:token', role: 'a directive, after #' },
+        { at: 'Parse_cpp.ml:def:define', role: 'a macro into hmacros' },
+        { at: 'Parse_cpp.ml:def:find_include', role: 'an #include found on the paths' },
+        { at: 'Lexer_cpp.mll:def:subst_args_in_macro_body', role: 'a macro call expanded' },
+        { at: 'Location_cpp.ml:def:add_event', role: 'the line history kept' },
+      ],
+      joints: [
+        { from: 'Parse_cpp.ml:type:hook', to: 'Parse_cpp.ml:def:parse', say: 'the tokens, categorized' },
+        { from: 'Lexer_cpp.mll:def:token', to: 'Parse_cpp.ml:def:parse', say: 'a directive on #' },
+        { from: 'Parse_cpp.ml:def:parse', to: 'Parse_cpp.ml:def:define', say: '#define' },
+        { from: 'Parse_cpp.ml:def:parse', to: 'Parse_cpp.ml:def:find_include', say: '#include: a new lexbuf' },
+        { from: 'Parse_cpp.ml:def:parse', to: 'Lexer_cpp.mll:def:subst_args_in_macro_body', say: 'an identifier defined' },
+        { from: 'Parse_cpp.ml:def:parse', to: 'Location_cpp.ml:def:add_event', say: 'Include, Eof, Line' },
+      ],
+    },
+    {
+      name: 'The directives lexed',
+      bones: [
+        { at: 'Lexer_cpp.mll:def:token', role: 'a directive after #' },
+        { at: 'Lexer_cpp.mll:def:define_body', role: "a #define's body" },
+        { at: 'Lexer_cpp.mll:def:macro_arguments', role: "a call's arguments" },
+        { at: 'Lexer_cpp.mll:def:subst_args_in_macro_body', role: '#1, #2 replaced' },
+        { at: 'Lexer_cpp.mll:def:skip_for_ifdef', role: 'text skipped to #else or #endif' },
+      ],
+      joints: [
+        { from: 'Lexer_cpp.mll:def:token', to: 'Lexer_cpp.mll:def:define_body', say: '#define' },
+        { from: 'Lexer_cpp.mll:def:macro_arguments', to: 'Lexer_cpp.mll:def:subst_args_in_macro_body', say: 'the arguments' },
+      ],
+    },
+  ],
+}

@@ -1,0 +1,42 @@
+// applications/clock/: what the code map says of it (tinybox codemap;
+// the format: ~/github/ocaml-elm-playground/docs/manual/codemap.md,
+// section 12). The C original: ~/principia/applications/misc/clock.c,
+// an event loop over libevent; here threads and channels (Event.select)
+// over lib_graphics' Keyboard and Mouse threads and a timer thread.
+// Built by its mkfile only (oclock), for Plan 9 and rio.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "oclock, Plan 9's clock in OCaml: an analog clock drawn in a rio window, redrawn every half second.",
+  files: {
+    'clock.ml': {
+      summary: "clock.c ported: hands drawn with libdraw, events from keyboard, mouse and a timer thread.",
+      digest: 'fb0f5368ab88',
+      capitals: [{ at: 'def:redraw', say: 'the face, twelve dots, two hands' }],
+      important: [
+        { at: 'type:event', say: 'the three channels as one type', weight: 2 },
+        { at: 'def:circlept', say: 'a point on the dial: y goes down', weight: 1 },
+        { at: 'code:"if ntm = !tm && view.r = !r"', say: 'same second, same size: nothing drawn', weight: 2 },
+        { at: 'def:main_thread', say: 'display, window, devices, the loop', weight: 3 },
+        { at: 'comment:"does not seem to work under plan9"', say: 'the timer thread may never be preempted', weight: 2 },
+        { at: 'code:"] |> Event.select"', say: 'whichever channel is ready first', weight: 3 },
+        { at: 'comment:"original colors"', say: "Plan 9's blue-green, here red", weight: 1 },
+      ],
+      links: [{ from: 'def:main_thread', to: 'def:redraw' }],
+    },
+  },
+  skeletons: [
+    skeletons.chain('oclock: set up, then a loop of events and redraws', [
+      ['clock.ml:code:"Cap.main (fun caps"', 'Cap.main: draw, keyboard, mouse', ''],
+      ['clock.ml:def:main_thread', 'the display, the window, colors, threads', 'caps'],
+      ['clock.ml:code:"] |> Event.select"', 'wait for a key, the mouse or the timer', 'the channels'],
+      ['clock.ml:def:redraw', 'the dial and hands, if the time moved', 'each event'],
+    ]) + {
+      bones+: [{ at: 'clock.ml:type:event', role: 'Mouse, Key or Timer' }],
+      joints+: [
+        { from: 'clock.ml:type:event', to: 'clock.ml:code:"] |> Event.select"', say: 'each channel wrapped' },
+        { from: 'clock.ml:def:redraw', to: 'clock.ml:code:"] |> Event.select"', say: 'again, until q' },
+      ],
+    },
+  ],
+}

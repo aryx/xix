@@ -1,0 +1,96 @@
+// lib_core/system/: what the code map says of it
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The stdlib's system modules (Sys, Filename, Arg), OCaml 1.x's own, and the OS bindings below.",
+  files: {
+    'Sys.mli': {
+      summary: 'The process and its OS: argv, getcwd, file_exists, signals, all C primitives.',
+      digest: '624fc661d324',
+      capitals: [
+        { at: 'def:argv', say: 'the command line; programs get it via CapSys' },
+        { at: 'def:getcwd', say: 'where the program runs: 12 files ask' },
+        { at: 'def:file_exists', say: 'the check ogit and omk make most' },
+      ],
+      important: [
+        { at: 'def:os_type', say: 'Unix, Win32 or MacOS: Filename branches on it', weight: 3 },
+        { at: 'type:signal_behavior', say: 'what TCB and threads set on signals' },
+      ],
+    },
+    'Sys.ml': {
+      summary: "Sys's implementation: each value a caml_sys_* primitive of the runtime.",
+      digest: '9a2576977d5a',
+      important: [
+        { at: 'def:get_config', say: 'the OS name and word size, from the runtime', weight: 3 },
+        { at: 'def:argv', say: 'read once, at startup' },
+      ],
+    },
+    'Filename.mli': {
+      summary: 'File names as strings: basename, dirname, concat, suffixes (Fpath wraps them).',
+      digest: '2ffba689e7bb',
+      important: [
+        { at: 'def:basename', say: 'the most used here', weight: 3 },
+        { at: 'def:concat' },
+        { at: 'def:temp_file', say: "Tmp's only use" },
+      ],
+    },
+    'Filename.ml': {
+      summary: 'Unix, Windows and Mac OS 9 conventions side by side, one picked by Sys.os_type.',
+      digest: 'db4ea745468d',
+      important: [
+        { at: 'def:concat', say: 'the choice made once, at module init', weight: 3 },
+        { at: 'def:is_relative', say: 'a pair picked in one match' },
+        { at: 'def:temp_file', say: 'retries names until one is free' },
+      ],
+    },
+    'Arg.mli': {
+      summary: "The command-line parser every CLI.ml uses: a spec list of flags, their actions, docs.",
+      digest: '86c3cf1c68b6',
+      capitals: [
+        { at: 'type:spec', say: 'what a flag does: Set, Unit, String...' },
+        { at: 'def:align', say: 'every CLI.ml aligns its flags' },
+      ],
+      important: [
+        { at: 'def:parse_argv', say: 'CLI.main passes argv from CapSys', weight: 3 },
+        { at: 'def:usage' },
+        { at: 'type:Bad', say: 'a user error, printed with the usage' },
+      ],
+    },
+    'Arg.ml': {
+      summary: 'The flag parser: argv walked from Arg.current, each key looked up in the spec list.',
+      digest: '385bb8547424',
+      important: [
+        { at: 'def:parse_argv', say: 'the loop over argv; -help added for free', weight: 3 },
+        { at: 'def:current', say: 'a global cursor: parse twice, reset it', weight: 3 },
+        { at: 'def:parse', say: 'reads Sys.argv itself: bypasses the caps' },
+        { at: 'def:add_help', say: '-help and --help, unless given' },
+        { at: 'def:align', say: 'pads docs to one column' },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts('The system layer: stdlib over the OS', [
+      ['Sys.mli', 'the process: argv, cwd, env, signals'],
+      ['Filename.mli', 'names as strings, per OS convention'],
+      ['Arg.mli', 'the command line parsed into flags'],
+      ['unix/', 'the POSIX system calls, for files and processes'],
+      ['plan9/', "Plan 9's own calls: bind, mount, 9P"],
+    ], [
+      ['Filename.mli', 'Sys.mli', 'os_type picks the convention'],
+      ['Arg.mli', 'Sys.mli', 'argv'],
+      ['plan9/', 'unix/', 'file descriptors'],
+    ]),
+    skeletons.calls('Parsing a command line', 'Arg.ml:def:parse_argv', 'walks argv from current, applies each spec', [
+      ['Arg.ml:def:assoc3', 'a key looked up in the specs', 'each flag'],
+      ['Arg.ml:def:add_help', '-help and --help added', 'the specs'],
+      ['Arg.ml:def:usage_b', 'the usage, on Bad or -help', 'an error'],
+      ['Arg.ml:def:current', 'the global cursor into argv', 'advances'],
+    ]),
+    skeletons.module('Filename.ml', 'One API, three OS conventions', [
+      ['unix_concat', 'the Unix way: a slash', ''],
+      ['concat', 'the one chosen by Sys.os_type', 'picked'],
+      ['basename', 'likewise chosen at init', 'the same pattern'],
+      ['temp_file', 'built on concat', 'a name'],
+    ]),
+  ],
+}

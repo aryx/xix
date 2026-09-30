@@ -1,0 +1,111 @@
+// kernel/processes/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). 9's proc.c (the pid table, pexit, kproc) and sysproc.c (rfork,
+// exec, exits, await), ~/principia/kernel/processes/. The scheduler is
+// scheduler/. What changes: a process is found by its pid in a hash
+// table (no Proc arena, no pointers between Procs), its kernel stack is
+// an OCaml thread, and the scheduler is reached through Hooks.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Processes (9's proc.c, sysproc.c): the pid table, kernel processes, rfork, exec, exits, await.",
+  files: {
+    'Process.ml': {
+      summary: "The processes by pid: a hash table in place of 9's Proc arena, and the pid counter.",
+      digest: '4a6b0e18d088',
+      important: [
+        { at: 'type:allocator', say: 'a table of pids: locks queue pids too', weight: 3 },
+        { at: 'def:_alloc', say: 'unused: rfork and kproc inline it', weight: 1 },
+        { at: 'code:"Thread.create (fun () -> failwith"', say: 'a thread with no code yet: no forkchild', weight: 1 },
+        { at: 'def:_free', say: 'Todo: the GC frees, once unhashed', weight: 1 },
+      ],
+    },
+    'Process.mli': {
+      summary: 'The pid table: hash, unhash, proc_of_pid, the pid counter.',
+      digest: '8e667e831067',
+      capitals: [
+        { at: 'def:proc_of_pid', say: 'a pid to its Process_.t' },
+        { at: 'def:hash', say: 'a new process made findable' },
+      ],
+    },
+    'sysrfork.ml': {
+      summary: "rfork(2) (9's sysrfork): a new Process_.t, segments shared or copied, readied; NoFork is Todo.",
+      digest: '3ad9caab5b28',
+      capitals: [{ at: 'def:syscall_rfork', say: 'a new process' }],
+      important: [
+        { at: 'code:"then Segment.share s"', say: 'RFMEM: memory shared, else copied', weight: 3 },
+        { at: 'code:"parent = if fork_flags.Syscall.wait_child"', say: 'RFNOWAIT: no parent to report to', weight: 1 },
+        { at: 'code:"TODO: sysrfork().thread"', say: "the child's thread: the parent's stack not forked", weight: 3 },
+        { at: 'code:"| Syscall.NoFork _flags ->"', say: 'rfork without a new process: Todo', weight: 1 },
+        { at: 'module:Chan', say: "Chan.share, twice: Kproc.ml's copy", weight: 1 },
+      ],
+    },
+    'sysrfork.mli': { summary: 'syscall_rfork: the child pid to the parent.', digest: '41e268a7109d' },
+    'sysexec.ml': {
+      summary: "exec(2) (9's sysexec): an a.out header checked, segments replaced; stops at Todo before running.",
+      digest: 'bbdf7421c52e',
+      capitals: [{ at: 'def:syscall_exec', say: 'a new program in this process' }],
+      important: [
+        { at: 'code:"!Hooks.Chan.chan_of_filename cmd"', say: "namec: a hook never set, no files yet", weight: 1 },
+        { at: 'def:parse_header', say: 'Todo: every exec fails here', weight: 3 },
+        { at: 'comment:"factorize with plan9-ml/formats/executable/a_out.ml"', say: "now linker/'s Exec_file", weight: 1 },
+        { at: 'comment:"note that this is not end_data + bss_size"', say: 'the bss starts in the last data page', weight: 1 },
+        { at: 'code:"let text_segment ="', say: 'Todo: demand loading from the channel', weight: 1 },
+      ],
+    },
+    'sysexec.mli': { summary: 'syscall_exec: a command and its arguments.', digest: '9f62ca345d85' },
+    'sysexits.ml': {
+      summary: "exits(2) (9's pexit): the parent told, children orphaned, memory freed, then Moribund and sched.",
+      digest: '37dcc481e4ee',
+      capitals: [{ at: 'def:syscall_exits', say: 'a process ends' }],
+      important: [
+        { at: 'code:"if up.pid = 1"', say: 'the boot process by pid, not a nil parent', weight: 1 },
+        { at: 'code:"parent.waitq <- wmsg :: parent.waitq"', say: "the parent's await will find it", weight: 3 },
+        { at: 'code:"List.length parent.waitq < 128"', say: "9's limit: daemons that never await", weight: 1 },
+        { at: 'def:hooks', say: 'what other modules undo: sysalarm', weight: 1 },
+        { at: 'comment:"todo: why need that?? coupling with sched"', say: "9's pexit locks for schedinit to free", weight: 1 },
+      ],
+    },
+    'sysexits.mli': { summary: 'syscall_exits, and the hooks run at exit.', digest: 'ffe4d37c25a6' },
+    'sysawait.ml': {
+      summary: "await(2) (9's pwait): sleep until a child's wait_msg is queued, then take it.",
+      digest: '815837c733b2',
+      capitals: [{ at: 'def:syscall_await', say: "a child's end, waited for" }],
+      important: [
+        { at: 'code:"Error.error Error.Enochild"', say: 'no child, none dead: an error', weight: 1 },
+        { at: 'code:"!Hooks.Scheduler.sleep"', say: "no Rendez yet, unlike 9's waitr", weight: 3 },
+      ],
+    },
+    'sysawait.mli': { summary: "syscall_await: a child's wait_msg.", digest: 'd2c07a97b2a4' },
+    'Kproc.ml': {
+      summary: "Kernel processes (9's kproc): a function run as a process, no user memory, readied.",
+      digest: 'c533a1552aaf',
+      important: [
+        { at: 'def:kproc', say: 'the Process_.t built inline, as rfork does', weight: 3 },
+        { at: 'code:"seg = Hashtbl.create 1"', say: 'no segments: kernel memory only', weight: 1 },
+      ],
+    },
+    'Kproc.mli': { summary: 'kproc: a name and a function.', digest: '34fb097bedf4' },
+  },
+  skeletons: [
+    skeletons.parts('A process: born, replaced, ended, waited for', [
+      ['Process.ml', 'the pid table'],
+      ['sysrfork.ml', 'born: a copy of its parent'],
+      ['Kproc.ml', 'born: a kernel function'],
+      ['sysexec.ml', 'replaced: a new program'],
+      ['sysexits.ml', 'ended: its parent told'],
+      ['sysawait.ml', 'waited for, by the parent'],
+    ], [
+      ['sysrfork.ml', 'Process.ml', 'hash'],
+      ['Kproc.ml', 'Process.ml', 'hash'],
+      ['sysexits.ml', 'Process.ml', 'proc_of_pid, unhash'],
+      ['sysexits.ml', 'sysawait.ml', "a wait_msg in the parent's waitq"],
+    ]),
+    skeletons.chain('A child, from rfork to its parent\'s await', [
+      ['sysrfork.ml:def:syscall_rfork', 'the child made, readied, the parent resched', ''],
+      ['Process.ml:def:hash', 'findable by pid', 'hash'],
+      ['sysexits.ml:def:syscall_exits', 'the child ends: its message queued', 'later'],
+      ['sysawait.ml:def:syscall_await', 'the parent wakes and takes it', 'waitq'],
+    ]),
+  ],
+}

@@ -1,0 +1,38 @@
+// linker/libraries/: what the code map says of it
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The library format (.a): a list of object files, marshalled; written by oar, read by olk and onm.",
+  files: {
+    'Library_file.ml': {
+      summary: "A library saved and loaded: the objects' list marshalled, with the object file's version.",
+      digest: '7f1cef84a629',
+      important: [
+        { at: 'def:load', say: 'a stale version refused', weight: 3 },
+        { at: 'def:save', say: 'output_value, like an object', weight: 3 },
+        { at: 'def:is_lib_filename', say: '.oa, .oa5, .oav, .oai: no 7, 6, j suffix', weight: 1 },
+      ],
+    },
+    'Library_file.mli': {
+      summary: "An archive is a list of objects, themselves serialized assembly ASTs.",
+      digest: '9d8bd04270d7',
+      capitals: [{ at: 'type:t', say: 'a list of objects: no index' }],
+      important: [{ at: 'comment:"is really essentially just a list of objects"', say: "Plan 9's simplicity, kept", weight: 3 }],
+    },
+  },
+  skeletons: [
+    {
+      name: 'A library: objects in a list',
+      bones: [
+        { at: 'Library_file.ml:type:t', role: 'the objects' },
+        { at: 'Library_file.ml:def:save', role: 'marshalled, by oar' },
+        { at: 'Library_file.ml:def:load', role: 'read back, by olk and onm' },
+        { at: '../../assembler/objects/Object_file.ml:type:t', role: 'each element' },
+      ],
+      joints: [
+        { from: '../../assembler/objects/Object_file.ml:type:t', to: 'Library_file.ml:type:t', say: 'a list of' },
+        { from: 'Library_file.ml:type:t', to: 'Library_file.ml:def:save', say: 'written' },
+        { from: 'Library_file.ml:def:save', to: 'Library_file.ml:def:load', say: 'the file' },
+      ],
+    },
+  ],
+}

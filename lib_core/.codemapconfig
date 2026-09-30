@@ -1,0 +1,34 @@
+// lib_core/: the libraries under every xix program. Two kinds side by
+// side: ocaml-light's own stdlib (base/, collections/, core/, printing/,
+// parsing/, system/: built only by mk, dune using OCaml's), and xix's
+// commons on top of it (commons/, regexps/, compression/, crypto/...).
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The libraries every program is written with: ocaml-light's stdlib, and the commons over it.",
+  dirs: {
+    symlinks: { summary: "The stdlib's files under their lowercase names, as symlinks, for ocaml-light's build." },
+    misc: { summary: "camlinternalOO.ml, ocaml-light's objects runtime (off the map, .codemapignore)." },
+  },
+  skeletons: [
+    skeletons.parts("lib_core: ocaml-light's stdlib, then the commons", [
+      ['core/', 'Stdlib: the channels, exit, the primitives'],
+      ['base/', 'String, Option, Buffer: the basic types'],
+      ['collections/', 'List, Hashtbl, Array, Set, Map'],
+      ['printing/', 'Printf, Format, Printexc'],
+      ['system/', 'Sys, Arg, Filename, Unix, and Plan 9 bind and mount'],
+      ['parsing/', "Lexing and Parsing: the runtime of ocamllex and ocamlyacc's output"],
+      ['commons/', 'Common, Fpath, FS, Console, Logs, Exit: what programs call'],
+      ['regexps/', "ocaml-re's regexps, and the =~ of Common"],
+      ['../caps/', 'the capabilities the commons demand'],
+    ], [
+      ['base/', 'core/', 'built on'],
+      ['collections/', 'base/', 'built on'],
+      ['printing/', 'core/', 'channels'],
+      ['commons/', 'collections/', 'extends as List_, Hashtbl_'],
+      ['commons/', 'system/', 'Sys, Unix'],
+      ['commons/', '../caps/', 'every effect behind a capability'],
+      ['commons/', 'regexps/', 'Common.=~'],
+    ]),
+  ],
+}

@@ -1,0 +1,92 @@
+// lib_core/printing/: what the code map says of it
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Printf, Format and Printexc of OCaml 1.x: formats read as strings at run time, Obj.magic.",
+  files: {
+    'Printf.mli': {
+      summary: 'Formatted output: printf, eprintf, sprintf, bprintf over a format string.',
+      digest: '19e93613172b',
+      important: [
+        { at: 'def:sprintf', say: 'the most used: spf in Common', weight: 3 },
+        { at: 'def:eprintf', say: 'what Logs prints with' },
+        { at: 'def:fprintf' },
+      ],
+    },
+    'Printf.ml': {
+      summary: "Formats interpreted: the typed format is a string underneath, Obj.magic unmasks it.",
+      digest: '058381055709',
+      important: [
+        { at: 'def:scan_format', say: 'one % directive: its flags, then a continuation', weight: 3 },
+        { at: 'def:fprintf', say: 'Obj.magic: the typechecker trusted, not us', weight: 3 },
+        { at: 'def:sprintf', say: 'the same loop into a Buffer' },
+        { at: 'def:bad_format' },
+      ],
+    },
+    'Format.mli': {
+      summary: "The pretty-printer: boxes and break hints, laid out to fit a margin.",
+      digest: '6a7309bec919',
+      important: [
+        { at: 'type:formatter', say: 'where boxes are laid out', weight: 3 },
+        { at: 'def:fprintf', say: '@[ @] @, in the format', weight: 3 },
+        { at: 'def:std_formatter' },
+        { at: 'def:formatter_of_buffer', say: "Common's to_string printers" },
+      ],
+    },
+    'Format.ml': {
+      summary: "Oppen's pretty-printing: tokens queued with sizes, a scan stack fixing them.",
+      digest: '36f57ab0000d',
+      important: [
+        { at: 'type:formatter', weight: 3 },
+        { at: 'def:advance_left', say: 'print what fits, delay what may not', weight: 3 },
+        { at: 'def:format_pp_token', say: 'a token laid out: break or not' },
+        { at: 'def:scan_push', say: 'a box or break waits for its size' },
+        { at: 'def:set_size', say: 'the size known: pop the scan stack' },
+        { at: 'def:break_new_line' },
+        { at: 'def:fprintf', say: '@-directives become box calls' },
+      ],
+    },
+    'Printexc.mli': {
+      summary: 'Exceptions printed, and backtraces as the later stdlib names them.',
+      digest: '7599a29fbfe9',
+      important: [
+        { at: 'def:to_string', weight: 3 },
+        { at: 'type:raw_backtrace', say: "Exception.ml's, over an old runtime" },
+      ],
+    },
+    'Printexc.ml': {
+      summary: "An exception printed by walking its block with Obj; raw backtraces faked as text.",
+      digest: '5af0bdef9e03',
+      important: [
+        { at: 'def:to_string', say: 'the constructor name from the block', weight: 3 },
+        { at: 'def:fields', say: 'arguments printed by their tags' },
+        { at: 'type:raw_backtrace', say: 'a string: the new API, emulated' },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts('Printing: formats read at run time', [
+      ['Printf.mli', 'formats to channels, strings, buffers'],
+      ['Format.mli', 'the same formats, boxes and breaks laid out'],
+      ['Printexc.mli', 'exceptions to strings'],
+    ], [
+      ['Printexc.mli', 'Printf.mli', 'sprintf'],
+      ['Format.mli', 'Printf.mli', 'the same directives'],
+    ]),
+    skeletons.module('Printf.ml', 'A format interpreted', [
+      ['fprintf', 'the loop: characters out, % to scan_format', ''],
+      ['scan_format', 'a directive: flags, width, conversion', 'a %'],
+      ['extract_format', 'the directive as a C format', 'its span'],
+      ['format_string', 'a %s padded', 'a string'],
+    ]),
+    skeletons.chain("Format.ml: Oppen's algorithm", [
+      ['Format.ml:def:fprintf', '@[ @, @] to box and break calls', ''],
+      ['Format.ml:def:pp_open_box_gen', 'a box opened', 'a box'],
+      ['Format.ml:def:scan_push', 'its size unknown yet, stacked', 'a token'],
+      ['Format.ml:def:set_size', 'the size known when the box closes', 'sizes'],
+      ['Format.ml:def:advance_left', 'the queue printed as far as known', 'then'],
+      ['Format.ml:def:format_pp_token', 'a token laid out on the line', 'each token'],
+      ['Format.ml:def:break_new_line', 'a break that does not fit', 'too long'],
+    ]),
+  ],
+}

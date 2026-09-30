@@ -1,0 +1,54 @@
+// lib_gui/lib_graphics/input/: an older copy of
+// ../../../lib_graphics/input, types only (no device, no thread), what
+// the code map says of it.
+local skeletons = import '../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Mouse states, keys, runes and the cursor as types: lib_graphics' input without its devices.",
+  files: {
+    'mouse.ml': {
+      summary: 'Mouse states and buttons, and their parsing from ints.',
+      digest: '1ec2e1550977',
+      important: [{ at: 'type:state', say: 'position, buttons, time', weight: 2 }],
+    },
+    'mouse.mli': {
+      summary: 'The mouse state type.',
+      digest: '2b300993efdf',
+    },
+    'keyboard.ml': {
+      summary: 'A key: a rune.',
+      digest: 'd2a678751ca1',
+    },
+    'keyboard.mli': {
+      summary: 'The key type.',
+      digest: '0950ecb93845',
+    },
+    'rune.ml': {
+      summary: 'Runes as chars, no Unicode yet; bytes to runes and back.',
+      digest: '24170d217491',
+      important: [
+        { at: 'type:t', say: 'a char: Unicode to come', weight: 2 },
+        { at: 'code:"str.[i] <- c"', say: 'mutable strings: pre-4.06 OCaml', weight: 1 },
+      ],
+    },
+    'cursor.ml': {
+      summary: 'Cursor bitmaps and the arrow.',
+      digest: 'a3ecf9e2bdf6',
+    },
+    'cursor.mli': {
+      summary: 'The cursor type.',
+      digest: 'bcc757e153af',
+    },
+  },
+  skeletons: [
+    skeletons.parts('Input types, copied', [
+      ['rune.ml', 'a character'],
+      ['keyboard.ml', 'a key: a rune'],
+      ['mouse.ml', 'a mouse state'],
+      ['cursor.ml', "the mouse's picture"],
+    ], [
+      ['rune.ml', 'keyboard.ml', 'the key type'],
+      ['cursor.ml', 'mouse.ml', 'shown for it'],
+    ]),
+  ],
+}

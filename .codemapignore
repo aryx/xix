@@ -34,3 +34,7 @@ VCS_dulwich.nw
 # ignore this file too but I had to explicitely add it here
 .Mk.nwcache
 .Rc.nwcache
+
+# claude: the tests' inputs (C, assembly, mkfiles fed to the programs),
+# data, not code; tests/Test.ml, the suite, stays on the map
+tests/*/

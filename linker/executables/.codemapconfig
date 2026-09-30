@@ -1,0 +1,75 @@
+// linker/executables/: what the code map says of it
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The executable formats olk writes: Plan 9's a.out and Linux's ELF (32 and 64 bits), and the link's config.",
+  files: {
+    'Exec_file.ml': {
+      summary: "The link's configuration (format, arch, text and data addresses, entry, profiling) and section sizes.",
+      digest: '94a07e3180b0',
+      capitals: [{ at: 'type:linker_config', say: 'everything -H -T -D -R -E -p decide' }],
+      important: [
+        { at: 'type:header_type', say: 'a.out for Plan 9, ELF for Linux', weight: 3 },
+        { at: 'comment:"TODO: | Elf64 | MachO | PE"', say: 'stale: Elf covers 64 bits now', weight: 1 },
+        { at: 'type:sections_size', say: 'text, data, bss: the header needs them', weight: 1 },
+        { at: 'type:profile_kind', say: 'only ProfileCount is done', weight: 1 },
+      ],
+    },
+    'A_out.ml': {
+      summary: "Plan 9's a.out header: eight big-endian words; ARM only so far.",
+      digest: '1c7526efb990',
+      important: [
+        { at: 'def:write_header', say: 'magic, sizes, entry: 32 bytes', weight: 3 },
+        { at: 'comment:"a.out uses big-endian integers"', say: 'even on little-endian ARM', weight: 3 },
+        { at: 'code:"TODO: A_out magic for Mips"', say: 'MIPS and the rest: ELF only', weight: 1 },
+      ],
+    },
+    'A_out.mli': { summary: "The a.out header's size and writer.", digest: '4409bd076bc4' },
+    'Elf.ml': {
+      summary: "ELF written from scratch as 5l's elf.c: ident, three program headers, three sections, 32 or 64 bits.",
+      digest: 'adc1139cf387',
+      important: [
+        { at: 'def:write_headers', say: 'the ELF header and program headers', weight: 3 },
+        { at: 'def:write_sections', say: 'section headers at the end, seeking back', weight: 3 },
+        { at: 'def:header_size', say: 'ELF32 or ELF64 by the arch', weight: 1 },
+        { at: 'def:nb_program_headers', say: 'text, data, an empty symbol table', weight: 1 },
+        { at: 'type:machine', say: 'ARM, MIPS, RISC-V, AArch64, x86-64', weight: 1 },
+        { at: 'comment:"spec: ???"', say: 'no spec cited: goken and readelf were', weight: 1 },
+      ],
+    },
+    'Elf.mli': { summary: "ELF's header size (by bits) and its two writers.", digest: '561d5b91f659' },
+  },
+  skeletons: [
+    {
+      name: 'The executable: a config, then a header',
+      bones: [
+        { at: 'Exec_file.ml:type:linker_config', role: 'what the command line decided' },
+        { at: 'Exec_file.ml:type:header_type', role: 'which format' },
+        { at: 'A_out.ml:def:write_header', role: 'Plan 9: 32 bytes' },
+        { at: 'Elf.ml:def:write_headers', role: 'Linux: ELF header, program headers' },
+        { at: 'Elf.ml:def:write_sections', role: 'Linux: section headers' },
+        { at: '../Execgen.ml:def:gen', role: 'the caller, around text and data' },
+      ],
+      joints: [
+        { from: 'Exec_file.ml:type:linker_config', to: 'Exec_file.ml:type:header_type', say: 'holds' },
+        { from: '../Execgen.ml:def:gen', to: 'A_out.ml:def:write_header', say: 'A_out' },
+        { from: '../Execgen.ml:def:gen', to: 'Elf.ml:def:write_headers', say: 'Elf' },
+        { from: '../Execgen.ml:def:gen', to: 'Elf.ml:def:write_sections', say: 'after the data' },
+      ],
+    },
+    {
+      name: 'ELF written: ident, headers, sections',
+      bones: [
+        { at: 'Elf.ml:def:header_size', role: 'where the text starts' },
+        { at: 'Elf.ml:def:write_headers', role: 'the entry: headers' },
+        { at: 'Elf.ml:def:write_ident', role: 'the first 16 bytes' },
+        { at: 'Elf.ml:def:program_header_32', role: 'a segment (64 alike)' },
+        { at: 'Elf.ml:def:write_sections', role: '.text, .data, .strtab' },
+      ],
+      joints: [
+        { from: 'Elf.ml:def:write_headers', to: 'Elf.ml:def:write_ident', say: 'class, byte order' },
+        { from: 'Elf.ml:def:write_headers', to: 'Elf.ml:def:program_header_32', say: 'three segments' },
+        { from: 'Elf.ml:def:header_size', to: 'Elf.ml:def:write_headers', say: 'offsets' },
+      ],
+    },
+  ],
+}

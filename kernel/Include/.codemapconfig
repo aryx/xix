@@ -1,0 +1,116 @@
+// kernel/Include/: what the code map says of it (tinybox codemap).
+// Plan 9's headers the kernel's C is compiled with, copied from an
+// older ~/principia/include/ (core/, graphics/), the syncweb markers
+// gone; ~/principia/include/'s configs judged the same files.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Plan 9's headers for the kernel's C: libc.h, draw.h, memdraw.h, pool.h, from ~/principia's include/.",
+  files: {
+    'libc.h': {
+      summary: "Plan 9's libc.h (an older ~/principia one, pad's bool and fdt on top): what all the C calls.",
+      digest: '86414aa788c1',
+      capitals: [
+        { at: 'code:"struct Fmt {"', say: 'the print engine state: fmt/ runs on it' },
+        { at: 'code:"(*print)"', say: 'print is a pointer: the kernel sets its own' },
+        { at: 'def:malloc', say: 'over pool.h: Port/alloc.c gives the kernel one' },
+      ],
+      important: [
+        { at: "comment:\"pad's stuff\"", say: 'bool, byte, fdt: types for reading the code', weight: 2 },
+        { at: 'def:nelem', say: 'an array length, used everywhere', weight: 1 },
+        { at: 'def:memmove', say: 'Libc/arm/memmove.s: word copies', weight: 1 },
+        { at: 'code:"struct Lock {"', say: 'a spin lock: key and a semaphore', weight: 2 },
+        { at: 'def:getcallerpc', say: 'who called: pool and lock debugging', weight: 1 },
+        { at: 'def:setjmp', say: 'Libc/arm/setjmp.s: sp and pc saved', weight: 1 },
+        { at: 'comment:"getopt like macros"', say: 'ARGBEGIN, unused by a kernel', weight: 1 },
+      ],
+    },
+    'draw.h': {
+      summary: "libdraw's header (an older ~/principia one): Point, Rectangle, Image, the drawing ops.",
+      digest: 'c1b7aac7f646',
+      capitals: [
+        { at: 'type:Point', say: 'the geometry every drawing file speaks' },
+        { at: 'code:"struct Rectangle"', say: 'min and max: max excluded' },
+        { at: 'code:"struct Image"', say: "a client's image: an id in /dev/draw" },
+      ],
+      important: [
+        { at: 'code:"enum ImageChan"', say: 'pixel layouts: channels and their depths', weight: 2 },
+        { at: 'code:"struct Display"', say: 'the client side: the kernel side is Memimage', weight: 1 },
+        { at: 'code:"enum Drawop"', say: 'Porter-Duff compositing operators', weight: 2 },
+        { at: 'def:draw', say: 'the one primitive: src through mask onto dst', weight: 2 },
+      ],
+    },
+    'memdraw.h': {
+      summary: "libmemdraw's header (~/principia's): Memimage, pixels in memory, drawn by the kernel itself.",
+      digest: '8fb993eda7da',
+      capitals: [
+        { at: 'code:"struct Memimage"', say: 'an image in memory: the screen is one' },
+        { at: 'def:memimagedraw', say: 'the compositing heart: Libmemdraw/draw.c' },
+      ],
+      important: [
+        { at: 'code:"struct Memdata"', say: 'the pixels, shared by images and refcounted', weight: 2 },
+        { at: 'type:Memdrawparam', say: 'a draw call, decided once, run by hwdraw', weight: 1 },
+        { at: 'def:hwdraw', say: 'the hook for a hardware blitter: none here', weight: 1 },
+      ],
+    },
+    'memlayer.h': {
+      summary: "libmemlayer's header (~/principia's): Memscreen, windows as layers over a Memimage.",
+      digest: '7e2f06992363',
+      important: [
+        { at: 'code:"struct Memscreen"', say: 'the layers of a screen, front to back', weight: 2 },
+        { at: 'code:"struct Memlayer"', say: 'a window: its save image when covered', weight: 2 },
+      ],
+    },
+    'font.h': {
+      summary: "Fonts and subfonts (~/principia's): characters cached in an image, drawn by Libmemdraw.",
+      digest: 'db1d8d1d3dfe',
+      important: [{ at: 'comment:"This file assumes you have included draw.h before"', say: 'no include of its own: order matters', weight: 1 }],
+    },
+    'pool.h': {
+      summary: "Plan 9's pool allocator header (~/principia's): the kernel and libc share one malloc.",
+      digest: 'f11cf4b37180',
+      capitals: [{ at: 'code:"struct Pool {"', say: 'an arena: Port/pool.c makes mainmem, imagmem' }],
+      important: [
+        { at: 'comment:"so that the kernel can reuse the pool allocation code"', say: 'why the kernel includes a libc header', weight: 2 },
+        { at: 'def:poolalloc', say: 'Libc/port/pool.c', weight: 1 },
+      ],
+    },
+    'syscall.h': {
+      summary: "The system calls' types and flags (~/principia's): open modes, rfork, Qid, Dir.",
+      digest: '15fb8277295a',
+      important: [
+        { at: 'comment:"you must include libc.h instead of this file"', weight: 1 },
+        { at: 'code:"enum Rfork_flags"', say: 'what rfork shares or copies', weight: 1 },
+        { at: 'code:"struct Qid {"', say: "a file's identity on its server", weight: 1 },
+      ],
+    },
+    'ctype.h': {
+      summary: "isalpha and friends as a table of bits (~/principia's), for Libc/port's ctype.c and strtod.",
+      digest: '66bfb736df6c',
+    },
+    'cursor.h': {
+      summary: "Cursor: a 16x16 mouse cursor, its image and mask (~/principia's), for the screen.",
+      digest: '6f9f6b12ce8e',
+    },
+    'keyboard.h': {
+      summary: "libdraw's keyboard header (~/principia's), its key codes: included by no C file of the kernel.",
+      digest: '438fea85bd66',
+    },
+  },
+  skeletons: [
+    skeletons.parts("The kernel's C headers: libc, then graphics", [
+      ['arm/', 'u.h: the machine types, included first'],
+      ['libc.h', 'the C library: strings, print, malloc, locks'],
+      ['pool.h', 'the allocator libc and the kernel share'],
+      ['draw.h', 'the geometry and the drawing model'],
+      ['memdraw.h', 'images in memory: what the kernel draws'],
+      ['memlayer.h', 'windows as layers of the screen'],
+    ], [
+      ['libc.h', 'arm/', 'uchar, ulong, Rune, va_list'],
+      ['pool.h', 'libc.h', 'ulong, Lock'],
+      ['draw.h', 'libc.h', 'bool, fdt, Fmt'],
+      ['memdraw.h', 'draw.h', 'Point, Rectangle'],
+      ['memlayer.h', 'memdraw.h', 'Memimage'],
+    ]),
+  ],
+}

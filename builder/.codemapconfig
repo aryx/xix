@@ -1,0 +1,378 @@
+// builder/: omk, the OCaml port of mk (Plan 9's make), what the code map
+// says of it. From builder/docs/omk.nw's "Code organization" (a file,
+// its role, its entities) and "Software architecture": parse the mkfile
+// (parse), evaluate the AST (eval: includes, variables, backquotes, the
+// rules), build the graph of a target (build_graph, apply_rules), find
+// the outdated files (work, dorecipe), schedule the jobs (run, sched,
+// waitup) running the recipes in a shell (exec_recipe). The book's data
+// flow: mkfile -> tokens -> AST -> rules and meta-rules -> graph -> jobs.
+// The C original is ~/principia/builders/mk/. Lexer.mll and Parser.mly
+// (ocamllex, ocamlyacc) are not sources to the map: Lexer.mli, Parse.ml
+// and Globals.ml speak for them.
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: 'omk, mk ported to OCaml: the mkfile parsed to an AST, evaluated, then graph, out-of-date check, parallel jobs.',
+  files: {
+    'Main.ml': {
+      summary: "omk's entry: Cap.main hands out every capability, CLI.main gets them with argv.",
+      digest: '88d4274418de',
+    },
+    'CLI.ml': {
+      summary: 'The command line and the driver: parse, eval, then per target the graph and the work loop (main.c, mk.c).',
+      digest: '2fe14f699c2e',
+      capitals: [
+        { at: 'def:build_targets', say: 'the mkfile parsed and evaluated, then each target' },
+        { at: 'def:build_target', say: 'graph, then work or wait until the root is Made' },
+      ],
+      important: [
+        { at: 'comment:"Main limitations compared to mk"', say: 'what the port dropped, and why', weight: 2 },
+        { at: 'type:caps', say: 'fork, exec, env, files: what mk may touch', weight: 2 },
+        { at: 'code:"while root.G.state = G.NotMade do"', say: 'work again, or wait for a job to end', weight: 3 },
+        { at: 'comment:"bugfix: root can be BeingMade"', say: 'the last jobs waited for after the loop', weight: 1 },
+        { at: 'code:"print_string (spf \"mk:"', say: 'print_string: stdout without its capability', weight: 1 },
+        { at: 'code:"Eval.eval caps env targets instrs"', say: 'may set the targets: the first in the file', weight: 2 },
+        { at: 'comment:"need to wait for other children before exiting"', say: 'no half-written object files on error', weight: 1 },
+        { at: 'def:do_action', say: '-test_parser, -test_eval: a stage alone', weight: 1 },
+      ],
+      links: [
+        { from: 'def:build_targets', to: 'Parse.ml:def:parse' },
+        { from: 'def:build_targets', to: 'Eval.ml:def:eval' },
+        { from: 'def:build_target', to: 'Graph.ml:def:build_graph' },
+        { from: 'def:build_target', to: 'Outofdate.ml:def:work' },
+        { from: 'def:build_target', to: 'Scheduler.ml:def:waitup' },
+      ],
+    },
+    'CLI.mli': {
+      summary: "omk's interface: the capabilities it needs (each said why) and main, which the tests call too.",
+      digest: '0ff7ffb8aa88',
+      important: [{ at: 'type:caps', say: 'each capability, and what needs it', weight: 2 }],
+    },
+    'Ast.ml': {
+      summary: "An mkfile's AST: words of strings, % and $variables, rules with attributes and recipes (new: mk had none).",
+      digest: '27afc7e5fe45',
+      capitals: [
+        { at: 'type:instr_kind', say: 'a definition, an include, a rule' },
+        { at: 'type:word', say: 'pieces glued without spaces: %.c' },
+      ],
+      important: [
+        { at: 'type:word_element', say: 'a string, %, a $var, a `backquote`', weight: 2 },
+        { at: 'type:var', say: '$x or ${x:a%b=c%d}', weight: 1 },
+        { at: 'type:rule', say: 'targets : prereqs, attributes, recipe', weight: 2 },
+        { at: 'type:rule_attribute', say: ':V: virtual, :Q: quiet, :D: delete...', weight: 1 },
+        { at: 'type:recipe', say: 'raw lines, handed to the shell unparsed', weight: 1 },
+      ],
+    },
+    'Env.ml': {
+      summary: "The variables' values after expansion: the mkfile's, the command line's, the environment's (var.c).",
+      digest: '364f83687b45',
+      capitals: [{ at: 'type:t', say: 'variables to lists of strings' }],
+      important: [
+        { at: 'def:initenv', say: 'the process environment, MKFLAGS, MKARGS', weight: 2 },
+        { at: 'def:add_var', say: 'a command-line var=value wins', weight: 2 },
+        { at: 'def:shellenv_of_env', say: 'what a recipe sees as its environment', weight: 2 },
+        { at: 'def:mk_vars', say: 'the variables mk sets itself', weight: 1 },
+      ],
+    },
+    'Env.mli': {
+      summary: 'Interface of the variables: their table, initenv from the process, what a recipe inherits.',
+      digest: 'cef5e6b36852',
+      important: [{ at: 'type:t', say: 'the table, and which came from argv', weight: 2 }],
+    },
+    'Eval.ml': {
+      summary: "The AST evaluated: variables expanded, backquotes run, <files included, rules indexed (new: mk mixed it in parsing).",
+      digest: '113775b9ef8f',
+      capitals: [{ at: 'def:eval', say: 'instructions to rules and meta-rules, and the env' }],
+      important: [
+        { at: 'def:eval_word', say: 'a word to strings, or to a % pattern', weight: 3 },
+        { at: 'def:eval_words', say: 'words: all strings, or all patterns', weight: 2 },
+        { at: 'code:"| A.Include ws ->"', say: '<file: parse and eval, recursively', weight: 2 },
+        { at: 'code:"| A.PipeInclude ws ->"', say: '<|cmd: its output parsed as mkfile', weight: 1 },
+        { at: 'code:"| A.Backquoted cmd ->"', say: '`cmd` run by the shell now', weight: 1 },
+        { at: 'comment:"TODO: should do that! bug otherwise?"', say: 'a word without % still a pattern', weight: 1 },
+        { at: 'comment:"TODO? delete tmpfile?"', say: "<|cmd's temporary file left behind", weight: 1 },
+      ],
+      links: [
+        { from: 'def:eval', to: 'Parse.ml:def:parse' },
+        { from: 'def:eval_word', to: 'Shell.ml:def:exec_backquote' },
+      ],
+    },
+    'Eval.mli': {
+      summary: 'Interface of the evaluation, and why it needs exec (backquotes) and open_in (includes).',
+      digest: 'd01b22543b06',
+      important: [{ at: 'def:eval', say: 'sets the first target if none given', weight: 2 }],
+    },
+    'Rules.ml': {
+      summary: 'The rules extracted by eval: simple ones by target, meta-rules with % patterns, and a rule instantiated.',
+      digest: '8a4b93b7f658',
+      capitals: [{ at: 'type:rules', say: 'simple rules by target; meta-rules in order' }],
+      important: [
+        { at: 'type:rule', say: 'strings or % patterns: one type for both', weight: 2 },
+        { at: 'type:rule_exec', say: 'a rule applied: its stem, $target, $prereq', weight: 2 },
+      ],
+    },
+    'Graph.ml': {
+      summary: "The dependency graph of a target, built once: rules and meta-rules applied, cycles and ambiguity checked (graph.c).",
+      digest: '84ce7452314e',
+      capitals: [
+        { at: 'type:node', say: 'a file: its time, its state, its arcs' },
+        { at: 'def:build_graph', say: 'a target to the root of its graph' },
+      ],
+      important: [
+        { at: 'def:apply_rules', say: 'a node: simple rules, then meta-rules matched', weight: 3 },
+        { at: 'type:arc', say: 'a prerequisite, labelled with its rule', weight: 2 },
+        { at: 'type:build_state', say: 'NotMade, BeingMade, Made', weight: 2 },
+        { at: 'def:hnodes', say: 'a DAG: one node per name, shared', weight: 1 },
+        { at: 'def:vacuous', say: 'meta-rule branches leading nowhere cut', weight: 1 },
+        { at: 'def:check_ambiguous', say: 'two recipes for one node', weight: 1 },
+        { at: 'def:update', say: 'a job done: the new time read', weight: 2 },
+        { at: 'comment:"todo: infinite rule detection"', say: 'no $NREP: a meta-rule may recurse forever', weight: 1 },
+      ],
+    },
+    'Graph.mli': {
+      summary: "Interface of the graph: node, arc and build state, build_graph, update after a job.",
+      digest: 'e6ff7c76de98',
+      important: [{ at: 'type:node', say: 'mutable: work and waitup change it', weight: 2 }],
+    },
+    'Percent.ml': {
+      summary: "A poor man's regexp: % patterns matched against names, the stem substituted back (match.c).",
+      digest: '458f63d53496',
+      capitals: [{ at: 'def:match_', say: '%.5 against hello.5: the stem hello' }],
+      important: [
+        { at: 'type:pattern', say: 'strings and one %', weight: 2 },
+        { at: 'def:subst', say: 'the stem put back: %.c to hello.c', weight: 2 },
+        { at: 'def:match_and_subst', say: "${x:%.c=%.5}'s substitution", weight: 1 },
+      ],
+    },
+    'Percent.mli': {
+      summary: "Interface of the % patterns: match, subst, and the substitution of ${x:a%b=c%d}.",
+      digest: '2f6b5bc01d5c',
+    },
+    'Outofdate.ml': {
+      summary: "What is out of date: the graph walked depth first, jobs started as soon as found (mk.c's work).",
+      digest: '63d676aea0ff',
+      capitals: [{ at: 'def:work', say: 'depth first: prerequisites before targets' }],
+      important: [
+        { at: 'def:outofdate', say: 'older than a prerequisite, or missing', weight: 2 },
+        { at: 'comment:"I use the strictly < in the C version"', say: 'float times: <= is safe again', weight: 1 },
+        { at: 'def:dorecipe', say: "the master arc's recipe made a job", weight: 3 },
+        { at: 'comment:"bug: can not use Set for the accumulator"', say: "$prereq keeps the mkfile's order", weight: 1 },
+        { at: 'comment:"alt: we could return a job list"', say: 'a job run as soon as found', weight: 1 },
+      ],
+      links: [{ from: 'def:dorecipe', to: 'Scheduler.ml:def:run' }],
+    },
+    'Outofdate.mli': {
+      summary: 'Interface of work: may schedule jobs, marks nodes BeingMade or Made, fails on unknown targets.',
+      digest: 'e76e22edc584',
+    },
+    'Job.ml': {
+      summary: "A job: a rule's recipe to run, with its env, its target nodes, $target and $prereq.",
+      digest: '4067f8423230',
+      important: [{ at: 'type:t', say: 'what the scheduler queues', weight: 2 }],
+    },
+    'Scheduler.ml': {
+      summary: 'Jobs queued and run in parallel up to $NPROC; a finished one updates its nodes (run.c).',
+      digest: '75e799be289f',
+      capitals: [{ at: 'def:sched', say: 'a job fired: its recipe to the shell' }],
+      important: [
+        { at: 'def:run', say: 'queued, and fired if a processor is free', weight: 2 },
+        { at: 'def:waitup', say: 'a child ended: its nodes updated, the next fired', weight: 3 },
+        { at: 'comment:"This -e is super important!"', say: 'a failing command stops the recipe', weight: 2 },
+        { at: 'def:nproclimit', say: '$NPROC: how many jobs at once', weight: 1 },
+        { at: 'def:adjust_env', say: '$target, $prereq, $stem set for the recipe', weight: 1 },
+        { at: 'code:"if Set.mem Ast.Delete job.J.rule.R.attrs2"', say: ':D: targets deleted when a recipe fails', weight: 1 },
+      ],
+      links: [{ from: 'def:sched', to: 'Shell.ml:def:exec_recipe' }],
+    },
+    'Scheduler.mli': {
+      summary: "Interface of the scheduler: run a job, wait for one, and the count of those running.",
+      digest: '45c58c00af4e',
+    },
+    'Shell.ml': {
+      summary: 'Recipes, backquotes and <|commands run by a forked shell: sh, or rc when $MKSHELL says (rc.c, Posix.c).',
+      digest: '29c1105f35c3',
+      capitals: [{ at: 'def:exec_recipe', say: "a recipe fed to a shell's stdin" }],
+      important: [
+        { at: 'type:t', say: 'a shell: path, flags, word separator', weight: 1 },
+        { at: 'def:shell_from_env_opt', say: '$MKSHELL: rc if it ends in /rc, else sh', weight: 2 },
+        { at: 'def:exec_shell', say: 'execve with the env; empty variables dropped', weight: 2 },
+        { at: 'comment:"bug: I exclude empty variables"', say: 'rc confused by empty variables', weight: 1 },
+        { at: 'def:feed_shell_input', say: 'the lines written into a pipe', weight: 1 },
+        { at: 'def:exec_backquote', say: "`cmd`: the child's output read back", weight: 2 },
+        { at: 'code:"exit (-2)"', say: 'after execve: Stdlib exit, no capability', weight: 1 },
+      ],
+    },
+    'Shell.mli': {
+      summary: 'Interface of the shell: its capabilities (exec, fork, wait, env, tmp) and the three ways to run it.',
+      digest: '67c4a8d48417',
+    },
+    'Shellenv.ml': {
+      summary: 'The environment given to a shell: names to lists of words, read back from the process.',
+      digest: 'b9bc41047fba',
+    },
+    'Shellenv.mli': {
+      summary: 'Interface of the shell environment: its type, and read_environment.',
+      digest: '4cd4a0ad079b',
+    },
+    'Parse.ml': {
+      summary: 'The mkfile parsed: ocamllex and ocamlyacc wired, the lexer switching to recipe mode after a rule.',
+      digest: '6c9d5cef624d',
+      capitals: [{ at: 'def:parse', say: 'a channel to the AST' }],
+      important: [{ at: 'comment:"nested [[lexfunc]] function"', say: 'rule line, then recipe lines: two lexers', weight: 2 }],
+    },
+    'Parse.mli': {
+      summary: 'Interface of parse, which sets Globals.line and Globals.file as it goes.',
+      digest: '21974b50028e',
+    },
+    'Lexer.mli': {
+      summary: "Interface of the ocamllex lexer (Lexer.mll): tokens, and its state, a rule's recipe next.",
+      digest: 'a564cd847484',
+      important: [{ at: 'type:state', say: 'a rule starts, so the next line is a recipe', weight: 2 }],
+    },
+    'Globals.ml': {
+      summary: "The file and line being parsed, shared by lexer, parser and errors (a cycle otherwise).",
+      digest: '9299a2381571',
+    },
+    'File.ml': {
+      summary: "A file's modification time, None when absent, and its printing.",
+      digest: '4cdd83a8d784',
+    },
+    'File.mli': {
+      summary: "Interface of timeof: None for a missing file.",
+      digest: '625f71e119d7',
+    },
+    'Flags.ml': {
+      summary: 'The debugging flags: explain, dry run, strict, and the dumps of each stage.',
+      digest: '55da613391b5',
+      important: [
+        { at: 'def:explain_mode', say: '-e: why each target is rebuilt', weight: 1 },
+        { at: 'def:dry_mode', say: '-n: recipes printed, not run', weight: 1 },
+      ],
+    },
+  },
+  dirs: {
+    docs: { summary: 'The book, omk.nw: mk explained chapter by chapter, from which the sources are tangled.' },
+  },
+  skeletons: [
+    skeletons.cli('omk: an mkfile to recipes run', [
+      ['CLI.ml:def:build_targets', 'parse and eval the mkfile, then each target', 'the mkfile, the targets'],
+      ['Parse.ml:def:parse', 'the mkfile to an AST', 'the file'],
+      ['Eval.ml:def:eval', 'the rules, the env, the first target', 'the instructions'],
+      ['CLI.ml:def:build_target', 'one target: graph, then work until Made', 'rules, env'],
+      ['Graph.ml:def:build_graph', 'the graph, built once', 'the target'],
+      ['Outofdate.ml:def:work', 'the outdated nodes found, jobs started', 'the root'],
+      ['Scheduler.ml:def:run', 'a job queued, fired if a processor is free', 'a job'],
+      ['Shell.ml:def:exec_recipe', 'the recipe run by sh or rc', 'the recipe'],
+    ]) + {
+      bones+: [{ at: 'Scheduler.ml:def:waitup', role: 'a child ended: its nodes Made' }],
+      joints+: [
+        { from: 'CLI.ml:def:build_target', to: 'Scheduler.ml:def:waitup', say: 'no work possible: wait' },
+        { from: 'Scheduler.ml:def:waitup', to: 'CLI.ml:def:build_target', say: 'nodes Made: work again' },
+      ],
+    },
+    skeletons.parts("omk's files: the book's pipeline", [
+      ['Parse.ml', 'parse: the mkfile to an AST'],
+      ['Ast.ml', 'the AST: words, rules, recipes'],
+      ['Eval.ml', 'eval: variables, includes, backquotes'],
+      ['Rules.ml', 'the rules and meta-rules extracted'],
+      ['Graph.ml', 'the graph of a target'],
+      ['Outofdate.ml', 'what to rebuild'],
+      ['Scheduler.ml', 'the jobs, in parallel'],
+      ['Shell.ml', 'the shell that runs recipes'],
+    ], [
+      ['Parse.ml', 'Ast.ml', 'builds'],
+      ['Ast.ml', 'Eval.ml', 'the instructions'],
+      ['Eval.ml', 'Rules.ml', 'extracts'],
+      ['Rules.ml', 'Graph.ml', 'applied to the target'],
+      ['Graph.ml', 'Outofdate.ml', 'walked'],
+      ['Outofdate.ml', 'Scheduler.ml', 'jobs'],
+      ['Scheduler.ml', 'Shell.ml', 'recipes'],
+      ['Eval.ml', 'Shell.ml', 'backquotes'],
+    ]),
+    skeletons.module('CLI.ml', 'The driver: flags, parse and eval, the work loop', [
+      ['main', 'flags, var=value, targets', ''],
+      ['build_targets', 'env, parse, eval, then each target', 'infile, targets, vars'],
+      ['build_target', 'graph, then work or waitup until Made', 'env, rules, a target'],
+    ]),
+    skeletons.module('Eval.ml', 'An AST evaluated: words to strings or patterns', [
+      ['eval', 'each instruction: definition, include, rule', ''],
+      ['eval_words', 'all strings, or all patterns', 'targets, prereqs, values'],
+      ['eval_word', '$var, ${x:a%b=c%d}, `cmd` expanded', 'each word'],
+    ]) + {
+      bones+: [{ at: 'Shell.ml:def:exec_backquote', role: 'a backquote run' }],
+      joints+: [{ from: 'Eval.ml:def:eval_word', to: 'Shell.ml:def:exec_backquote', say: '`cmd`' }],
+    },
+    {
+      name: 'The graph built: rules applied from the root down, then checked',
+      bones: [
+        { at: 'Graph.ml:def:build_graph', role: 'the entry: a target to its root' },
+        { at: 'Graph.ml:def:apply_rules', role: 'a node: its rules, recursively' },
+        { at: 'Graph.ml:type:node', role: 'a file: time, state, arcs' },
+        { at: 'Graph.ml:def:check_cycle', role: 'no cycle' },
+        { at: 'Graph.ml:def:vacuous', role: 'dead meta-rule branches cut' },
+        { at: 'Graph.ml:def:check_ambiguous', role: 'one recipe per node' },
+      ],
+      joints: [
+        { from: 'Graph.ml:def:build_graph', to: 'Graph.ml:def:apply_rules', say: 'the target' },
+        { from: 'Graph.ml:def:apply_rules', to: 'Graph.ml:type:node', say: 'builds' },
+        { from: 'Graph.ml:def:build_graph', to: 'Graph.ml:def:check_cycle', say: 'the root' },
+        { from: 'Graph.ml:def:build_graph', to: 'Graph.ml:def:vacuous', say: 'then' },
+        { from: 'Graph.ml:def:build_graph', to: 'Graph.ml:def:check_ambiguous', say: 'then' },
+      ],
+    },
+    skeletons.module('Outofdate.ml', 'Out of date: a depth-first walk that starts jobs', [
+      ['work', 'prerequisites first, recursively', ''],
+      ['outofdate', 'older than the prerequisite?', 'each arc'],
+      ['dorecipe', 'the master rule made a job', 'an outdated node'],
+    ]) + {
+      bones+: [{ at: 'Scheduler.ml:def:run', role: 'the job queued' }],
+      joints+: [{ from: 'Outofdate.ml:def:dorecipe', to: 'Scheduler.ml:def:run', say: 'the job' }],
+    },
+    {
+      name: 'The scheduler: a queue, $NPROC processes, wait',
+      bones: [
+        { at: 'Scheduler.ml:def:jobs', role: 'the queue of jobs waiting' },
+        { at: 'Scheduler.ml:def:run', role: 'a job added, fired if room' },
+        { at: 'Scheduler.ml:def:sched', role: 'a job fired: recipe to the shell' },
+        { at: 'Scheduler.ml:def:running', role: 'pid to job, the running ones' },
+        { at: 'Scheduler.ml:def:waitup', role: 'a child ended: nodes updated' },
+      ],
+      joints: [
+        { from: 'Scheduler.ml:def:run', to: 'Scheduler.ml:def:jobs', say: 'the job' },
+        { from: 'Scheduler.ml:def:jobs', to: 'Scheduler.ml:def:sched', say: 'the oldest' },
+        { from: 'Scheduler.ml:def:sched', to: 'Scheduler.ml:def:running', say: 'its pid' },
+        { from: 'Scheduler.ml:def:running', to: 'Scheduler.ml:def:waitup', say: 'the pid waited' },
+        { from: 'Scheduler.ml:def:waitup', to: 'Scheduler.ml:def:sched', say: 'room: the next' },
+      ],
+    },
+    skeletons.module('Shell.ml', 'A shell forked: its three uses, one exec', [
+      ['exec_recipe', 'a recipe: lines to stdin', ''],
+      ['exec_shell', 'execve sh or rc with the env', 'the child'],
+      ['shell_from_env_opt', '$MKSHELL chooses', 'which shell'],
+    ]) + {
+      bones+: [
+        { at: 'Shell.ml:def:exec_backquote', role: '`cmd`: output read back' },
+        { at: 'Shell.ml:def:feed_shell_input', role: 'the lines into a pipe' },
+      ],
+      joints+: [
+        { from: 'Shell.ml:def:exec_backquote', to: 'Shell.ml:def:exec_shell', say: 'the child' },
+        { from: 'Shell.ml:def:exec_recipe', to: 'Shell.ml:def:feed_shell_input', say: 'the recipe' },
+      ],
+    },
+  ],
+  tours: [
+    {
+      name: 'mk hello.5: an mkfile to a recipe run',
+      stops: [
+        { at: 'Main.ml:code:"Cap.main"', say: 'Cap.main hands out the capabilities; CLI.main reads the flags.' },
+        { at: 'CLI.ml:def:build_targets', say: 'The mkfile is parsed to an AST, then evaluated: two stages where mk had one.' },
+        { at: 'Eval.ml:def:eval_word', say: 'A word becomes strings, or a % pattern when it holds one: rules or meta-rules.' },
+        { at: 'Graph.ml:def:apply_rules', say: 'From hello.5 down: simple rules by name, meta-rules by % match, recursively.' },
+        { at: 'CLI.ml:def:build_target', say: 'The loop: work while it finds something, wait for a child when it cannot.' },
+        { at: 'Outofdate.ml:def:work', say: 'Depth first: a node is rebuilt only once its prerequisites are Made.' },
+        { at: 'Scheduler.ml:def:sched', say: 'The recipe printed, then run by the shell with -e: the first error stops it.' },
+        { at: 'Scheduler.ml:def:waitup', say: 'A child ends: its nodes get their new times, and the next job fires.' },
+      ],
+    },
+  ],
+}

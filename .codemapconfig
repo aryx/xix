@@ -1,0 +1,164 @@
+// XIX: what the code map says of it (tinybox codemap, in
+// ~/github/ocaml-elm-playground; its manual docs/manual/codemap.md, its
+// guidelines docs/claude_notes/codemapconfig_guidelines.md). The
+// categories and colours follow docs/index.html's table of the books
+// (core system, toolchain, developer tools, graphics) and ~/principia's
+// root config, whose books these programs port; the chains follow the
+// books' "Software architecture" sections (builder/docs/omk.nw's
+// parse, eval, build_graph, ...; compiler/docs/occ.nw's data flow).
+// The brief the agents wrote the rest from:
+// docs/claude_notes/codemap_brief_xix.md.
+local skeletons = import 'skeletons.libsonnet';
+
+// docs/index.html's categories of books, as ~/principia colours them
+local core_color = '#4a78c8';  // core system: the shell, utilities (blue)
+local toolchain_color = '#3a9a50';  // the development toolchain (green)
+local devtools_color = '#2f8a8a';  // developer tools: mk, ed, git (teal)
+local library_color = '#c8a032';  // the libraries (yellow)
+local kernel_color = '#8a50c0';  // the kernel (purple)
+local graphics_color = '#c84848';  // graphics: rio and its libraries (red)
+local other_color = '#707070';  // beyond the table
+
+// the layers' colours, named, so that the rules read
+local stdio_color = '#50c8f0';
+local fs_color = '#78e66e';
+local process_color = '#f05050';
+local env_color = '#fa9f32';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  title: 'XIX: Plan 9 programs ported to OCaml (mk, rc, a toolchain for ARM, x86-64, ARM64, MIPS and RISC-V, rio, git, a kernel), each with its book',
+  summary: "Plan 9's programs rewritten in OCaml, portable and half the size, the companions of Principia Softwarica's books.",
+  colors: {
+    'shell/': core_color,
+    'utilities/': core_color,
+    'applications/': core_color,
+    'compiler/': toolchain_color,
+    'assembler/': toolchain_color,
+    'linker/': toolchain_color,
+    'macroprocessor/': toolchain_color,
+    'generators/': toolchain_color,
+    'debugger/': toolchain_color,
+    'builder/': devtools_color,
+    'editor/': devtools_color,
+    'vcs/': devtools_color,
+    'lib_core/': library_color,
+    'lib_parsing/': library_color,
+    'caps/': library_color,
+    'lib_graphics/': graphics_color,
+    'lib_gui/': graphics_color,
+    'windows/': graphics_color,
+    'kernel/': kernel_color,
+    'tests/': other_color,
+    'scripts/': other_color,
+  },
+  skeletons: [
+    skeletons.parts("XIX's architecture (a book a box)", [
+      ['shell/', 'orc, the shell: what the user types runs'],
+      ['builder/', 'omk: runs the toolchain as the mkfile says'],
+      ['compiler/', 'occ (5c): C to assembly, in memory (ARM, MIPS, RISC-V)'],
+      ['assembler/', 'oas (5a): assembly to an object file'],
+      ['linker/', 'olk (5l): objects to an executable (a.out, ELF), five architectures'],
+      ['windows/', 'orio: the screen shared, each window a /dev/cons of its own'],
+      ['lib_graphics/', 'libdraw: drawing as messages to /dev/draw'],
+      ['lib_core/', "commons, regexps, the stdlib's own: what every program is written with"],
+      ['caps/', 'the capabilities: what a program may touch, in its types'],
+      ['kernel/', 'Plan 9 kernel in OCaml on the Raspberry Pi, over the C runtime'],
+    ], [
+      ['shell/', 'builder/', 'runs it; its recipes run by orc'],
+      ['builder/', 'compiler/', 'runs'],
+      ['compiler/', 'assembler/', 'shares its assembly AST and object format'],
+      ['assembler/', 'linker/', 'object files'],
+      ['windows/', 'lib_graphics/', 'draws with'],
+      ['shell/', 'lib_core/', 'written with'],
+      ['compiler/', 'lib_core/', 'written with'],
+      ['lib_graphics/', 'lib_core/', 'written with'],
+      ['lib_core/', 'caps/', 'every effect through a capability'],
+      ['kernel/', 'lib_core/', 'written with'],
+    ]),
+    skeletons.chain('How a xix program starts: Main, Cap.main, CLI.main', [
+      ['compiler/Main.ml', 'Main.ml: nothing but Cap.main', ''],
+      ['caps/src/caps/Cap.mli:def:main', 'Cap.main: all the capabilities, given once', 'calls'],
+      ['compiler/CLI.ml:def:main', 'CLI.main: the flags, then the real work, capabilities in its type', 'all_caps'],
+    ]),
+    skeletons.chain('From C to a running program: the toolchain', [
+      ['compiler/CLI.ml:def:compile', 'occ: a .c preprocessed, parsed, typed, to ARM assembly', ''],
+      ['assembler/objects/Object_file.mli:def:save', 'the object file: the assembly AST, marshalled', 'an assembly program'],
+      ['assembler/CLI.ml:def:assemble', 'oas: a .s parsed to the same AST, saved the same way', 'or written by hand'],
+      ['linker/CLI.ml:def:link', 'olk: objects loaded, resolved, laid out, encoded', 'objects'],
+      ['builder/CLI.ml:def:build_targets', 'omk: runs the three, as the mkfile says', 'runs them all'],
+    ]),
+    skeletons.chain('mk: an mkfile to commands run (omk.nw)', [
+      ['builder/Parse.ml:def:parse', 'the mkfile to an AST', ''],
+      ['builder/Eval.ml:def:eval', 'includes, variables, backquotes: the rules', 'the instructions'],
+      ['builder/Graph.ml:def:build_graph', 'the graph of a target: rules applied, meta-rules matched', 'the rules'],
+      ['builder/CLI.ml:def:build_target', 'out of date? jobs run by the scheduler, recipes by the shell', 'the graph'],
+    ]),
+    skeletons.chain('The kernel boots: C, then OCaml', [
+      ['kernel/main.c:def:main', 'C: CPU, MMU, memory, screen, traps, clock', ''],
+      ['kernel/Main.ml:def:main', 'OCaml: caml_startup runs the bytecode (Byterun/)', 'caml_startup'],
+      ['kernel/Syscall_dispatch.ml:def:dispatch', 'a system call: a request to its handler', 'syscalls'],
+    ]),
+  ],
+  tours: [
+    {
+      name: 'A C file compiled, assembled, linked',
+      stops: [
+        { at: 'builder/CLI.ml:def:build_targets', say: 'omk reads the mkfile and decides what is out of date: a .5 from a .c.' },
+        { at: 'compiler/Main.ml:code:"Cap.main"', say: 'Every program starts the same: Cap.main hands out the capabilities, once.' },
+        { at: 'compiler/CLI.ml:def:frontend', say: 'The C preprocessed by the macroprocessor, parsed, checked, typed.' },
+        { at: 'compiler/CLI.ml:def:backend', say: 'The typed AST rewritten and turned into assembly, in memory: no text in between.' },
+        { at: 'assembler/objects/Object_file.mli:def:save', say: 'The object file is the assembly AST, marshalled: the compiler and the assembler share it.' },
+        { at: 'linker/CLI.ml:def:link', say: 'The linker loads the objects, resolves the symbols, lays out text and data.' },
+        { at: 'linker/executables/Exec_file.ml:type:header_type', say: 'An a.out or an ELF header: the executable, for Plan 9 or Linux.' },
+      ],
+    },
+  ],
+  views: [
+    { name: 'The toolchain', files: ['compiler/', 'macroprocessor/', 'assembler/', 'linker/', 'builder/'] },
+    { name: 'The graphics stack', files: ['lib_graphics/', 'lib_gui/', 'windows/'] },
+    { name: 'The capabilities', files: ['caps/', 'lib_core/commons/'] },
+  ],
+  // the anatomy (the X-ray's plates 3 and 4): a program senses its
+  // command line, the console, the keyboard and the mouse (rio's); it
+  // breathes through files, processes and the console, each through a
+  // capability
+  anatomy: {
+    nerves: [
+      { text: 'CapSys.argv', say: 'the command line' },
+      { text: 'Console.stdin', say: 'the console read' },
+      { text: 'Keyboard.receive', say: 'a key, from the keyboard thread' },
+      { text: 'Keyboard.key', say: 'a key' },
+      { text: 'Mouse.receive', say: 'the mouse, from its thread' },
+      { text: 'Mouse.read', say: 'the mouse read' },
+      { text: 'Syscall.Request', say: "a user program's system call" },
+    ],
+    lungs: [
+      { text: 'FS.with_open_in', say: 'a file read' },
+      { text: 'FS.with_open_out', say: 'a file written' },
+      { text: 'Console.print', say: 'the console written' },
+      { text: 'CapUnix.fork', say: 'a process forked' },
+      { text: 'CapUnix.execv', say: 'a program run' },
+      { text: 'CapUnix.wait', say: 'a child waited for' },
+      { text: 'CapSys.getenv', say: 'the environment read' },
+      { text: 'Object_file.save', say: 'an object file written' },
+    ],
+  },
+  layers: [
+    {
+      name: 'What a program may touch: the capabilities',
+      rules: [
+        { text: 'Cap.stdout', color: stdio_color, say: 'the console written' },
+        { text: 'Cap.stderr', color: stdio_color, say: 'errors written' },
+        { text: 'Cap.stdin', color: stdio_color, say: 'the console read' },
+        { text: 'Cap.open_in', color: fs_color, say: 'files read' },
+        { text: 'Cap.open_out', color: fs_color, say: 'files written' },
+        { text: 'Cap.fork', color: process_color, say: 'processes forked' },
+        { text: 'Cap.exec', color: process_color, say: 'programs run' },
+        { text: 'Cap.wait', color: process_color, say: 'children waited for' },
+        { text: 'Cap.chdir', color: env_color, say: 'the directory changed' },
+        { text: 'Cap.env', color: env_color, say: 'the environment' },
+        { text: 'Cap.exit', color: env_color, say: 'the program ended' },
+      ],
+    },
+  ],
+}

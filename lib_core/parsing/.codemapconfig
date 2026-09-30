@@ -1,0 +1,77 @@
+// lib_core/parsing/: what the code map says of it
+// OCaml's stdlib Lexing and Parsing, copied into xix's own stdlib so that
+// ocaml-light builds them; their engines are the runtime's C
+// (caml_lex_engine, caml_parse_engine), reached by `external`.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The runtime of ocamllex and ocamlyacc's output: lexer buffers and the LALR driver, from OCaml's stdlib.",
+  files: {
+    'Lexing.mli': {
+      summary: "Lexer buffers and positions: what every .mll's rules read, from a channel or a string.",
+      digest: 'a6005d20fef8',
+      capitals: [
+        { at: 'type:lexbuf', say: 'what every lexer of xix reads' },
+        { at: 'def:from_channel', say: 'a lexbuf over a file' },
+      ],
+      important: [
+        { at: 'type:position', say: 'file, line, column: for error messages', weight: 3 },
+        { at: 'def:lexeme', say: 'the matched text, in an action', weight: 1 },
+        { at: 'def:from_string', weight: 1 },
+        { at: 'type:lex_tables', say: 'the generated automaton, as strings', weight: 1 },
+      ],
+    },
+    'Lexing.ml': {
+      summary: "The lexer buffer, refilled as the C engine asks; positions updated after each token.",
+      digest: 'bba79054d545',
+      important: [
+        { at: 'def:c_engine', say: 'the automaton runs in the C runtime', weight: 3 },
+        { at: 'def:engine', say: 'positions updated after a token', weight: 1 },
+        { at: 'def:lex_refill', say: 'junk reclaimed, or the buffer doubled', weight: 3 },
+        { at: 'def:from_function', weight: 1 },
+      ],
+    },
+    'Parsing.mli': {
+      summary: "The runtime of ocamlyacc's parsers: Parse_error, positions of the rule's symbols, yyparse.",
+      digest: 'a1bc843ee2bf',
+      capitals: [{ at: 'type:Parse_error', say: 'what every parser of xix raises' }],
+      important: [
+        { at: 'def:symbol_start_pos', say: "the rule's position, in actions", weight: 1 },
+        { at: 'def:rhs_start_pos', weight: 1 },
+        { at: 'comment:"used by the generated parsers only"', say: 'below: the generated code only', weight: 1 },
+      ],
+    },
+    'Parsing.ml': {
+      summary: "The LALR driver: C's parse_engine asks, yyparse reads tokens, runs actions, grows stacks.",
+      digest: '35b5450ca930',
+      capitals: [{ at: 'def:yyparse', say: 'the loop between the C engine and OCaml' }],
+      important: [
+        { at: 'def:parse_engine', say: 'the tables interpreted in C', weight: 3 },
+        { at: 'def:env', say: 'one global parser: not reentrant', weight: 3 },
+        { at: 'def:grow_stacks', weight: 1 },
+        { at: 'type:parser_input', say: 'the C engine and OCaml as a protocol', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts('A generated lexer and parser at run time', [
+      ['Lexing.ml', 'tokens: the buffer and the C lexing engine'],
+      ['Parsing.ml', 'the grammar: the C LALR engine driven'],
+    ], [
+      ['Lexing.ml', 'Parsing.ml', 'tokens and their positions'],
+    ]),
+    skeletons.module('Lexing.ml', 'A token lexed', [
+      ['from_channel', 'a buffer over a channel', ''],
+      ['from_function', 'refilled by a function', 'the channel'],
+      ['engine', 'the C automaton, positions after', 'the buffer'],
+      ['c_engine', 'the tables run in C', 'the tables'],
+    ]) + { bones+: [{ at: 'Lexing.ml:def:lex_refill', role: 'more input, when the engine asks' }],
+           joints+: [{ from: 'Lexing.ml:def:c_engine', to: 'Lexing.ml:def:lex_refill', say: 'end of buffer' }] },
+    skeletons.module('Parsing.ml', 'yyparse: C and OCaml in turn', [
+      ['yyparse', 'the loop on the engine\'s requests', ''],
+      ['parse_engine', 'the LALR tables in C', 'a command'],
+      ['env', 'the stacks, global', 'the state'],
+      ['grow_stacks', 'when the engine runs out', 'Grow_stacks'],
+    ]),
+  ],
+}

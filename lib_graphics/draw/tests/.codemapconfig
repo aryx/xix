@@ -1,0 +1,49 @@
+// lib_graphics/draw/tests/: programs testing libdraw on the whole
+// screen, what the code map says of it. gen_font_default.ml, the
+// generator of ../Font_default.ml, is off the map (.codemapignore).
+local skeletons = import '../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: 'Programs testing libdraw alone: a rectangle and a line, then the default font.',
+  files: {
+    'hellodraw.ml': {
+      summary: "libdraw's hello world: the screen filled magenta, a thick line, three seconds.",
+      digest: '0b6216a315ae',
+      capitals: [{ at: 'def:main', say: 'init, alloc a color, draw, flush' }],
+      important: [
+        { at: 'code:"Display.debug display"', say: "the server's debug messages on", weight: 1 },
+        { at: 'code:"Draw.draw view view.r color None Point.zero"', say: 'the whole screen, with a 1x1 color', weight: 3 },
+        { at: 'code:"Line.line view"', weight: 2 },
+      ],
+    },
+    'test_font.ml': {
+      summary: "The default font loaded and 'Hello world' drawn in a border.",
+      digest: 'f44935c47e30',
+      capitals: [{ at: 'def:main', say: 'the font, a border, a string' }],
+      important: [
+        { at: 'code:"Font_default.load_default_font display"', say: 'the compiled-in font', weight: 3 },
+        { at: 'code:"Text.string view p"', weight: 2 },
+        { at: 'code:"while true do () done"', say: 'spins to keep the picture', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts('Tests of libdraw', [
+      ['hellodraw.ml', 'images and draw'],
+      ['test_font.ml', 'fonts and strings'],
+      ['../Draw.ml', 'what the first tests'],
+      ['../Font_default.ml', 'what the second tests'],
+    ], [
+      ['hellodraw.ml', '../Draw.ml', 'draw, line'],
+      ['test_font.ml', '../Font_default.ml', 'the font'],
+    ]),
+    skeletons.module('hellodraw.ml', 'hellodraw', [
+      ['_', 'Cap.main', ''],
+      ['main', 'draw and flush', 'caps'],
+    ]),
+    skeletons.module('test_font.ml', 'test_font', [
+      ['_', 'Cap.main', ''],
+      ['main', 'font, border, string', 'caps'],
+    ]),
+  ],
+}

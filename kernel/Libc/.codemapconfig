@@ -1,0 +1,28 @@
+// kernel/Libc/: what the code map says of it (tinybox codemap; its
+// manual: ~/github/ocaml-elm-playground/docs/manual/codemap.md). A
+// subset of ~/principia's lib_core/libc/ (arm/, fmt/, port/), copied
+// with the syncweb markers removed, linked into the kernel by
+// kernel/mkfile. No 9syscall/ nor 9sys/: the kernel makes no system
+// calls; kernel/fakes.c stubs the few (write, read, _exits) that
+// ocamlrun and fmt still name.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Plan 9's libc, the part the kernel and ocamlrun link: fast ARM routines, print's engine, strings, UTF-8, math, the pool allocator.",
+  skeletons: [
+    skeletons.parts("The kernel's libc: three folders of principia's", [
+      ['port/', 'portable C: the pool allocator, strings, runes, the math ocamlrun needs'],
+      ['fmt/', "print's engine, behind the kernel's print and panic"],
+      ['arm/', 'the CPU part: memmove, setjmp, atomics, division and 64-bit arithmetic'],
+      ['../Port/', 'the kernel: malloc over pool, print over vseprint'],
+      ['../Byterun/', 'ocamlrun: floats, strings, parsing through libc'],
+    ], [
+      ['fmt/', 'port/', 'runes, string lengths'],
+      ['port/', 'arm/', 'memmove, 64-bit arithmetic (vlrt)'],
+      ['fmt/', 'arm/', 'vlong conversions'],
+      ['../Port/', 'fmt/', 'print: vseprint into a buffer'],
+      ['../Port/', 'port/', 'malloc: poolalloc(mainmem)'],
+      ['../Byterun/', 'port/', 'sin, strtod, strlen...'],
+    ]),
+  ],
+}

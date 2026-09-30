@@ -1,0 +1,8 @@
+// applications/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). So far one program, clock/, the port of Plan 9's clock
+// (~/principia/applications/misc/clock.c).
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Graphical applications for orio's windows: so far oclock, Plan 9's clock in OCaml.",
+}

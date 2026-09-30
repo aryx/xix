@@ -1,0 +1,29 @@
+// kernel/directories/: what the code map says of it (tinybox codemap;
+// the format: ~/github/ocaml-elm-playground/docs/manual/codemap.md,
+// section 12). The directory calls of 9's sysfile.c, not begun: each has
+// its file, empty, and Syscall.Request its constructor.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The directory system calls to come (9's sysfile.c): chdir, create, remove, fd2path, stats; empty.",
+  files: {
+    'syschdir.ml': { summary: "Empty: chdir(2), the process's dot changed.", digest: 'd41d8cd98f00' },
+    'syscreate.ml': { summary: "Empty: create(2), a new file in a directory.", digest: 'd41d8cd98f00' },
+    'sysremove.ml': { summary: 'Empty: remove(2).', digest: 'd41d8cd98f00' },
+    'sysfd2path.ml': { summary: "Empty: fd2path(2), a channel's path back.", digest: 'd41d8cd98f00' },
+    'sysfstat.ml': { summary: "Empty: fstat(2), a file's Dir.", digest: 'd41d8cd98f00' },
+    'sysfwstat.ml': { summary: "Empty: fwstat(2), a file's Dir changed.", digest: 'd41d8cd98f00' },
+  },
+  skeletons: [
+    skeletons.parts('The directory calls, placeholders', [
+      ['syschdir.ml', 'where relative names start'],
+      ['syscreate.ml', 'a name added'],
+      ['sysremove.ml', 'a name removed'],
+      ['sysfd2path.ml', 'a channel to its name'],
+      ['sysfstat.ml', 'metadata read'],
+      ['sysfwstat.ml', 'metadata written'],
+    ], [
+      ['sysfwstat.ml', 'sysfstat.ml', 'the same Dir'],
+    ]),
+  ],
+}

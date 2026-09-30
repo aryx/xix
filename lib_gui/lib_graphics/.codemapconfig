@@ -1,0 +1,21 @@
+// lib_gui/lib_graphics/: ../../lib_graphics copied, over OCaml's
+// Graphics module rather than the Plan 9 draw server (pad.txt), what the
+// code map says of it. Its mkfile builds geometry and input only; draw
+// is left out (commented), most of its drawing a raise Todo.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "libdraw's API over OCaml's Graphics, not /dev/draw: to run lib_gui outside Plan 9; mostly TODO.",
+  skeletons: [
+    skeletons.parts('libdraw again, over Graphics', [
+      ['geometry/', 'points and rectangles, copied'],
+      ['draw/', 'the display and draw, over Graphics'],
+      ['input/', 'mouse and keyboard types, no device'],
+      ['../../lib_graphics/', 'the original, over /dev/draw'],
+    ], [
+      ['draw/', 'geometry/', 'written with'],
+      ['input/', 'geometry/', 'positions'],
+      ['draw/', '../../lib_graphics/', 'copied from'],
+    ]),
+  ],
+}

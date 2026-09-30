@@ -1,0 +1,28 @@
+// utilities/: what the code map says of it (tinybox codemap; the format:
+// ~/github/ocaml-elm-playground/docs/manual/codemap.md, section 12).
+// The first OCaml ports of Plan 9's small commands (cat, wc, pwd, grep)
+// and hello, the template of a new xix program. The C originals and
+// their book are ~/principia/utilities/ (Utilities.nw). Each program is
+// the same shape: Cap.main hands out the capabilities, main parses the
+// flags, the core reads each file or stdin and writes to stdout.
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Plan 9's small commands ported to OCaml (cat, wc, pwd, grep), and hello, the template of a program.",
+  skeletons: [
+    skeletons.parts('The utilities, and what they are written with', [
+      ['hello/', 'the template: Main, CLI, a core'],
+      ['files/', 'cat, wc, pwd: one file each'],
+      ['text/', 'grep, after hello'],
+      ['misc/', 'tree printing, a sketch'],
+      ['../caps/', 'the capabilities: stdin, stdout, files'],
+      ['../lib_core/commons/', 'Chan, Console, FS, Arg_, Logs_'],
+    ], [
+      ['hello/', 'text/', 'copied to start grep'],
+      ['files/', '../caps/', 'Cap.main, then each capability'],
+      ['files/', '../lib_core/commons/', 'FS.with_open_in, Console'],
+      ['text/', '../lib_core/commons/', 'Chan, Console, Arg_'],
+      ['hello/', '../lib_core/commons/', 'Arg_, Logs_'],
+    ]),
+  ],
+}

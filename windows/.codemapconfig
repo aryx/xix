@@ -1,0 +1,570 @@
+// windows/: orio, rio ported to OCaml, what the code map says of it.
+// From windows/docs/orio.nw ("Software architecture": the threads'
+// relationships, and the traces of a new window, a mouse click, a key
+// press, a drawing operation; its "Code organization" is still empty) and
+// the C original's config, ~/principia/windows/rio/.codemapconfig, whose
+// chains (the echo path, "the Journey of ls": a client's write to
+// /dev/cons) have their OCaml counterparts here. What the port changed:
+// OCaml's Thread and Event (CML's channels, Event.select) replace
+// libthread's procs, threads and alt; no worker pool (a thread per 9P
+// read or write); the menu items are French; no Resize, Move, snarf,
+// scroll, selection, plumb or wctl yet.
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: 'orio, rio ported to OCaml: a thread each for keyboard, mouse, window and 9P, each window a /dev/cons.',
+  files: {
+    'Main.ml': {
+      summary: "orio's entry: Cap.main hands out every capability, CLI.main gets them with argv.",
+      digest: 'c70a82e6013a',
+    },
+    'CLI.ml': {
+      summary: "rio's main (rio.c's threadmain): the display, desktop and fonts, the file server, then the threads.",
+      digest: '7cd72cddf77f',
+      capitals: [{ at: 'def:thread_main', say: 'rio starts: graphics, file server, threads' }],
+      important: [
+        { at: 'comment:"Main limitations compared to rio"', say: 'no unicode, one font, a basic terminal', weight: 2 },
+        { at: 'code:"Draw_rio.get_view caps display"', say: 'rio is a client of /dev/draw too: rio in rio', weight: 2 },
+        { at: 'code:"Baselayer.alloc view background"', say: 'the desktop: windows will be its layers', weight: 3 },
+        { at: 'code:"Fileserver.init ()"', say: 'the pipe the windows mount as /mnt/wsys', weight: 2 },
+        { at: 'code:"Thread.create Thread_keyboard.thread kbd"', say: 'the threads: keyboard, mouse, 9P', weight: 3 },
+        { at: 'code:"Wm.threads_window_thread_func := Threads_window.thread"', say: 'a ref breaks the Wm/Threads_window cycle', weight: 2 },
+        { at: 'code:"Event.receive exit_chan"', say: 'main waits: the menu Exit sends the code', weight: 1 },
+        { at: 'code:"Arg.Unit (fun () -> raise Todo)"', say: '-s, -i, -k, -font: parsed, not done yet', weight: 1 },
+      ],
+      links: [
+        { from: 'def:thread_main', to: 'Thread_keyboard.ml:def:thread' },
+        { from: 'def:thread_main', to: 'Thread_mouse.ml:def:thread' },
+        { from: 'def:thread_main', to: 'Threads_fileserver.ml:def:thread' },
+      ],
+    },
+    'CLI.mli': {
+      summary: "rio's capabilities, each said why: the devices it multiplexes, fork and exec, mount and bind.",
+      digest: 'a37062581939',
+      important: [{ at: 'type:caps', say: 'draw, mouse, keyboard, fork, exec, mount, bind', weight: 2 }],
+    },
+    'Window.ml': {
+      summary: "The window (dat.h's Window): its image, the channels its thread reads, the terminal, its process.",
+      digest: 'd2a89cd96f78',
+      capitals: [
+        { at: 'type:t', say: 'a window: image, channels, terminal, process' },
+        { at: 'type:cmd', say: 'Delete, Reshape: what a window is told' },
+      ],
+      important: [
+        { at: 'comment:"This is most of the time a layer"', say: 'hidden: a plain image off the desktop', weight: 2 },
+        { at: 'comment:"Threads_window.thread <-- Thread_mouse.thread"', say: 'who sends on each channel', weight: 3 },
+        { at: 'comment:"The channel inside the channel"', say: 'a reply channel sent: how 9P reads wait', weight: 3 },
+        { at: 'comment:"we do not queue all mouse states"', say: 'clicks queued, moves only the last', weight: 2 },
+        { at: 'def:alloc', say: 'channels made, the terminal allocated', weight: 2 },
+        { at: 'def:pt_on_border', weight: 1 },
+      ],
+    },
+    'Globals.ml': {
+      summary: "rio's globals: all windows by id, the hidden ones, the current one (rio's input).",
+      digest: 'b6a86172128e',
+      important: [
+        { at: 'def:windows', say: 'every window, by the id of /mnt/wsys', weight: 2 },
+        { at: 'def:current', say: "the one with the keyboard: rio's 'input'", weight: 3 },
+        { at: 'def:window_at_point', say: 'the topmost under a point (wpointto)', weight: 2 },
+        { at: 'def:hidden', weight: 1 },
+      ],
+    },
+    'Thread_keyboard.ml': {
+      summary: 'The keyboard thread: each key from the keyboard\'s thread sent to the current window.',
+      digest: '26a93315bb42',
+      capitals: [{ at: 'def:thread', say: 'every key typed goes through here' }],
+      important: [
+        { at: 'code:"Keyboard.receive kbd"', say: "from libdraw's thread reading /dev/cons", weight: 2 },
+        { at: 'code:"Event.send win.chan_keyboard key"', say: "to the current window's thread", weight: 3 },
+      ],
+    },
+    'Thread_keyboard.mli': {
+      summary: "The keyboard thread's entry, started by CLI.thread_main.",
+      digest: '611fe3ba6f84',
+    },
+    'Thread_mouse.ml': {
+      summary: "The mouse thread: inside the current window, to its thread; elsewhere, the manager's menu.",
+      digest: '418f7fd49c68',
+      capitals: [{ at: 'def:thread', say: 'the mouse: to a window, or to the manager' }],
+      important: [
+        { at: 'code:"let sending_to_win ="', say: 'inside the current window, and it wants it', weight: 3 },
+        { at: 'code:"Event.send w.chan_mouse m"', say: "to the window's thread", weight: 3 },
+        { at: 'def:wm_menu', say: 'Nouveau, Detruire, Cacher: the right button', weight: 3 },
+        { at: 'code:"Wm.new_win caps img \"/bin/rc\""', say: 'a new window runs rc -i', weight: 2 },
+        { at: 'comment:"just because hard to right click on QEMU"', say: 'the left button opens the menu too', weight: 1 },
+        { at: 'code:"| OtherWin w when m.buttons.left ->"', say: 'a click elsewhere raises that window', weight: 1 },
+      ],
+      links: [
+        { from: 'def:thread', to: 'def:wm_menu' },
+        { from: 'def:wm_menu', to: 'Mouse_action.ml:def:sweep' },
+        { from: 'def:wm_menu', to: 'Wm.ml:def:new_win' },
+      ],
+    },
+    'Thread_mouse.mli': {
+      summary: "The mouse thread's entry; its capabilities are the New menu's (fork, exec...).",
+      digest: '995a15dcc6a7',
+    },
+    'Threads_window.ml': {
+      summary: "A window's thread (winctl): one Event.select over keys, mouse, commands and the file server's asks.",
+      digest: '61a2d11039df',
+      capitals: [{ at: 'def:thread', say: "a window's event loop" }],
+      important: [
+        { at: 'type:event', say: 'what the select may return', weight: 2 },
+        { at: 'code:"|> Event.select"', say: 'waits on all its channels at once', weight: 3 },
+        { at: 'code:"Terminal.key_in w.terminal key"', say: 'cooked mode: the terminal takes the key', weight: 3 },
+        { at: 'code:"Terminal.newline_after_output_point w.terminal"', say: 'a /dev/cons read served only after a newline', weight: 3 },
+        { at: 'def:bytes_out', say: 'typed text, up to the newline, to the reader', weight: 2 },
+        { at: 'def:runes_in', say: "a client's write into the terminal", weight: 2 },
+        { at: 'def:cmd_in', say: 'Delete, Reshape', weight: 1 },
+        { at: 'def:error', say: 'errors silently dropped: failwith commented', weight: 1 },
+      ],
+      links: [
+        { from: 'def:key_in', to: 'Terminal.ml:def:key_in' },
+        { from: 'def:runes_in', to: 'Terminal.ml:def:runes_in' },
+      ],
+    },
+    'Threads_window.mli': {
+      summary: "A window's thread entry, started by Wm.new_win through a ref set in CLI.",
+      digest: 'd7490835fbac',
+    },
+    'Terminal.ml': {
+      summary: "The terminal emulator (terminal.c): a growing array of runes, the output point, drawn with libdraw.",
+      digest: '6b441f5740e2',
+      capitals: [
+        { at: 'def:key_in', say: 'a key typed: edited, inserted, echoed' },
+        { at: 'def:runes_in', say: "the shell's output, at the output point" },
+      ],
+      important: [
+        { at: 'comment:"no need for a gap buffer"', say: 'most insertions are at the end', weight: 2 },
+        { at: 'type:t', say: 'text, cursor, output point, the view', weight: 3 },
+        { at: 'comment:"Division between characters the host has seen"', say: 'the output point: what rc has not read', weight: 3 },
+        { at: 'def:insert_runes', say: 'the array grown, cursors shifted', weight: 2 },
+        { at: 'def:repaint', say: 'content, scrollbar, tick: all redrawn', weight: 2 },
+        { at: 'code:"| 0x91 when !previous_code = 0x80"', say: 'arrows arrive as UTF-8 bytes, not runes', weight: 1 },
+        { at: 'def:newline_after_output_point', say: 'a line is ready for the reader', weight: 2 },
+        { at: 'def:alloc', weight: 1 },
+      ],
+      links: [
+        { from: 'def:key_in', to: 'def:insert_runes' },
+        { from: 'def:key_in', to: 'def:repaint' },
+        { from: 'def:repaint', to: 'def:repaint_content' },
+      ],
+    },
+    'Terminal.mli': {
+      summary: "The terminal's model and its entries: alloc, key_in, runes_in, repaint.",
+      digest: '469c1c23572b',
+      important: [{ at: 'type:t', say: 'the model, then the view', weight: 2 }],
+    },
+    'Wm.ml': {
+      summary: 'The window manager (wm.c, wind.c): windows made, closed, raised, hidden, their borders and cursors.',
+      digest: '67c3c7e3b372',
+      capitals: [{ at: 'def:new_win', say: 'a window: image, thread, process' }],
+      important: [
+        { at: 'code:"Thread.create !threads_window_thread_func w"', say: 'a thread per window', weight: 3 },
+        { at: 'code:"CapUnix.fork caps ()"', say: 'and a process: the shell', weight: 3 },
+        { at: 'code:"Draw_ipc.name_image w.img winname"', say: 'window.N: what the client finds in /dev/winname', weight: 2 },
+        { at: 'comment:"TODO: Thread.critical_section := true"', say: 'fork with threads running: not guarded', weight: 1 },
+        { at: 'def:set_current_and_repaint', say: 'the input moves; borders repainted', weight: 2 },
+        { at: 'def:close_win', weight: 1 },
+        { at: 'def:top_win', weight: 1 },
+        { at: 'def:hide_win', weight: 1 },
+        { at: 'def:corner_cursor_or_window_cursor', weight: 1 },
+      ],
+      links: [{ from: 'def:new_win', to: 'Processes_winshell.ml:def:run_cmd_in_window_in_child_of_fork' }],
+    },
+    'Wm.mli': {
+      summary: "The window manager's API, the steps of a new window said in its header.",
+      digest: '47061dfd0246',
+      important: [{ at: 'comment:"This is called from Thread_mouse.ml"', say: 'a new window, step by step', weight: 2 }],
+    },
+    'Mouse_action.ml': {
+      summary: 'Mouse gestures of the manager: a rectangle swept for New, a window pointed to for Delete and Hide.',
+      digest: '923bc4ad80f9',
+      important: [
+        { at: 'type:sweep_state', say: 'the sweep as a state machine', weight: 2 },
+        { at: 'def:sweep', say: 'a red-bordered layer follows the mouse', weight: 3 },
+        { at: 'code:"then transit (SweepRightClicked m.Mouse.pos)"', say: 'named Right, tests Left (QEMU)', weight: 1 },
+        { at: 'def:point_to', weight: 2 },
+      ],
+    },
+    'Mouse_action.mli': {
+      summary: 'sweep and point_to: the two mouse gestures the menu needs.',
+      digest: '07697e9ca90f',
+    },
+    'Cursors.ml': {
+      summary: "rio's cursors as bitmaps (data.c): the cross, the box, the sight, and one per border and corner.",
+      digest: '2293cdd11778',
+      important: [
+        { at: 'def:crosscursor', say: 'sweeping a new window', weight: 1 },
+        { at: 'def:which_corner', say: 'a point to its border portion', weight: 2 },
+        { at: 'def:which_corner_cursor', say: 'the resize arrow for that corner', weight: 2 },
+      ],
+    },
+    'Cursors.mli': {
+      summary: 'The cursors rio shows, and the corner one chosen from a point.',
+      digest: '61335cf5f374',
+    },
+    'Processes_winshell.ml': {
+      summary: "A window's process (winshell): /mnt/wsys mounted with its id, bound on /dev, then exec'd.",
+      digest: '4d17bc9e0de1',
+      capitals: [{ at: 'def:run_cmd_in_window_in_child_of_fork', say: 'the window becomes /dev for its shell' }],
+      important: [
+        { at: 'code:"Plan9.mount caps fs.clients_fd"', say: "rio's server, this window's files", weight: 3 },
+        { at: 'code:"Plan9.bind caps (Fpath.v \"/mnt/wsys\")"', say: 'over /dev: its own cons and mouse', weight: 3 },
+        { at: 'comment:"do not forget the last perm argument"', say: 'a partial application that crashed the kernel', weight: 2 },
+      ],
+    },
+    'Processes_winshell.mli': {
+      summary: 'The child side of a new window: what it needs, chdir, exec, mount and bind.',
+      digest: '79a65907cd45',
+    },
+    'Fileserver.ml': {
+      summary: "rio's 9P server state (Filsys): a pipe, one end for rio, the other mounted by each window's process.",
+      digest: '24ea60ef7c20',
+      capitals: [{ at: 'type:t', say: 'the pipe and the fids' }],
+      important: [
+        { at: 'comment:"pipes created under plan9 are bidirectional"', say: 'one pipe for both directions', weight: 2 },
+        { at: 'def:init', weight: 2 },
+      ],
+    },
+    'Fileserver.mli': {
+      summary: "The file server's state and init.",
+      digest: '998790fe9c6b',
+      important: [{ at: 'comment:"clients_fd will be shared by all"', say: 'every window mounts the same fd', weight: 1 }],
+    },
+    'Threads_fileserver.ml': {
+      summary: "rio's 9P loop (filsysproc, fsys.c): a request read from the pipe, dispatched by type, answered.",
+      digest: 'c3b71d874ce7',
+      capitals: [{ at: 'def:thread', say: "rio's 9P loop" }],
+      important: [
+        { at: 'def:all_devices', say: 'the files a window serves: its dirtab', weight: 3 },
+        { at: 'def:dispatch', say: 'Version, Attach, Walk, Open, Read, Write...', weight: 3 },
+        { at: 'code:"let wid = int_of_string aname"', say: "attach: the mount's spec is the window id", weight: 2 },
+        { at: 'code:"let data = dev.D.read_threaded offset count w"', say: 'a thread per read: it may block', weight: 3 },
+        { at: 'code:"dev.D.write_threaded offset data w"', say: 'and per write (no pool of Xfids)', weight: 2 },
+        { at: 'def:answer', say: 'every reply goes out here', weight: 1 },
+        { at: 'code:"failwith \"TODO: readdir\""', say: 'ls /dev in a window: not yet', weight: 1 },
+      ],
+    },
+    'Threads_fileserver.mli': {
+      summary: "The file server thread's entry.",
+      digest: '2420fabfe2a0',
+    },
+    'File.ml': {
+      summary: "A window's files for 9P: file codes, qids, and the fid table's entries (fsys.c's Fid).",
+      digest: 'fb20edf8550a',
+      important: [
+        { at: 'type:devid', say: 'WinName, Mouse, Cons, ConsCtl, WinId, Text', weight: 2 },
+        { at: 'type:t', say: 'a fid: its qid, entry, window', weight: 2 },
+        { at: 'def:qid_of_fileid', weight: 1 },
+      ],
+    },
+    'Device.ml': {
+      summary: "A virtual device as a record of functions: open, close, read and write, run in a 9P thread.",
+      digest: '68b84ccc664c',
+      capitals: [{ at: 'type:t', say: 'a virtual /dev file: its methods' }],
+      important: [
+        { at: 'def:default', say: 'devices override only what they serve', weight: 2 },
+        { at: 'def:honor_offset_and_count', weight: 1 },
+      ],
+    },
+    'Virtual_cons.ml': {
+      summary: "A window's /dev/cons and /dev/consctl: reads wait for a line, writes go to the terminal.",
+      digest: '719f707eb285',
+      important: [
+        { at: 'comment:"a process is reading on its /dev/cons"', say: 'rc reads: waits on the window thread', weight: 3 },
+        { at: 'code:"Event.receive w.chan_devcons_read"', say: 'the window hands its reply channels', weight: 2 },
+        { at: 'comment:"a process is writing on its /dev/cons"', say: "ls's output, on its way to the screen", weight: 3 },
+        { at: 'def:dev_consctl', say: 'rawon, rawoff: raw mode', weight: 1 },
+      ],
+    },
+    'Virtual_cons.mli': {
+      summary: '/dev/cons and /dev/consctl as devices.',
+      digest: '2e9008bcfa1d',
+    },
+    'Virtual_mouse.ml': {
+      summary: "A window's /dev/mouse: a read waits for its window's next mouse state (/dev/cursor not yet).",
+      digest: 'b7057d4c5d6f',
+      important: [{ at: 'def:dev_mouse', say: 'opened: the window turns graphical', weight: 2 }],
+    },
+    'Virtual_mouse.mli': {
+      summary: '/dev/mouse as a device.',
+      digest: '6eb033962002',
+    },
+    'Virtual_draw.ml': {
+      summary: "A window's /dev/winname: the name of its image, which libdraw's clients look up.",
+      digest: 'a785575f34f9',
+      important: [{ at: 'comment:"The ancestor of rio (8 1/2)"', say: 'why no virtual /dev/draw', weight: 2 }],
+    },
+    'Virtual_draw.mli': {
+      summary: '/dev/winname as a device.',
+      digest: '415d0aedee2a',
+    },
+    'Dev_textual_window.ml': {
+      summary: "A window's /dev/text: the terminal's whole text.",
+      digest: '007ad8cd8efb',
+    },
+    'Dev_textual_window.mli': {
+      summary: '/dev/text as a device.',
+      digest: '5087ead968fe',
+    },
+    'Dev_wm.ml': {
+      summary: "A window's /dev/winid: its id.",
+      digest: 'ac3d5f77251d',
+    },
+    'Dev_wm.mli': {
+      summary: '/dev/winid as a device.',
+      digest: '90a44de33875',
+    },
+    'Dev_graphical_window.ml': {
+      summary: 'Graphical windows\' devices, still empty (graphical_window.c).',
+      digest: '531fb7328f8e',
+    },
+    'Dev_graphical_window.mli': {
+      summary: 'Its interface, empty too.',
+      digest: '9ef33c6891f0',
+    },
+    'test.ml': {
+      summary: "rio -test: threads, cooperative and preemptive, and the default font drawn.",
+      digest: '36bd084f70bd',
+      important: [{ at: 'def:test', say: 'what -test runs', weight: 1 }],
+    },
+  },
+  dirs: {
+    docs: { summary: 'orio.nw, the book of orio: the code, woven with its explanations (syncweb).' },
+  },
+  skeletons: [
+    skeletons.cli('orio: the display, the file server, the threads', [
+      ['CLI.ml:def:thread_main', 'graphics, the file server, three threads; then waits', 'caps'],
+      ['Thread_keyboard.ml:def:thread', 'the keyboard thread', 'Thread.create'],
+      ['Threads_window.ml:def:thread', "a window's thread", 'keys'],
+      ['Terminal.ml:def:key_in', 'its terminal', 'a key'],
+    ]) + {
+      bones+: [
+        { at: 'Thread_mouse.ml:def:thread', role: 'the mouse thread' },
+        { at: 'Threads_fileserver.ml:def:thread', role: 'the 9P thread' },
+        { at: 'Wm.ml:def:new_win', role: 'New: a window, its thread, its process' },
+      ],
+      joints+: [
+        { from: 'CLI.ml:def:thread_main', to: 'Thread_mouse.ml:def:thread', say: 'Thread.create' },
+        { from: 'CLI.ml:def:thread_main', to: 'Threads_fileserver.ml:def:thread', say: 'Thread.create' },
+        { from: 'Thread_mouse.ml:def:thread', to: 'Threads_window.ml:def:thread', say: 'mouse states' },
+        { from: 'Thread_mouse.ml:def:thread', to: 'Wm.ml:def:new_win', say: 'the menu: New' },
+        { from: 'Wm.ml:def:new_win', to: 'Threads_window.ml:def:thread', say: 'Thread.create' },
+        { from: 'Threads_fileserver.ml:def:thread', to: 'Threads_window.ml:def:thread', say: 'reads and writes of cons' },
+      ],
+    },
+    skeletons.parts("orio's threads (orio.nw's threads relationships)", [
+      ['CLI.ml', 'thread_main: starts everything, waits for Exit'],
+      ['Thread_keyboard.ml', 'keyboard thread: keys to the current window'],
+      ['Thread_mouse.ml', 'mouse thread: to a window, or the manager'],
+      ['Threads_window.ml', 'a thread per window: its select'],
+      ['Threads_fileserver.ml', '9P thread: a thread per read or write'],
+      ['Virtual_cons.ml', 'the virtual devices: cons, mouse, winname'],
+      ['Terminal.ml', 'the terminal: text and its drawing'],
+      ['Wm.ml', 'the window manager'],
+      ['Processes_winshell.ml', "a window's process: rc over rio's /dev"],
+      ['Window.ml', 'the window: its channels'],
+    ], [
+      ['CLI.ml', 'Thread_keyboard.ml', 'Thread.create'],
+      ['CLI.ml', 'Thread_mouse.ml', 'Thread.create'],
+      ['CLI.ml', 'Threads_fileserver.ml', 'Thread.create'],
+      ['Thread_keyboard.ml', 'Threads_window.ml', 'keys on chan_keyboard'],
+      ['Thread_mouse.ml', 'Threads_window.ml', 'states on chan_mouse'],
+      ['Thread_mouse.ml', 'Wm.ml', 'the right button'],
+      ['Wm.ml', 'Threads_window.ml', 'Thread.create'],
+      ['Wm.ml', 'Processes_winshell.ml', 'fork'],
+      ['Threads_fileserver.ml', 'Virtual_cons.ml', 'read_threaded, write_threaded'],
+      ['Virtual_cons.ml', 'Threads_window.ml', 'reply channels exchanged'],
+      ['Threads_window.ml', 'Terminal.ml', 'key_in, runes_in'],
+      ['Threads_window.ml', 'Window.ml', 'reads its channels'],
+    ]),
+    skeletons.chain('A key typed, echoed (the Journey of ls, in orio)', [
+      ['../lib_graphics/input/Keyboard.ml:def:thread_keyboard', "libdraw's thread: /dev/cons read, raw", ''],
+      ['Thread_keyboard.ml:def:thread', 'to the current window', 'a key on the ctl channel'],
+      ['Threads_window.ml:def:thread', "the window's thread selects it", 'chan_keyboard'],
+      ['Threads_window.ml:def:key_in', 'cooked: to the terminal; raw: queued', 'Key'],
+      ['Terminal.ml:def:key_in', 'edited, or inserted at the cursor', 'the key'],
+      ['Terminal.ml:def:insert_runes', 'into the text array', 'a rune'],
+      ['Terminal.ml:def:repaint', 'redrawn: the echo', 'the text'],
+      ['../lib_graphics/draw/Text.ml:def:string', "libdraw's string: 's' messages", 'visible lines'],
+      ['../lib_graphics/draw/Display.ml:def:flush_buffer', 'written to /dev/draw/n/data', 'the buffer'],
+    ]),
+    skeletons.chain("A client's write to /dev/cons (ls's output)", [
+      ['Threads_fileserver.ml:def:thread', 'a Twrite read from the pipe', ''],
+      ['Threads_fileserver.ml:def:dispatch', 'by type: Write, a thread for it', 'the request'],
+      ['Virtual_cons.ml:def:dev_cons', 'write_threaded: bytes to runes', 'dev.write_threaded'],
+      ['Threads_window.ml:def:thread', 'SentChannelForConsWrite', 'a channel asked for'],
+      ['Threads_window.ml:def:runes_in', 'the runes received', 'the runes'],
+      ['Terminal.ml:def:runes_in', 'at the output point, then repaint', 'runes'],
+    ]),
+    skeletons.chain('rc reads /dev/cons: a line, once typed', [
+      ['Threads_fileserver.ml:def:dispatch', 'a Tread, a thread for it', ''],
+      ['Virtual_cons.ml:def:dev_cons', 'read_threaded: waits for the window', 'dev.read_threaded'],
+      ['Threads_window.ml:def:thread', 'offers channels once a newline is typed', 'chan_devcons_read'],
+      ['Threads_window.ml:def:bytes_out', 'text up to the output point sent', 'the count'],
+    ]) + {
+      bones+: [{ at: 'Terminal.ml:def:newline_after_output_point', role: 'a whole line typed?' }],
+      joints+: [{ from: 'Terminal.ml:def:newline_after_output_point', to: 'Threads_window.ml:def:thread', say: 'the guard' }],
+    },
+    skeletons.chain('A new window: sweep, thread, process (orio.nw\'s trace)', [
+      ['Thread_mouse.ml:def:thread', 'a click on the desktop', ''],
+      ['Thread_mouse.ml:def:wm_menu', 'Nouveau chosen', 'the right button'],
+      ['Mouse_action.ml:def:sweep', 'a rectangle swept: a layer', 'Nouveau'],
+      ['Wm.ml:def:new_win', 'Window.alloc, thread, fork', 'the image'],
+      ['Processes_winshell.ml:def:run_cmd_in_window_in_child_of_fork', 'mount, bind, exec rc', 'the child'],
+    ]),
+    {
+      name: 'A window thread: one select over its channels',
+      bones: [
+        { at: 'Threads_window.ml:def:thread', role: 'the loop' },
+        { at: 'Threads_window.ml:type:event', role: 'what came' },
+        { at: 'Threads_window.ml:def:key_in', role: 'Key' },
+        { at: 'Threads_window.ml:def:mouse_in', role: 'Mouse: clicks queued' },
+        { at: 'Threads_window.ml:def:cmd_in', role: 'Cmd: Delete, Reshape' },
+        { at: 'Threads_window.ml:def:mouse_out', role: 'a /dev/mouse read served' },
+        { at: 'Threads_window.ml:def:bytes_out', role: 'a /dev/cons read served' },
+        { at: 'Threads_window.ml:def:runes_in', role: 'a /dev/cons write' },
+      ],
+      joints: [
+        { from: 'Threads_window.ml:def:thread', to: 'Threads_window.ml:type:event', say: 'Event.select' },
+        { from: 'Threads_window.ml:type:event', to: 'Threads_window.ml:def:key_in', say: 'a key' },
+        { from: 'Threads_window.ml:type:event', to: 'Threads_window.ml:def:mouse_in', say: 'a state' },
+        { from: 'Threads_window.ml:type:event', to: 'Threads_window.ml:def:cmd_in', say: 'a cmd' },
+        { from: 'Threads_window.ml:type:event', to: 'Threads_window.ml:def:mouse_out', say: 'a reply channel' },
+        { from: 'Threads_window.ml:type:event', to: 'Threads_window.ml:def:bytes_out', say: 'two reply channels' },
+        { from: 'Threads_window.ml:type:event', to: 'Threads_window.ml:def:runes_in', say: 'a reply channel' },
+      ],
+    },
+    {
+      name: 'The terminal: text in, drawn',
+      bones: [
+        { at: 'Terminal.ml:type:t', role: 'text, cursor, output point, view' },
+        { at: 'Terminal.ml:def:alloc', role: 'made for a window image' },
+        { at: 'Terminal.ml:def:key_in', role: 'a key typed' },
+        { at: 'Terminal.ml:def:runes_in', role: "the host's output" },
+        { at: 'Terminal.ml:def:insert_runes', role: 'the array grown, cursors moved' },
+        { at: 'Terminal.ml:def:delete_runes', role: 'backspace' },
+        { at: 'Terminal.ml:def:repaint', role: 'content, scrollbar, tick' },
+      ],
+      joints: [
+        { from: 'Terminal.ml:def:alloc', to: 'Terminal.ml:type:t', say: 'builds' },
+        { from: 'Terminal.ml:def:key_in', to: 'Terminal.ml:def:insert_runes', say: 'a rune at the cursor' },
+        { from: 'Terminal.ml:def:key_in', to: 'Terminal.ml:def:delete_runes', say: '^H' },
+        { from: 'Terminal.ml:def:runes_in', to: 'Terminal.ml:def:insert_runes', say: 'runes at the output point' },
+        { from: 'Terminal.ml:def:insert_runes', to: 'Terminal.ml:type:t', say: 'the text' },
+        { from: 'Terminal.ml:type:t', to: 'Terminal.ml:def:repaint', say: 'drawn' },
+      ],
+    },
+    {
+      name: 'The window manager: New, Delete, Hide, focus',
+      bones: [
+        { at: 'Wm.ml:def:new_win', role: 'New: layer, thread, process' },
+        { at: 'Wm.ml:def:set_current_and_repaint', role: 'the input moves' },
+        { at: 'Wm.ml:def:close_win', role: 'Delete' },
+        { at: 'Wm.ml:def:top_win', role: 'raised' },
+        { at: 'Wm.ml:def:hide_win', role: 'Hide: off the desktop' },
+        { at: 'Wm.ml:def:show_win', role: 'back' },
+        { at: 'Wm.ml:def:draw_border', role: 'the border: current or not' },
+      ],
+      joints: [
+        { from: 'Wm.ml:def:new_win', to: 'Wm.ml:def:set_current_and_repaint', say: 'the new one' },
+        { from: 'Wm.ml:def:top_win', to: 'Wm.ml:def:set_current_and_repaint', say: 'the raised one' },
+        { from: 'Wm.ml:def:set_current_and_repaint', to: 'Wm.ml:def:draw_border', say: 'old and new' },
+        { from: 'Wm.ml:def:hide_win', to: 'Wm.ml:def:show_win', say: 'the menu lists it' },
+      ],
+    },
+    {
+      name: 'The 9P thread: read, dispatch, answer',
+      bones: [
+        { at: 'Threads_fileserver.ml:def:thread', role: 'the loop over the pipe' },
+        { at: 'Threads_fileserver.ml:def:dispatch', role: 'by request type' },
+        { at: 'Threads_fileserver.ml:def:all_devices', role: 'the files: devid to device' },
+        { at: 'Threads_fileserver.ml:def:device_of_devid', role: 'a fid to its device' },
+        { at: 'Threads_fileserver.ml:def:answer', role: 'the reply written' },
+        { at: 'Device.ml:type:t', role: "a device's methods" },
+      ],
+      joints: [
+        { from: 'Threads_fileserver.ml:def:thread', to: 'Threads_fileserver.ml:def:dispatch', say: 'a T-message' },
+        { from: 'Threads_fileserver.ml:def:dispatch', to: 'Threads_fileserver.ml:def:device_of_devid', say: 'Open, Read, Write' },
+        { from: 'Threads_fileserver.ml:def:all_devices', to: 'Threads_fileserver.ml:def:device_of_devid', say: 'looked up' },
+        { from: 'Threads_fileserver.ml:def:device_of_devid', to: 'Device.ml:type:t', say: 'the device' },
+        { from: 'Threads_fileserver.ml:def:dispatch', to: 'Threads_fileserver.ml:def:answer', say: 'an R-message' },
+      ],
+    },
+    {
+      name: 'The window: what it holds, who fills it',
+      bones: [
+        { at: 'Window.ml:type:t', role: 'the window' },
+        { at: 'Window.ml:type:cmd', role: 'its commands' },
+        { at: 'Window.ml:def:alloc', role: 'made' },
+        { at: 'Window.ml:def:pt_on_border', role: 'a point on its border?' },
+        { at: 'Globals.ml:def:windows', role: 'all of them' },
+        { at: 'Globals.ml:def:current', role: 'the one with the input' },
+      ],
+      joints: [
+        { from: 'Window.ml:def:alloc', to: 'Window.ml:type:t', say: 'builds' },
+        { from: 'Window.ml:type:cmd', to: 'Window.ml:type:t', say: 'sent on chan_cmd' },
+        { from: 'Window.ml:type:t', to: 'Globals.ml:def:windows', say: 'added by Wm.new_win' },
+        { from: 'Globals.ml:def:windows', to: 'Globals.ml:def:current', say: 'one chosen' },
+        { from: 'Window.ml:type:t', to: 'Window.ml:def:pt_on_border', say: 'its rectangle' },
+      ],
+    },
+    skeletons.module('Thread_mouse.ml', 'The mouse thread: a window, or the manager', [
+      ['thread', 'the loop over mouse states', ''],
+      ['wm_menu', 'the right button: the menu', 'a click outside'],
+      ['middle_click_system', 'the middle button: a TODO', 'or'],
+    ]) + {
+      bones+: [
+        { at: '../lib_graphics/ui/Menu_ui.ml:def:menu', role: 'the menu drawn and tracked' },
+        { at: 'Mouse_action.ml:def:sweep', role: 'Nouveau: a rectangle' },
+      ],
+      joints+: [
+        { from: 'Thread_mouse.ml:def:wm_menu', to: '../lib_graphics/ui/Menu_ui.ml:def:menu', say: 'the items' },
+        { from: 'Thread_mouse.ml:def:wm_menu', to: 'Mouse_action.ml:def:sweep', say: 'Nouveau' },
+      ],
+    },
+    skeletons.module('CLI.ml', "orio's main: flags, then thread_main", [
+      ['main', 'flags, logging', ''],
+      ['thread_main', 'display, desktop, font, server, threads', 'caps'],
+    ]) + {
+      bones+: [{ at: 'Fileserver.ml:def:init', role: 'the pipe' }],
+      joints+: [{ from: 'CLI.ml:def:thread_main', to: 'Fileserver.ml:def:init', say: 'the server' }],
+    },
+    {
+      name: 'Cursors: bitmaps, and the corner one chosen',
+      bones: [
+        { at: 'Cursors.ml:def:crosscursor', role: 'a cursor as bits' },
+        { at: 'Cursors.ml:type:corner', role: 'the eight borders and corners' },
+        { at: 'Cursors.ml:def:which_corner', role: 'a point to a corner' },
+        { at: 'Cursors.ml:def:which_corner_cursor', role: 'its cursor' },
+      ],
+      joints: [
+        { from: 'Cursors.ml:def:which_corner', to: 'Cursors.ml:type:corner', say: 'returns' },
+        { from: 'Cursors.ml:def:which_corner_cursor', to: 'Cursors.ml:def:which_corner', say: 'the point' },
+      ],
+    },
+  ],
+  tours: [
+    {
+      name: 'orio: its threads, a key, a write',
+      stops: [
+        { at: 'Main.ml:code:"Cap.main"', say: 'Like every xix program: Cap.main, then CLI.main.' },
+        { at: 'CLI.ml:def:thread_main', say: 'rio is a /dev/draw client, a 9P server and a set of threads.' },
+        { at: 'Window.ml:type:t', say: 'A window: its image, the channels its thread reads, its terminal.' },
+        { at: 'Thread_keyboard.ml:def:thread', say: 'Every key goes to the current window, on its channel.' },
+        { at: 'Threads_window.ml:def:thread', say: 'Each window is a thread selecting over all its channels.' },
+        { at: 'Terminal.ml:def:key_in', say: 'The key enters the text and is echoed by repainting.' },
+        { at: 'Thread_mouse.ml:def:wm_menu', say: 'The right button: Nouveau sweeps a rectangle for a new window.' },
+        { at: 'Wm.ml:def:new_win', say: 'A new window: a layer, a thread, a forked process.' },
+        { at: 'Processes_winshell.ml:def:run_cmd_in_window_in_child_of_fork', say: "The child mounts rio on /dev: its cons is rio's." },
+        { at: 'Threads_fileserver.ml:def:dispatch', say: 'Each 9P request dispatched; reads and writes in threads of their own.' },
+        { at: 'Virtual_cons.ml:def:dev_cons', say: "A write to cons: runes handed to the window's thread." },
+      ],
+    },
+  ],
+  views: [
+    { name: 'orio and its libraries', files: ['.', '../lib_graphics/draw/', '../lib_graphics/input/', '../lib_graphics/ui/'] },
+    { name: 'The file server', files: ['Fileserver.ml', 'Threads_fileserver.ml', 'File.ml', 'Device.ml', 'Virtual_cons.ml', 'Virtual_mouse.ml', 'Virtual_draw.ml'] },
+  ],
+}

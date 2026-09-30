@@ -1,0 +1,16 @@
+// builder/tests/: omk's regression tests (Testo), run by the suite in
+// ~/github/xix/tests/.
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "omk's regression tests: CLI.main run in a forked child, its exit and output checked.",
+  files: {
+    'Test_mk.ml': {
+      summary: "omk's tests: CLI.main forked per test, since its globals are never reset (only --help so far).",
+      digest: '17bec1682a6b',
+      important: [
+        { at: 'def:run_main', say: 'a child per run: the globals stay clean', weight: 3 },
+        { at: 'def:e2e_tests', say: 'one test, --help: the rest to write', weight: 1 },
+      ],
+    },
+  },
+}

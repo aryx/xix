@@ -1,0 +1,53 @@
+// lib_core/system/plan9/tests/: what the code map says of it
+local skeletons = import '../../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: 'bind and mount tried under Plan 9: the same test in OCaml, native C and APE C.',
+  files: {
+    'test_bind.ml': {
+      summary: 'Binds /tests/bytecode on /tests/test through Plan9.bind, then lists the result.',
+      digest: '6a924fa9e151',
+      important: [
+        { at: 'code:"Plan9.bind caps"', say: 'res bound, never checked', weight: 3 },
+        { at: 'code:"Cap.main"' },
+      ],
+    },
+    'test_mount.ml': {
+      summary: 'A pipe, a fork: the child mounts one end, the parent answers 9P on the other.',
+      digest: 'ec3f9ed27575',
+      important: [
+        { at: 'code:"Plan9.mount caps"', say: 'the client side, like orio', weight: 3 },
+        { at: 'code:"Unix.fork"' },
+      ],
+    },
+    'test_bind_c.c': {
+      summary: "test_bind in Plan 9's native C: bind, dirread, the reference to compare with.",
+      digest: '1c5b97d36c5f',
+      important: [{ at: 'code:"MREPL"', say: 'MREPL: replace' }],
+    },
+    'test_bind_ape.c': {
+      summary: "test_bind in APE's POSIX C, the world the OCaml runtime lives in on Plan 9.",
+      digest: '0bd87c57e411',
+      important: [{ at: 'code:"opendir"', say: "POSIX's readdir, not dirread" }],
+    },
+  },
+  skeletons: [
+    {
+      name: 'One test, three worlds',
+      bones: [
+        { at: 'test_bind.ml:def:main', role: 'OCaml: Plan9.bind under Cap.bind' },
+        { at: 'test_bind_c.c:def:main', role: 'native C: bind and dirread' },
+        { at: 'test_bind_ape.c:def:main', role: 'APE C: bind and readdir' },
+        { at: 'test_mount.ml:def:main', role: 'mount: a 9P server on a pipe' },
+        { at: '../Plan9.ml:def:bind', role: 'what test_bind calls' },
+        { at: '../Plan9.ml:def:mount', role: 'what test_mount calls' },
+      ],
+      joints: [
+        { from: 'test_bind.ml:def:main', to: '../Plan9.ml:def:bind', say: 'the capability' },
+        { from: 'test_mount.ml:def:main', to: '../Plan9.ml:def:mount', say: 'the pipe, /mnt/wsys' },
+        { from: 'test_bind_c.c:def:main', to: 'test_bind.ml:def:main', say: 'the same bind, in C' },
+        { from: 'test_bind_ape.c:def:main', to: 'test_bind.ml:def:main', say: 'the same, under APE' },
+      ],
+    },
+  ],
+}

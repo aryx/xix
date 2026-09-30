@@ -1,0 +1,34 @@
+// lib_graphics/input/tests/: a test of the mouse and keyboard threads,
+// what the code map says of it.
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "A program testing input: mouse and keyboard selected, a line following the mouse.",
+  files: {
+    'hellodraw2.ml': {
+      summary: "hellorio's ancestor, on the whole screen; stale: Keyboard.init and Mouse.init without caps.",
+      digest: 'be8a0d14f1e8',
+      capitals: [{ at: 'def:thread_main', say: 'keys and mouse selected, then redraw' }],
+      important: [
+        { at: 'code:"Keyboard.init ()"', say: 'stale: init now takes the capabilities', weight: 2 },
+        { at: 'code:"] |> Event.select"', say: 'whichever device first', weight: 3 },
+        { at: 'def:redraw', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    {
+      name: 'hellodraw2: select, redraw',
+      bones: [
+        { at: 'hellodraw2.ml:def:_', role: 'Cap.main' },
+        { at: 'hellodraw2.ml:def:thread_main', role: 'the devices, the loop' },
+        { at: 'hellodraw2.ml:type:event', role: 'a key or a state' },
+        { at: 'hellodraw2.ml:def:redraw', role: 'a line at the mouse' },
+      ],
+      joints: [
+        { from: 'hellodraw2.ml:def:_', to: 'hellodraw2.ml:def:thread_main', say: 'caps' },
+        { from: 'hellodraw2.ml:def:thread_main', to: 'hellodraw2.ml:type:event', say: 'Event.select' },
+        { from: 'hellodraw2.ml:type:event', to: 'hellodraw2.ml:def:redraw', say: 'the position' },
+      ],
+    },
+  ],
+}

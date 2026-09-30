@@ -1,0 +1,97 @@
+// kernel/memory/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). User memory, from 9's page.c, segment.c and sysmemory.c
+// (~/principia/kernel/memory/); the kernel's own heap stays C (Port's
+// xalloc.c, alloc.c, pool.c), and 9's fault.c is not ported yet: no page
+// is ever faulted in.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "User memory (9's page.c, segment.c): physical pages, page tables, segments shared or copied, brk.",
+  files: {
+    'Page.ml': {
+      summary: "The physical pages' allocator (9's palloc): a free list, pages allocated, shared, freed.",
+      digest: '3369349bbd83',
+      important: [
+        { at: 'type:allocator', say: 'every physical page, and the free ones', weight: 3 },
+        { at: 'def:alloc', say: 'fails under 100 free pages: all do today', weight: 3 },
+        { at: 'def:_init_allocator', say: 'Todo: the free list stays empty', weight: 1 },
+        { at: 'code:"let ka = Kernel_memory.kmap p"', say: 'kmap returns unit: clear is a Todo', weight: 1 },
+        { at: 'def:free', say: 'the last reference: back on the list', weight: 1 },
+      ],
+    },
+    'Page.mli': { summary: 'Pages: alloc, free, share, and the allocator.', digest: 'ad3f718c3d8b' },
+    'Pagetable.ml': {
+      summary: "Page tables (9's Pte): alloc, free their pages, copy them sharing the pages for copy on write.",
+      digest: '976e25ea380f',
+      important: [
+        { at: 'def:copy', say: 'pages shared; a fault will copy them', weight: 3 },
+      ],
+    },
+    'Pagetable.mli': { summary: 'Page tables: alloc, free, copy.', digest: '50f646116cdc' },
+    'Segment.ml': {
+      summary: "Segments (9's segment.c): alloc, free, and at rfork shared or copied by kind.",
+      digest: 'b5a3a2c303b7',
+      important: [
+        { at: 'def:copy_or_share', say: 'text shared, stack copied, data asked', weight: 3 },
+        { at: 'def:alloc', say: 'the page directory sized, pages absent', weight: 1 },
+        { at: 'def:_add_page_to_segment', say: "unused: fault.c's half, to come", weight: 1 },
+        { at: 'def:really_copy', say: 'a new table sharing the old pages', weight: 1 },
+      ],
+    },
+    'Segment.mli': { summary: 'Segments: alloc, free, copy, share.', digest: '9bfcecae45e0' },
+    'sysbrk.ml': {
+      summary: "brk(2) (9's ibrk in segment.c): the bss grown, checked against the other segments.",
+      digest: '96d2d7042ec3',
+      important: [
+        { at: 'def:change_segment_top', say: 'grows only: shrinking is Todo', weight: 3 },
+        { at: 'code:"Error.error Error.Esoverlap"', say: 'no segment may run into another', weight: 1 },
+      ],
+    },
+    'sysbrk.mli': { summary: 'syscall_brk: the bss up to an address.', digest: '67a26aec84fc' },
+    'Proc_segment.ml': {
+      summary: "A process's segment holding an address (9's seg()), for faults and checks to come.",
+      digest: '8f08f1bf650e',
+      important: [{ at: 'def:segment_of_addr', say: 'Not_found if none: a fault in 9', weight: 1 }],
+    },
+    'Proc_segment.mli': { summary: 'segment_of_addr.', digest: '22b6a555f4d9' },
+    'User_memory.ml': {
+      summary: "User addresses: compared, subtracted, rounded to pages; the validity checks still Todo.",
+      digest: '0a4f89df5c38',
+      important: [
+        { at: 'module:Operators', say: 'VU arithmetic: no kernel address slips in', weight: 3 },
+        { at: 'def:_ok_addr_range', say: "9's okaddr: Todo, so no user copy yet", weight: 1 },
+      ],
+    },
+    'User_memory.mli': { summary: 'User addresses: the operators and roundup_page.', digest: 'ac9e80db0d77' },
+    'Kernel_memory.ml': {
+      summary: "The kernel's mapping of a page (9's kmap), and memclear: Todo, memclear only logs.",
+      digest: '0becf4426059',
+    },
+    'Kernel_memory.mli': { summary: 'kmap, kunmap, memclear.', digest: 'a1cf72cab7c0' },
+  },
+  skeletons: [
+    skeletons.parts('User memory: segments of page tables of pages', [
+      ['sysbrk.ml', 'brk: a segment grown'],
+      ['Segment.ml', 'a range, its page directory'],
+      ['Pagetable.ml', '256 pages'],
+      ['Page.ml', 'the physical pages, allocated'],
+      ['Kernel_memory.ml', 'a page seen from the kernel'],
+      ['Proc_segment.ml', 'an address to its segment'],
+      ['User_memory.ml', 'user address arithmetic'],
+    ], [
+      ['sysbrk.ml', 'Segment.ml', 'the top moved'],
+      ['sysbrk.ml', 'User_memory.ml', 'rounded, compared'],
+      ['Segment.ml', 'Pagetable.ml', 'copied, freed'],
+      ['Pagetable.ml', 'Page.ml', 'shared, freed'],
+      ['Page.ml', 'Kernel_memory.ml', 'cleared'],
+    ]),
+    skeletons.chain('A segment copied at rfork', [
+      ['../processes/sysrfork.ml:def:syscall_rfork', "each of the parent's segments", ''],
+      ['Segment.ml:def:copy_or_share', 'by kind: text shared, stack copied', 'Segment.copy'],
+      ['Segment.ml:def:really_copy', 'a new directory', 'not shared'],
+      ['Pagetable.ml:def:copy', 'a new table, the same pages', 'each table'],
+      ['Page.ml:def:share', 'one more reference', 'each page'],
+    ]),
+  ],
+}

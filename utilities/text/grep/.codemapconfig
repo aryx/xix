@@ -1,0 +1,39 @@
+// utilities/text/grep/: what the code map says of it (tinybox codemap;
+// the format: ~/github/ocaml-elm-playground/docs/manual/codemap.md,
+// section 12). The C original: ~/principia/utilities/text/grep/, which
+// compiles its regexp to a DFA; this one reuses lib_core/regexps.
+local skeletons = import '../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "ogrep, grep in OCaml: each line of each file matched by a Perl-style regexp (-i, -n).",
+  files: {
+    'Main.ml': {
+      summary: "ogrep's entry: Cap.main hands out the capabilities, CLI.main gets them with argv.",
+      digest: '14204b2ac5f7',
+    },
+    'CLI.ml': {
+      summary: 'The flags (-i, -n), then the regexp compiled and each file or stdin searched line by line.',
+      digest: '1a4d8d78e82a',
+      capitals: [{ at: 'def:grep', say: 'a channel searched line by line' }],
+      important: [
+        { at: 'comment:"Toy hello program acting as a template"', say: "stale: hello's header, copied", weight: 2 },
+        { at: 'type:caps', say: 'stdin, stdout, files read: nothing else', weight: 2 },
+        { at: 'code:"Re_perl.compile_pat"', say: "Perl syntax, not Plan 9's egrep one", weight: 2 },
+        { at: 'code:"Re_core.execp 0 (-1) re str"', say: 'a match anywhere in the line', weight: 1 },
+        { at: 'def:main', say: 'no file: stdin; no regexp: usage, exit 2', weight: 2 },
+      ],
+      links: [{ from: 'def:main', to: 'def:grep' }],
+    },
+    'CLI.mli': {
+      summary: "ogrep's interface: main, and grep itself with its flags, for reuse.",
+      digest: 'da041246c70d',
+      important: [{ at: 'def:grep', say: 'the core, exported', weight: 1 }],
+    },
+  },
+  skeletons: [
+    skeletons.cli('ogrep: flags, a regexp, lines matched', [
+      ['CLI.ml:def:grep', 'each line tested, the matching printed', 'regexp, each file or stdin'],
+      ['../../../lib_core/regexps/', 'Re_perl compiles, Re_core executes', 'the pattern'],
+    ]),
+  ],
+}

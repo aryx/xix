@@ -1,0 +1,73 @@
+// utilities/files/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). Three programs, a file each (ocat, owc, opwd); the C originals
+// are ~/principia/utilities/files/ and misc/ (wc.c). TODO/ holds the
+// commands still to port (ls, cp, mv, rm...), off the map.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: 'ocat, owc, opwd: cat, wc and pwd ported, a file each, files opened through FS.with_open_in.',
+  files: {
+    'cat.ml': {
+      summary: "ocat, cat in OCaml: each file, or stdin, copied to stdout 8K at a time.",
+      digest: '0d4e00857237',
+      capitals: [{ at: 'def:cat', say: 'a channel copied to stdout' }],
+      important: [
+        { at: 'comment:"Improvements over Plan 9 C version"', say: 'exceptions and with_open_in, yet longer', weight: 2 },
+        { at: 'type:caps', say: 'open_in, stdin, stdout: all cat may touch', weight: 2 },
+        { at: 'code:"xs |> Fpath_.of_strings |> List.iter"', say: 'each argument opened, cat run, closed', weight: 2 },
+        { at: 'code:"Console.stdin caps"', say: 'no argument: stdin, through its capability', weight: 1 },
+      ],
+    },
+    'wc.ml': {
+      summary: 'owc, wc in OCaml: lines, words and characters of each file, and their total (-l, -w, -c).',
+      digest: 'e1cab974142c',
+      capitals: [{ at: 'def:wc', say: 'a two-state automaton over characters' }],
+      important: [
+        { at: 'comment:"Limitations compared to Plan9 version"', say: 'bytes, not runes: no -r, no -b', weight: 2 },
+        { at: 'type:stats', say: 'mutable counters, passed not global', weight: 2 },
+        { at: 'type:state', say: 'in a word, or after a space', weight: 2 },
+        { at: 'code:"stats.words <- stats.words + 1"', say: 'a word counted when it starts', weight: 2 },
+        { at: 'code:"Chan.{ ic = stdin; origin = Chan.Stdin }"', say: "stdin taken bare: cat's Console.stdin", weight: 1 },
+        { at: 'def:sum_stats', say: 'the total line, for two files or more', weight: 1 },
+      ],
+    },
+    'pwd.ml': {
+      summary: 'opwd, pwd in OCaml: the current directory printed, in one line.',
+      digest: '594abcc78417',
+      important: [{ at: 'code:"Sys.getcwd()"', say: 'the cwd read without a capability', weight: 2 }],
+    },
+  },
+  skeletons: [
+    skeletons.parts('Three programs over one library', [
+      ['cat.ml', 'bytes copied'],
+      ['wc.ml', 'bytes counted'],
+      ['pwd.ml', 'the directory named'],
+      ['../../lib_core/commons/FS.ml', 'a file opened, handed over, closed'],
+      ['../../lib_core/commons/Console.ml', 'stdin and stdout, by capability'],
+    ], [
+      ['cat.ml', '../../lib_core/commons/FS.ml', 'with_open_in'],
+      ['wc.ml', '../../lib_core/commons/FS.ml', 'with_open_in'],
+      ['cat.ml', '../../lib_core/commons/Console.ml', 'stdout'],
+      ['wc.ml', '../../lib_core/commons/Console.ml', 'print'],
+      ['pwd.ml', '../../lib_core/commons/Console.ml', 'print'],
+    ]),
+    skeletons.cli('ocat: each file to stdout', [
+      ['cat.ml:def:cat', 'read 8K, write 8K, until the end', 'a channel per file, or stdin'],
+    ], main='cat.ml:code:"Cap.main (fun"', cli='cat.ml:def:main'),
+    skeletons.cli('owc: count, report, total', [
+      ['wc.ml:def:wc', 'the counts of one channel', 'a channel per file, or stdin'],
+      ['wc.ml:def:report', 'a line of the chosen counts', 'the stats'],
+    ], main='wc.ml:code:"Cap.main (fun"', cli='wc.ml:def:main') + {
+      bones+: [{ at: 'wc.ml:def:sum_stats', role: 'the total of all files' }],
+      joints+: [
+        { from: 'wc.ml:def:main', to: 'wc.ml:def:sum_stats', say: "each file's stats" },
+        { from: 'wc.ml:def:sum_stats', to: 'wc.ml:def:report', say: 'the total' },
+      ],
+    },
+    skeletons.chain('opwd: the whole program', [
+      ['pwd.ml:code:"Cap.main"', 'Cap.main, then getcwd', ''],
+      ['../../lib_core/commons/Console.ml:def:print', 'a line to stdout', 'the directory'],
+    ]),
+  ],
+}

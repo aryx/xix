@@ -1,0 +1,104 @@
+// kernel/Libmemlayer/: what the code map says of it. Plan 9's
+// libmemlayer (~/principia/lib_graphics/libmemlayer/, Graphics.nw's
+// "Overlapping Layers"), copied into the kernel's C and linked by the
+// kernel's mkfile; the syncweb markers dropped, load.c's compressed
+// images commented out, nothing else changed.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Plan 9's libmemlayer, copied: overlapping windows as Memimages, a draw split into visible and saved pieces.",
+  files: {
+    'draw.c': {
+      summary: "memdraw for layers, from Plan 9's libmemlayer/draw.c unchanged: each piece drawn on screen or saved.",
+      digest: 'cc372d1890cb',
+      important: [
+        { at: 'def:memdraw', say: 'layers first, else plain memimagedraw', weight: 3 },
+        { at: 'def:ldrawop', say: 'one piece: screen or save image', weight: 3 },
+        { at: 'type:Draw', say: "the call's arguments, through the split", weight: 1 },
+      ],
+    },
+    'layerop.c': {
+      summary: "_memlayerop, from Plan 9 unchanged: a layer's rectangle split by the layers in front of it.",
+      digest: '786723461dc4',
+      capitals: [{ at: 'def:_memlayerop', say: 'the heart of layers: visible or obscured' }],
+      important: [
+        { at: 'def:_layerop', say: 'recursion down the windows in front', weight: 3 },
+        { at: 'comment:"no one is in front of this part of window"', weight: 2 },
+      ],
+    },
+    'lalloc.c': {
+      summary: "memlalloc, from Plan 9 unchanged: a new layer on a screen, its save image, at the front.",
+      digest: 'f418414f9cb3',
+      important: [{ at: 'def:memlalloc', weight: 2 }],
+    },
+    'ldelete.c': {
+      summary: 'A layer deleted and freed, the layers under it exposed; from Plan 9 unchanged.',
+      digest: 'e207880d33b9',
+      important: [{ at: 'def:memldelete', weight: 2 }, { at: 'def:_memlsetclear', weight: 1 }],
+    },
+    'lhide.c': {
+      summary: 'Hide a part of a layer (saved) or expose it (restored, or refreshed); from Plan 9 unchanged.',
+      digest: '9033450a27c8',
+      important: [
+        { at: 'comment:"Hide puts that portion of screenr"', say: 'must match the geometry: call order matters', weight: 2 },
+        { at: 'def:memlhide', weight: 1 },
+        { at: 'def:memlexpose', weight: 1 },
+      ],
+    },
+    'line.c': {
+      summary: 'memline for layers, split like a draw; from Plan 9 unchanged.',
+      digest: 'b5d9d456f170',
+      important: [{ at: 'def:_memline', say: 'bounding box, then the split', weight: 2 }, { at: 'def:memline', weight: 1 }],
+    },
+    'load.c': {
+      summary: "memload into a layer, piece by piece; from Plan 9, xix's copy without compressed images.",
+      digest: 'aa83f65f6007',
+      important: [{ at: 'comment:"if(iscompressed)"', say: 'xix: cloadmemimage not linked in', weight: 2 }],
+    },
+    'lorigin.c': {
+      summary: "A layer moved on the screen or its logical origin changed; from Plan 9 unchanged.",
+      digest: 'eda9404e3848',
+      important: [{ at: 'def:memlorigin', weight: 2 }],
+    },
+    'lsetrefresh.c': {
+      summary: 'How a layer is refreshed when exposed: save image, a function, or none; Plan 9 unchanged.',
+      digest: 'fba64b77f1ea',
+    },
+    'ltofront.c': {
+      summary: "A layer brought to the front: covered parts saved, uncovered ones restored; Plan 9 unchanged.",
+      digest: 'cb5595eae114',
+      important: [{ at: 'def:_memltofront', weight: 2 }, { at: 'def:memltofrontn', weight: 1 }],
+    },
+    'ltorear.c': {
+      summary: 'A layer sent to the back, the layers it uncovers exposed; from Plan 9 unchanged.',
+      digest: '5922975e1f30',
+    },
+    'unload.c': {
+      summary: 'memunload: pixels read from a layer, screen or save image; from Plan 9 unchanged.',
+      digest: '9e5d617e7ac4',
+    },
+  },
+  skeletons: [
+    skeletons.parts('libmemlayer: every operation split by _memlayerop', [
+      ['draw.c', 'drawing on a layer'],
+      ['line.c', 'lines on a layer'],
+      ['layerop.c', 'the split: visible pieces and hidden ones'],
+      ['lalloc.c', 'a layer made'],
+      ['ltofront.c', 'raised to the front'],
+      ['lhide.c', 'hide and expose: save and restore'],
+      ['../Libmemdraw/', 'the pixels, on the screen or saved'],
+    ], [
+      ['draw.c', 'layerop.c', 'a rectangle and ldrawop'],
+      ['line.c', 'layerop.c', 'llineop'],
+      ['lalloc.c', 'ltofront.c', 'the new layer, raised'],
+      ['ltofront.c', 'lhide.c', 'covered parts'],
+      ['layerop.c', '../Libmemdraw/', 'memimagedraw on each piece'],
+    ]),
+    skeletons.chain('memdraw: a draw split among visible and hidden pieces', [
+      ['draw.c:def:memdraw', 'the call', ''],
+      ['layerop.c:def:_memlayerop', 'the split', 'the rectangle, ldrawop'],
+      ['draw.c:def:ldrawop', 'a piece drawn', 'each piece'],
+      ['../Libmemdraw/draw.c:def:memimagedraw', 'the pixels', 'screen or save image'],
+    ]),
+  ],
+}

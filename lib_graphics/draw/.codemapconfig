@@ -1,0 +1,367 @@
+// lib_graphics/draw/: libdraw's drawing in OCaml, what the code map
+// says of it. The C original is ~/principia/lib_graphics/libdraw/
+// (init.c, alloc.c, draw.c, string.c, font.c, window.c...). As there,
+// nothing is drawn here: each call appends a message ('b' alloc, 'd'
+// draw, 's' string, 'A' a screen, 't' top...) to the display's buffer,
+// written to /dev/draw/n/data on flush; the kernel draws.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "libdraw's drawing: a display, images, layers and fonts, each call a message to /dev/draw.",
+  files: {
+    'Display.ml': {
+      summary: "The connection to /dev/draw (init.c): its files, its screen image, a buffer of messages.",
+      digest: '06ed93afb47a',
+      capitals: [
+        { at: 'type:display', say: 'the connection: ctl, data, the buffer' },
+        { at: 'def:flush', say: "'v': the buffer written, the screen shown" },
+      ],
+      important: [
+        { at: 'type:image', say: 'an image: an id on the server, a rectangle', weight: 3 },
+        { at: 'def:init', say: '/dev/draw/new read: client number, screen', weight: 3 },
+        { at: 'def:add_buf', say: 'every drawing call ends here', weight: 3 },
+        { at: 'def:flush_buffer', say: 'the one write to /dev/draw/n/data', weight: 2 },
+        { at: 'comment:"important to do that before the exn"', say: 'bufp reset first, or retries loop', weight: 2 },
+        { at: 'comment:"not sure why but it reads only 143"', say: '143 of 144 bytes read: accepted', weight: 1 },
+        { at: 'code:"let _reffdTODO ="', say: 'refresh never read', weight: 1 },
+        { at: 'def:fake_image', weight: 1 },
+      ],
+    },
+    'Display.mli': {
+      summary: 'The display and the image types (mutually recursive), the buffer and its flush.',
+      digest: '1cf5f47182b7',
+      capitals: [
+        { at: 'type:image', say: 'an image: the type drawing is about' },
+        { at: 'type:display', say: 'the connection to /dev/draw' },
+      ],
+      important: [
+        { at: 'def:flush', say: 'what a program calls after drawing', weight: 2 },
+        { at: 'def:add_buf', weight: 1 },
+      ],
+    },
+    'Image.ml': {
+      summary: "Images allocated on the server ('b'), freed ('f'), loaded with pixels ('y'): alloc.c.",
+      digest: 'c832aabd1fe9',
+      important: [
+        { at: 'def:alloc_gen', say: "the 'b' message: id, screen, chans, rectangles", weight: 3 },
+        { at: 'code:"then Rectangle.r (-0x3FFFFFFF)"', say: 'replicated: an infinite clip rectangle', weight: 2 },
+        { at: 'def:alloc_color', say: 'a color is a 1x1 replicated image', weight: 3 },
+        { at: 'def:free', say: 'a free always flushes', weight: 1 },
+        { at: 'def:load', say: 'pixels from the client: fonts', weight: 1 },
+      ],
+    },
+    'Image.mli': {
+      summary: "An image's life: alloc, alloc_color, load, flush, free (the type is Display.image).",
+      digest: '9cf8d491a018',
+      capitals: [
+        { at: 'def:alloc', say: 'an image on the server' },
+        { at: 'def:alloc_color', say: 'a color: a 1x1 image' },
+      ],
+      important: [{ at: 'type:t', say: 'Display.image: shared with display', weight: 2 }, { at: 'def:flush', weight: 1 }],
+    },
+    'Draw.ml': {
+      summary: "draw(): one image through a mask onto another, Porter-Duff ops (draw.c); init allocates white and black.",
+      digest: 'ad5d36a9f8ee',
+      capitals: [{ at: 'def:draw', say: "the one primitive: 'd' dst, src, mask" }],
+      important: [
+        { at: 'def:init', say: 'the display, with white and black', weight: 2 },
+        { at: 'def:draw_gen', say: "the 'd' message", weight: 3 },
+        { at: 'type:op', say: 'SoverD and the other compositing ops', weight: 2 },
+        { at: 'def:adjust_str_for_op', say: "'O' prefixed unless SoverD", weight: 1 },
+        { at: 'def:draw_color', say: 'fill with a color image', weight: 2 },
+        { at: 'def:alloc_mix_colors', say: 'a mix of two colors (allocimagemix)', weight: 1 },
+      ],
+    },
+    'Draw.mli': {
+      summary: "libdraw's entry: init, draw, draw_color, the compositing ops.",
+      digest: '7eaac5d93ac3',
+      important: [{ at: 'def:draw', weight: 2 }, { at: 'def:init', weight: 2 }],
+    },
+    'Draw_marshal.ml': {
+      summary: "The bytes of the protocol: ints, points, rectangles and colors, little-endian (BPLONG...).",
+      digest: 'c8fe8a5076ec',
+      important: [
+        { at: 'comment:"marshall full AST if kernel was written in OCaml"', say: 'the road not taken: a typed message', weight: 2 },
+        { at: 'def:bp_long', say: 'four bytes, low first', weight: 2 },
+        { at: 'def:bp_color', say: 'RGBA as a long: A, B, G, R', weight: 1 },
+      ],
+    },
+    'Draw_marshal.mli': {
+      summary: "The marshalling functions every message is built with.",
+      digest: '1d7b27fef976',
+      capitals: [{ at: 'def:bp_long', say: "the protocol's bytes: every message" }],
+      important: [{ at: 'def:bp_rect', weight: 1 }, { at: 'def:bp_point', weight: 1 }],
+    },
+    'Channel.ml': {
+      summary: "Pixel formats (chan.c): channels of kinds and bits, rgb24, grey1..., as text and as a long.",
+      digest: 'b182732b6323',
+      important: [
+        { at: 'type:chan_kind', say: 'red, green, blue, grey, alpha, map...', weight: 2 },
+        { at: 'def:channels_of_str', say: "/dev/draw/new's 'x8r8g8b8'", weight: 2 },
+        { at: 'def:depth_of_channels', weight: 1 },
+      ],
+    },
+    'Channel.mli': {
+      summary: 'Channels and the common formats.',
+      digest: '2fce24ff4e99',
+      important: [{ at: 'type:t', say: 'a pixel format', weight: 2 }],
+    },
+    'Color.ml': {
+      summary: 'Colors as RGBA and the named ones of draw.h (palegreygreen, rio\'s title).',
+      digest: '6eeb6b73ccd1',
+      important: [{ at: 'type:t', say: 'r, g, b, a', weight: 2 }, { at: 'def:mk2', weight: 1 }],
+    },
+    'Color.mli': {
+      summary: 'Colors and the named ones.',
+      digest: 'd5bae0a4645d',
+      important: [{ at: 'type:t', weight: 2 }],
+    },
+    'Baselayer.ml': {
+      summary: "A screen (Plan 9's allocscreen): the base on which overlapping layers are drawn, rio's desktop.",
+      digest: 'a449338f1416',
+      important: [
+        { at: 'def:alloc', say: "the 'A' message, retried for a free id", weight: 3 },
+        { at: 'code:"while not !ok && !try_ < 25 do"', say: '25 failures: an id returned anyway', weight: 2 },
+        { at: 'def:free', say: 'a TODO: failwith', weight: 1 },
+      ],
+    },
+    'Baselayer.mli': {
+      summary: 'The screen type: an id on its display.',
+      digest: '79c33c67f297',
+    },
+    'Layer.ml': {
+      summary: "Layers (window.c): images on a screen, stacked, refreshed by the server; a rio window is one.",
+      digest: 'd3aecf7f9cd3',
+      important: [
+        { at: 'def:alloc', say: 'an image with a screen id: a layer', weight: 3 },
+        { at: 'def:stack_op_gen', say: "the 't' message: up or down", weight: 2 },
+        { at: 'def:put_to_top', weight: 1 },
+      ],
+    },
+    'Layer.mli': {
+      summary: 'Layers: alloc, free, to the top or the bottom.',
+      digest: 'b803bd67344c',
+    },
+    'Draw_rio.ml': {
+      summary: "Inside a rio window (getwindow): /dev/winname read, its image found, a layer as the view.",
+      digest: '76b32f38549b',
+      important: [
+        { at: 'def:window_border_size', say: 'rio and libdraw must agree: 4', weight: 2 },
+        { at: 'def:get_view_and_baselayer', say: 'winname, named image, screen, layer', weight: 3 },
+        { at: 'comment:"TODO: does not work?"', say: 'Common.cat of /dev/winname failed', weight: 1 },
+        { at: 'code:"using display.image"', say: 'no window: the whole screen', weight: 1 },
+      ],
+    },
+    'Draw_rio.mli': {
+      summary: "What a client of rio needs: get_view and the border's size.",
+      digest: 'da475e813b10',
+    },
+    'Draw_ipc.ml': {
+      summary: "Images shared between processes by name ('N', 'n'): how rio hands a window to its client.",
+      digest: 'ac28859ec62c',
+      important: [
+        { at: 'def:name_image', say: 'rio publishes window.N', weight: 3 },
+        { at: 'def:get_named_image', say: 'the client finds it', weight: 3 },
+      ],
+    },
+    'Draw_ipc.mli': {
+      summary: 'Naming an image, finding one by name.',
+      digest: 'a4f172a83ace',
+    },
+    'Line.ml': {
+      summary: "Lines with ends (square, disc, arrow): the 'L' message (line.c).",
+      digest: '1074e16e580f',
+      important: [{ at: 'def:line_gen', say: "the 'L' message", weight: 2 }],
+    },
+    'Line.mli': {
+      summary: 'line and its ends.',
+      digest: '65feef1c79b9',
+    },
+    'Ellipse.ml': {
+      summary: "Ellipses, outlined or filled: 'e' and 'E' (ellipse.c); arcs share the generator.",
+      digest: '9e53ac60a5bd',
+      important: [{ at: 'def:ellipse_gen', say: 'arcs too: alpha and phi', weight: 2 }],
+    },
+    'Ellipse.mli': {
+      summary: 'ellipse, fill, and the generator Arc uses.',
+      digest: '775546ee769c',
+    },
+    'Arc.ml': {
+      summary: "Arcs: an ellipse's piece, through Ellipse's generator (arc.c); unused so far.",
+      digest: 'd54e0ddc9bd8',
+    },
+    'Arc.mli': {
+      summary: 'arc and fill.',
+      digest: '9048bf9772bb',
+    },
+    'Polygon.ml': {
+      summary: "Borders (border.c): a rectangle's outline as four draws, not a polygon yet.",
+      digest: '6008a8e4bf62',
+      important: [{ at: 'def:border', say: 'four thin rectangles', weight: 2 }],
+    },
+    'Polygon.mli': {
+      summary: 'border.',
+      digest: '55d0e32d23e2',
+    },
+    'Text.ml': {
+      summary: "Strings drawn from a font's cache image: the 's' message (string.c), a simplified cache.",
+      digest: 'd44c8f73959d',
+      important: [
+        { at: 'def:string_gen', say: "the 's' message: indices into the cache", weight: 3 },
+        { at: 'def:cache_chars', say: 'simplified: the cache holds all 256', weight: 2 },
+        { at: 'comment:"important to adjust pt"', say: 'the baseline: y plus the ascent', weight: 2 },
+        { at: 'def:string_width', weight: 1 },
+      ],
+    },
+    'Text.mli': {
+      summary: 'string and string_width.',
+      digest: 'de4c2786f370',
+    },
+    'Font.ml': {
+      summary: "Fonts (font.c): subfonts and a cache image on the server; 'i' to set it up, 'l' a char in.",
+      digest: '7f21424a3b7f',
+      important: [
+        { at: 'type:t', say: 'height, ascent, subfonts, the cache image', weight: 3 },
+        { at: 'def:initialize', say: "the 'i' message", weight: 1 },
+        { at: 'def:load_char', say: "the 'l' message", weight: 1 },
+      ],
+    },
+    'Font.mli': {
+      summary: 'The font type, and the two messages that fill its cache.',
+      digest: 'f7ae0687304a',
+      important: [{ at: 'type:t', weight: 2 }],
+    },
+    'Subfont.ml': {
+      summary: 'Subfonts: a bitmap of glyphs and where each char is in it (subfont.c).',
+      digest: 'cbb82e182751',
+      important: [
+        { at: 'comment:"given char c, Subfont *f"', say: "the C header's explanation, kept", weight: 2 },
+        { at: 'type:t', weight: 2 },
+      ],
+    },
+    'Subfont.mli': {
+      summary: 'The subfont type.',
+      digest: '0c6195e087b4',
+    },
+    'Fontchar.ml': {
+      summary: "A glyph's place in its subfont's bitmap: x, top, bottom, left, width.",
+      digest: '5d54933d3615',
+      important: [{ at: 'type:t', weight: 2 }],
+    },
+    'Font_default.ml': {
+      summary: 'The default font compiled in: lucm latin1 9 as a string of bits, made by tests/gen_font_default.ml.',
+      digest: 'c9934bf76f41',
+      important: [
+        { at: 'def:lucm_latin_1_9_uncompressed_parsed', say: 'the bitmap and glyph table: 550 lines of data', weight: 2 },
+        { at: 'def:load_default_subfont', say: 'the bits loaded into a server image', weight: 2 },
+        { at: 'def:load_default_font', say: 'every char loaded into the cache at once', weight: 3 },
+      ],
+    },
+    'Font_default.mli': {
+      summary: 'load_default_font: the only font orio has.',
+      digest: '5f60f59a97ae',
+    },
+  },
+  skeletons: [
+    skeletons.parts('libdraw: calls to messages to /dev/draw', [
+      ['Display.ml', 'the connection and the buffer'],
+      ['Draw_marshal.ml', 'the bytes of a message'],
+      ['Image.ml', 'images: alloc, free'],
+      ['Draw.ml', 'draw: the primitive'],
+      ['Line.ml', 'lines, ellipses, borders: more primitives'],
+      ['Text.ml', 'strings'],
+      ['Font.ml', 'fonts: a cache image'],
+      ['Baselayer.ml', 'screens'],
+      ['Layer.ml', 'layers on them'],
+      ['Draw_rio.ml', 'inside a rio window'],
+    ], [
+      ['Image.ml', 'Display.ml', "'b', 'f'"],
+      ['Draw.ml', 'Display.ml', "'d'"],
+      ['Line.ml', 'Draw.ml', 'the op'],
+      ['Text.ml', 'Font.ml', 'the cache'],
+      ['Text.ml', 'Display.ml', "'s'"],
+      ['Image.ml', 'Draw_marshal.ml', 'bp_long...'],
+      ['Layer.ml', 'Image.ml', 'an image with a screen'],
+      ['Layer.ml', 'Baselayer.ml', 'on a screen'],
+      ['Draw_rio.ml', 'Layer.ml', 'the view'],
+    ]),
+    skeletons.chain('A rectangle drawn: from draw to /dev/draw', [
+      ['Draw.ml:def:draw', 'dst, r, src, mask, point', ''],
+      ['Draw.ml:def:draw_gen', "the 'd' message built", 'the images'],
+      ['Draw_marshal.ml:def:bp_long', 'ids, rectangles, points as bytes', 'ints'],
+      ['Display.ml:def:add_buf', 'appended to the buffer', 'the message'],
+      ['Display.ml:def:flush_buffer', 'written: the kernel draws', 'full, or flushed'],
+    ]),
+    skeletons.chain('A client of rio finds its window', [
+      ['Draw.ml:def:init', 'the display: /dev/draw/new', ''],
+      ['Draw_rio.ml:def:get_view_and_baselayer', '/dev/winname read', 'the display'],
+      ['Draw_ipc.ml:def:get_named_image', 'the window, by its name', 'window.N'],
+      ['Baselayer.ml:def:alloc', 'a screen on it', 'the image'],
+      ['Layer.ml:def:alloc', 'a layer inside the border: the view', 'the screen'],
+    ]),
+    {
+      name: 'The display: init, the buffer, flush',
+      bones: [
+        { at: 'Display.ml:type:display', role: 'the connection' },
+        { at: 'Display.ml:type:image', role: 'an image on the server' },
+        { at: 'Display.ml:def:init', role: '/dev/draw/new, data, screen' },
+        { at: 'Display.ml:def:add_buf', role: 'a message appended' },
+        { at: 'Display.ml:def:flush_buffer', role: 'the write' },
+        { at: 'Display.ml:def:flush', role: "'v', then written" },
+      ],
+      joints: [
+        { from: 'Display.ml:def:init', to: 'Display.ml:type:display', say: 'builds, with its screen image' },
+        { from: 'Display.ml:type:display', to: 'Display.ml:type:image', say: 'mutually recursive' },
+        { from: 'Display.ml:def:add_buf', to: 'Display.ml:def:flush_buffer', say: 'when full' },
+        { from: 'Display.ml:def:flush', to: 'Display.ml:def:add_buf', say: "'v'" },
+        { from: 'Display.ml:def:flush', to: 'Display.ml:def:flush_buffer', say: 'then' },
+      ],
+    },
+    skeletons.module('Image.ml', "An image's life on the server", [
+      ['alloc_color', 'a color: 1x1, replicated', ''],
+      ['alloc', 'no screen, no refresh', 'calls'],
+      ['alloc_gen', "the 'b' message", 'calls'],
+    ]) + {
+      bones+: [
+        { at: 'Image.ml:def:free', role: "'f', then flushed" },
+        { at: 'Image.ml:def:load', role: "'y': pixels in" },
+        { at: 'Display.ml:def:add_buf', role: 'the buffer' },
+      ],
+      joints+: [
+        { from: 'Image.ml:def:alloc_gen', to: 'Display.ml:def:add_buf', say: "'b'" },
+        { from: 'Image.ml:def:free', to: 'Display.ml:def:add_buf', say: "'f'" },
+        { from: 'Image.ml:def:load', to: 'Display.ml:def:add_buf', say: "'y'" },
+      ],
+    },
+    {
+      name: 'The default font: bits, subfont, cache',
+      bones: [
+        { at: 'Font_default.ml:def:lucm_latin_1_9_uncompressed_parsed', role: 'the data: bits and glyphs' },
+        { at: 'Font_default.ml:def:load_default_subfont', role: 'the bits in a server image' },
+        { at: 'Font_default.ml:def:load_default_font', role: 'the cache filled' },
+        { at: 'Font.ml:def:initialize', role: "'i'" },
+        { at: 'Font.ml:def:load_char', role: "'l' per char" },
+      ],
+      joints: [
+        { from: 'Font_default.ml:def:lucm_latin_1_9_uncompressed_parsed', to: 'Font_default.ml:def:load_default_subfont', say: 'loaded' },
+        { from: 'Font_default.ml:def:load_default_subfont', to: 'Font_default.ml:def:load_default_font', say: 'the subfont' },
+        { from: 'Font_default.ml:def:load_default_font', to: 'Font.ml:def:initialize', say: 'the cache image' },
+        { from: 'Font_default.ml:def:load_default_font', to: 'Font.ml:def:load_char', say: 'all 256' },
+      ],
+    },
+  ],
+  tours: [
+    {
+      name: 'libdraw: from a call to the kernel',
+      stops: [
+        { at: 'Display.ml:def:init', say: 'A program opens /dev/draw/new: its client number and the screen image.' },
+        { at: 'Display.ml:type:image', say: 'An image is an id on the server with its rectangles: no pixels here.' },
+        { at: 'Image.ml:def:alloc_gen', say: "Allocating is a 'b' message; a color is a 1x1 replicated image." },
+        { at: 'Draw.ml:def:draw_gen', say: 'draw() is the one primitive: dst, src, mask, as a message.' },
+        { at: 'Display.ml:def:add_buf', say: 'Messages accumulate in a buffer...' },
+        { at: 'Display.ml:def:flush_buffer', say: '... written in one go to /dev/draw/n/data, where the kernel draws.' },
+        { at: 'Draw_rio.ml:def:get_view_and_baselayer', say: 'Inside rio, a program draws on a layer of its window, found by name.' },
+      ],
+    },
+  ],
+}

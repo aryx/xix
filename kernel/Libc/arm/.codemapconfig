@@ -1,0 +1,106 @@
+// kernel/Libc/arm/: what the code map says of it (tinybox codemap). From
+// ~/principia/lib_core/libc/arm/ (its config's judgement reused), the
+// syncweb markers removed; memmove.s and memset.s are APE's versions.
+// No main9.s: the kernel starts in Bcm/start.s, not in _main. The TEXT
+// symbols are not definitions to the map: anchors are labels or code:.
+local skeletons = import '../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "libc's ARM assembly for the kernel: fast memmove and memset, setjmp, atomics, and the division and vlong runtime 5c calls.",
+  files: {
+    'memmove.s': {
+      summary: "memmove and memcpy (APE's copy, memcpy an alias): by overlap forward or back, 32 bytes a turn, unaligned by shifts.",
+      digest: '986915d83c6f',
+      important: [
+        { at: 'def:_memmove', say: 'overlap decides the direction', weight: 3 },
+        { at: 'code:"TEXT memcpy"', say: 'memcpy is memmove here: overlap safe', weight: 1 },
+        { at: 'def:_f32loop', say: 'eight registers at a time: MOVM', weight: 2 },
+        { at: 'def:_funaligned', say: 'source unaligned: words shifted together', weight: 2 },
+      ],
+    },
+    'memset.s': {
+      summary: "memset (APE's copy): the byte replicated in a word, then 16 bytes a turn.",
+      digest: '746c523e194e',
+      important: [{ at: 'def:_f16loop', say: 'four registers stored at a time', weight: 2 }],
+    },
+    'setjmp.s': {
+      summary: "setjmp and longjmp, as principia's: only SP and the link register saved; ocamlrun's exceptions (fail.c).",
+      digest: '85810f448f25',
+      important: [
+        { at: 'code:"setjmp"', say: 'two words: SP and LR', weight: 2 },
+        { at: 'def:ok', say: 'longjmp(0) returns 1, as ANSI says', weight: 1 },
+      ],
+    },
+    'atom.s': {
+      summary: "cas, ainc, adec, as principia's: compare-and-swap and atomic counters by LDREX/STREX (ARMv6 on).",
+      digest: '515a5bd8c2e2',
+      important: [{ at: 'def:spincas', say: 'retry until the store-exclusive succeeds', weight: 2 }],
+    },
+    'getcallerpc.s': { summary: "getcallerpc, as principia's: the caller's return address, for the pool's tags.", digest: '7e603910c5ae' },
+    'strcmp.s': { summary: "strcmp in assembly, as principia's: a word at a time when both are aligned.", digest: '14cd21a5417e' },
+    'strcpy.s': { summary: "strcpy in assembly, as principia's: aligned words when it can.", digest: 'aad4991d9678' },
+    'div.s': {
+      summary: "_div, _mod, _divu, _modu, as principia's: ARM has no divide instruction, so 5c calls these.",
+      digest: '23daf1a31e5e',
+      important: [{ at: 'comment:"divide by zero fault"', say: 'division by zero: a fault on purpose', weight: 2 }],
+    },
+    'vlop.s': { summary: "_mulv, as principia's: a 64-bit multiply by MULLU, for vlrt.c.", digest: '99eb54110c99' },
+    'vlrt.c': {
+      summary: "The vlong runtime, as principia's: 5c turns 64-bit arithmetic into calls here, a Vlong as two words.",
+      digest: '30337ebc0274',
+      important: [
+        { at: 'type:Vlong', say: 'a 64-bit number: lo, hi', weight: 3 },
+        { at: 'def:dodiv', say: 'long division, bit by bit', weight: 2 },
+        { at: 'def:_d2v', say: 'double to vlong, from the bits', weight: 1 },
+        { at: 'def:_vasop', say: 'x op= y, for any integer type of x', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts('libc on ARM, for the kernel: fast paths and the runtime', [
+      ['memmove.s', 'memory copied fast'],
+      ['memset.s', 'memory cleared fast'],
+      ['setjmp.s', 'saved and resumed: an OCaml exception raised from C'],
+      ['atom.s', 'atomic counters'],
+      ['vlrt.c', "64-bit arithmetic 5c can't inline"],
+      ['vlop.s', 'the 64-bit multiply'],
+      ['div.s', 'division, in software'],
+    ], [
+      ['vlrt.c', 'vlop.s', '_mulv'],
+      ['vlrt.c', 'div.s', '32-bit divisions'],
+    ]),
+    {
+      name: 'memmove.s: copying fast',
+      bones: [
+        { at: 'memmove.s:def:_memmove', role: 'overlap? which way' },
+        { at: 'memmove.s:def:_forward', role: 'from the start' },
+        { at: 'memmove.s:def:_f32loop', role: '32 bytes a turn' },
+        { at: 'memmove.s:def:_funaligned', role: 'unaligned source' },
+        { at: 'memmove.s:def:_back', role: 'from the end' },
+        { at: 'memmove.s:def:_return', role: 'done' },
+      ],
+      joints: [
+        { from: 'memmove.s:def:_memmove', to: 'memmove.s:def:_forward', say: 'to below from' },
+        { from: 'memmove.s:def:_memmove', to: 'memmove.s:def:_back', say: 'overlapping' },
+        { from: 'memmove.s:def:_forward', to: 'memmove.s:def:_f32loop', say: 'aligned' },
+        { from: 'memmove.s:def:_forward', to: 'memmove.s:def:_funaligned', say: 'not' },
+        { from: 'memmove.s:def:_f32loop', to: 'memmove.s:def:_return', say: 'the tail' },
+      ],
+    },
+    {
+      name: 'vlrt.c: 64 bits in two words',
+      bones: [
+        { at: 'vlrt.c:type:Vlong', role: 'lo and hi' },
+        { at: 'vlrt.c:def:_divv', role: 'signed division' },
+        { at: 'vlrt.c:def:dodiv', role: 'the division itself' },
+        { at: 'vlrt.c:def:vneg', role: 'signs removed, restored' },
+        { at: 'vlrt.c:def:_d2v', role: 'conversions' },
+      ],
+      joints: [
+        { from: 'vlrt.c:def:_divv', to: 'vlrt.c:def:vneg', say: 'negatives' },
+        { from: 'vlrt.c:def:_divv', to: 'vlrt.c:def:dodiv', say: 'unsigned' },
+        { from: 'vlrt.c:type:Vlong', to: 'vlrt.c:def:dodiv', say: 'the operands' },
+      ],
+    },
+  ],
+}

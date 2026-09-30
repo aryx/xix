@@ -1,0 +1,35 @@
+// lib_core/crypto/: what the code map says of it
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "SHA-1 in pure OCaml, the names of ogit's objects; the code is uuidm's, as git-mirage's.",
+  files: {
+    'sha1.mli': {
+      summary: 'A SHA-1 as a 20-byte string: computed, read, written, checked.',
+      digest: '7e7672dde7db',
+      capitals: [
+        { at: 'type:t', say: "an object's name in ogit: 9 files" },
+        { at: 'def:sha1', say: 'the hash of a string' },
+      ],
+      important: [{ at: 'def:read', say: 'from a tree or the index' }],
+    },
+    'sha1.ml': {
+      summary: "RFC 3174's pseudo-code, slow but C-free; is_sha, read and write around it for ogit's book.",
+      digest: '4efb1a88f11a',
+      important: [
+        { at: 'def:sha1', say: 'pad, then 80 rounds per 64-byte block', weight: 3 },
+        { at: 'comment:"Slow and ugly but does the job"', weight: 2 },
+        { at: 'type:t', say: 'raw bytes, not hex: Hexsha converts' },
+        { at: 'def:read', say: 'asserts 20 bytes' },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.module('sha1.ml', 'A SHA-1 computed and stored', [
+      ['sha1', 'a string hashed: padded, then blocks of 64 bytes', ''],
+      ['is_sha', 'the invariant: 20 bytes', 'a t'],
+      ['write', 'into an object, the index', 'a t'],
+      ['read', 'back, checked', 'read'],
+    ]),
+  ],
+}

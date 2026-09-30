@@ -1,0 +1,230 @@
+// assembler/objects/: what the code map says of it
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The assembly ASTs, one per architecture over a shared core, and the object file: that AST marshalled.",
+  files: {
+    'Ast_asm.ml': {
+      summary: "What every Plan 9 assembly shares: operands, pseudo-instructions, a program of lines, 'instr left open.",
+      digest: '172b7fbafb44',
+      capitals: [
+        { at: 'type:program', say: "lines and their locations: an object's content" },
+        { at: 'type:line', say: 'pseudo, virtual or an arch instruction' },
+        { at: 'type:branch_operand', say: 'a ref: resolved by oas, then by olk' },
+      ],
+      important: [
+        { at: 'comment:"object files are mostly the serialized form"', say: 'why the AST lives beside the object file', weight: 3 },
+        { at: 'comment:"please increment Object_file.version"', say: 'the AST is the file format: bump on change', weight: 3 },
+        { at: 'type:global', say: 'priv mutated by the linker when naming statics', weight: 1 },
+        { at: 'type:entity', say: 'FP, SP, SB: params, locals, globals', weight: 1 },
+        { at: 'type:ximm', say: "DATA's values: ints, strings, addresses", weight: 1 },
+        { at: 'type:pseudo_instr', say: 'TEXT, GLOBL, DATA, WORD', weight: 1 },
+        { at: 'type:virtual_instr', say: 'RET, NOP, Jmp...: expanded by the linker', weight: 1 },
+        { at: 'def:visit_globals_program', say: 'every symbol named: what olk resolves', weight: 1 },
+      ],
+    },
+    'Ast_asm5.ml': {
+      summary: "ARM's assembly (5a's): shifted-register operands, and a condition on every instruction.",
+      digest: '03f7b8bb5dcd',
+      important: [
+        { at: 'type:instr_with_cond', say: "ARM's trick: any instruction conditional", weight: 3 },
+        { at: 'type:mov_operand', say: "MOVW's many addressing modes", weight: 3 },
+        { at: 'type:instr', say: 'the ARM instructions 5a knows', weight: 1 },
+        { at: 'type:shift_reg_op', say: 'R1<<3 folded into an operand', weight: 1 },
+        { at: 'def:rTMP', say: 'the register the linker may clobber', weight: 1 },
+        { at: 'comment:"CASE/BCASE and MULU/DIVU/MODU"', say: 'an old TODO now done: see the note', weight: 1 },
+      ],
+    },
+    'Ast_asm6.ml': {
+      summary: 'amd64 assembly (6a/6l): variable-length instructions, a real SP, ModRM operands.',
+      digest: 'f574294e550d',
+      important: [
+        { at: 'comment:"THE central architectural difference"', say: 'bytes, not words: the linker generalized', weight: 3 },
+        { at: 'type:gen', say: 'the general operand: register, memory, immediate', weight: 3 },
+        { at: 'type:instr', say: 'the x86-64 instructions ported', weight: 1 },
+        { at: 'type:width', say: 'B, W, L, Q: the size suffixes', weight: 1 },
+        { at: 'type:xregister', say: 'SSE registers for floats', weight: 1 },
+      ],
+    },
+    'Ast_asm7.ml': {
+      summary: 'ARM64 assembly (7a/7l): register 31 is ZR or SP by position, no per-instruction condition.',
+      digest: '85cd221653d6',
+      important: [
+        { at: 'comment:"register 31 is contextual"', say: 'one number, two registers', weight: 3 },
+        { at: 'type:instr', say: 'the AArch64 instructions ported', weight: 3 },
+        { at: 'type:move_size', say: 'loads and stores by width', weight: 1 },
+        { at: 'type:condition', say: 'only on branches and selects now', weight: 1 },
+      ],
+    },
+    'Ast_asmi.ml': {
+      summary: "RISC-V assembly (ia/ja): a plain RISC, LUI and AUIPC for big constants, gp as Plan 9's SB.",
+      digest: '1be3a4bcc45f',
+      important: [
+        { at: 'comment:"gp (x3) global pointer = SB in plan9 philosophy"', say: 'RISC-V took the SB idea', weight: 3 },
+        { at: 'type:instr', say: 'RV32/RV64 instructions, one AST', weight: 3 },
+        { at: 'type:vgen', say: 'operands of loads and stores', weight: 1 },
+        { at: 'type:csr_op', say: 'control registers, for a kernel', weight: 1 },
+      ],
+    },
+    'Ast_asmv.ml': {
+      summary: "MIPS assembly (va): R0 always zero, JAL and a LINK register, no CALL/RET but virtual ones.",
+      digest: 'fdc819d99d52',
+      important: [
+        { at: 'comment:"There is no CALL/RET"', say: 'why RET is virtual, expanded by vl', weight: 3 },
+        { at: 'type:instr', say: 'the MIPS instructions va knows', weight: 3 },
+        { at: 'def:rTMP', say: 'the linker scratch: 148 uses in Codegenv', weight: 1 },
+        { at: 'type:tlb_kind', say: 'TLB instructions, for a kernel', weight: 1 },
+      ],
+    },
+    'Arch_linker.ml': {
+      summary: "An architecture's AST functions as a record, so the linker is written once: a functor OCaml-light lacks.",
+      digest: '5043986daaac',
+      important: [
+        { at: 'comment:"alt: use a functor"', say: 'records instead: OCaml-light has no functors', weight: 3 },
+        { at: 'def:of_arch', say: 'Obj.magic: the record typed by the caller', weight: 3 },
+        { at: 'type:t', say: 'branches, globals, a temp register', weight: 1 },
+      ],
+    },
+    'Object_file.ml': {
+      summary: "A .5/.o file: the architecture and its assembly AST, marshalled with a version number.",
+      digest: 'e1ac3473f964',
+      important: [
+        { at: 'def:save', say: 'output_value: no encoding written by hand', weight: 3 },
+        { at: 'def:load', say: 'a stale version refused, not misread', weight: 3 },
+        { at: 'def:version', say: 'bumped when any Ast_asm changes', weight: 1 },
+        { at: 'def:is_obj_filename', say: '.o5 .ov .oi .oj .o7 .o6', weight: 1 },
+      ],
+    },
+    'Object_file.mli': {
+      summary: "The object file's interface: save by oas and occ, load by olk, ar and nm.",
+      digest: 'c8d7e9c15cf9',
+      capitals: [
+        { at: 'def:save', say: 'the assembly AST marshalled' },
+        { at: 'def:load', say: 'the AST back, for the linker' },
+      ],
+      important: [
+        { at: 'comment:"really just a serialized assembly AST"', say: "Plan 9's idea: no binary format", weight: 3 },
+        { at: 'type:t', say: 'the program and its arch', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts('The object file: the assembly AST, per architecture', [
+      ['Ast_asm.ml', "the shared core, 'instr a parameter"],
+      ['Ast_asm5.ml', 'ARM (5): the first, the book'],
+      ['Ast_asm6.ml', 'amd64 (6)'],
+      ['Ast_asm7.ml', 'ARM64 (7)'],
+      ['Ast_asmv.ml', 'MIPS (v)'],
+      ['Ast_asmi.ml', 'RISC-V (i and j)'],
+      ['Object_file.ml', 'the AST marshalled to disk'],
+      ['Arch_linker.ml', "each arch's functions, for olk"],
+    ], [
+      ['Ast_asm5.ml', 'Ast_asm.ml', "fills 'instr"],
+      ['Ast_asm6.ml', 'Ast_asm.ml', "fills 'instr"],
+      ['Ast_asm7.ml', 'Ast_asm.ml', "fills 'instr"],
+      ['Ast_asmv.ml', 'Ast_asm.ml', "fills 'instr"],
+      ['Ast_asmi.ml', 'Ast_asm.ml', "fills 'instr"],
+      ['Ast_asm.ml', 'Object_file.ml', 'a program saved'],
+      ['Ast_asm5.ml', 'Arch_linker.ml', 'its branch and globals visitors'],
+    ]),
+    {
+      name: 'An assembly program: lines of pseudo, virtual or real instructions',
+      bones: [
+        { at: 'Ast_asm.ml:type:program', role: 'the lines, and where they came from' },
+        { at: 'Ast_asm.ml:type:line', role: 'one line: pseudo, virtual, instr, label' },
+        { at: 'Ast_asm.ml:type:pseudo_instr', role: 'TEXT, GLOBL, DATA: symbols defined' },
+        { at: 'Ast_asm.ml:type:virtual_instr', role: 'portable: expanded by the linker' },
+        { at: 'Ast_asm.ml:type:branch_operand', role: 'a jump: label, symbol, then address' },
+        { at: 'Ast_asm.ml:type:global', role: 'a symbol, maybe private' },
+      ],
+      joints: [
+        { from: 'Ast_asm.ml:type:program', to: 'Ast_asm.ml:type:line', say: 'a list of' },
+        { from: 'Ast_asm.ml:type:line', to: 'Ast_asm.ml:type:pseudo_instr', say: 'Pseudo' },
+        { from: 'Ast_asm.ml:type:line', to: 'Ast_asm.ml:type:virtual_instr', say: 'Virtual' },
+        { from: 'Ast_asm.ml:type:virtual_instr', to: 'Ast_asm.ml:type:branch_operand', say: 'Jmp, JmpAndLink' },
+        { from: 'Ast_asm.ml:type:branch_operand', to: 'Ast_asm.ml:type:global', say: 'SymbolJump' },
+        { from: 'Ast_asm.ml:type:pseudo_instr', to: 'Ast_asm.ml:type:global', say: 'TEXT, GLOBL define' },
+      ],
+    },
+    {
+      name: "ARM's assembly: conditional instructions",
+      bones: [
+        { at: 'Ast_asm5.ml:type:program', role: "Ast_asm's program of these" },
+        { at: 'Ast_asm5.ml:type:instr_with_cond', role: 'an instruction and its condition' },
+        { at: 'Ast_asm5.ml:type:instr', role: 'the instructions' },
+        { at: 'Ast_asm5.ml:type:mov_operand', role: 'the addressing modes' },
+        { at: 'Ast_asm5.ml:type:arith_operand', role: 'immediate, register, shifted' },
+      ],
+      joints: [
+        { from: 'Ast_asm5.ml:type:program', to: 'Ast_asm5.ml:type:instr_with_cond', say: "the 'instr" },
+        { from: 'Ast_asm5.ml:type:instr_with_cond', to: 'Ast_asm5.ml:type:instr', say: 'wraps' },
+        { from: 'Ast_asm5.ml:type:instr', to: 'Ast_asm5.ml:type:mov_operand', say: 'MOV' },
+        { from: 'Ast_asm5.ml:type:instr', to: 'Ast_asm5.ml:type:arith_operand', say: 'arithmetic' },
+      ],
+    },
+    {
+      name: 'amd64 assembly: instructions over general operands',
+      bones: [
+        { at: 'Ast_asm6.ml:type:program', role: "Ast_asm's program of these" },
+        { at: 'Ast_asm6.ml:type:instr', role: 'the instructions' },
+        { at: 'Ast_asm6.ml:type:gen', role: 'register, memory, immediate' },
+        { at: 'Ast_asm6.ml:type:width', role: 'the operand size' },
+        { at: 'Ast_asm6.ml:def:branch_opd_of_instr', role: 'for the linker: the jumps' },
+      ],
+      joints: [
+        { from: 'Ast_asm6.ml:type:program', to: 'Ast_asm6.ml:type:instr', say: "the 'instr" },
+        { from: 'Ast_asm6.ml:type:instr', to: 'Ast_asm6.ml:type:gen', say: 'operands' },
+        { from: 'Ast_asm6.ml:type:instr', to: 'Ast_asm6.ml:type:width', say: 'sized' },
+        { from: 'Ast_asm6.ml:type:instr', to: 'Ast_asm6.ml:def:branch_opd_of_instr', say: 'jumps found' },
+      ],
+    },
+    {
+      name: 'ARM64 assembly: instructions and operands',
+      bones: [
+        { at: 'Ast_asm7.ml:type:program', role: "Ast_asm's program of these" },
+        { at: 'Ast_asm7.ml:type:instr', role: 'the instructions' },
+        { at: 'Ast_asm7.ml:type:gen', role: 'the general operand' },
+        { at: 'Ast_asm7.ml:type:reg', role: 'R0-R31, 31 by position' },
+        { at: 'Ast_asm7.ml:def:branch_opd_of_instr', role: 'for the linker: the jumps' },
+      ],
+      joints: [
+        { from: 'Ast_asm7.ml:type:program', to: 'Ast_asm7.ml:type:instr', say: "the 'instr" },
+        { from: 'Ast_asm7.ml:type:instr', to: 'Ast_asm7.ml:type:gen', say: 'operands' },
+        { from: 'Ast_asm7.ml:type:gen', to: 'Ast_asm7.ml:type:reg', say: 'registers' },
+        { from: 'Ast_asm7.ml:type:instr', to: 'Ast_asm7.ml:def:branch_opd_of_instr', say: 'jumps found' },
+      ],
+    },
+    {
+      name: 'RISC-V assembly: instructions and operands',
+      bones: [
+        { at: 'Ast_asmi.ml:type:program', role: "Ast_asm's program of these" },
+        { at: 'Ast_asmi.ml:type:instr', role: 'the instructions' },
+        { at: 'Ast_asmi.ml:type:gen', role: 'register or immediate' },
+        { at: 'Ast_asmi.ml:type:vgen', role: 'memory operands' },
+        { at: 'Ast_asmi.ml:def:branch_opd_of_instr', role: 'for the linker: the jumps' },
+      ],
+      joints: [
+        { from: 'Ast_asmi.ml:type:program', to: 'Ast_asmi.ml:type:instr', say: "the 'instr" },
+        { from: 'Ast_asmi.ml:type:instr', to: 'Ast_asmi.ml:type:gen', say: 'operands' },
+        { from: 'Ast_asmi.ml:type:instr', to: 'Ast_asmi.ml:type:vgen', say: 'loads, stores' },
+        { from: 'Ast_asmi.ml:type:instr', to: 'Ast_asmi.ml:def:branch_opd_of_instr', say: 'jumps found' },
+      ],
+    },
+    {
+      name: 'MIPS assembly: instructions and operands',
+      bones: [
+        { at: 'Ast_asmv.ml:type:program', role: "Ast_asm's program of these" },
+        { at: 'Ast_asmv.ml:type:instr', role: 'the instructions' },
+        { at: 'Ast_asmv.ml:type:gen', role: 'register or immediate' },
+        { at: 'Ast_asmv.ml:type:vgen', role: 'memory and special registers' },
+        { at: 'Ast_asmv.ml:def:branch_opd_of_instr', role: 'for the linker: the jumps' },
+      ],
+      joints: [
+        { from: 'Ast_asmv.ml:type:program', to: 'Ast_asmv.ml:type:instr', say: "the 'instr" },
+        { from: 'Ast_asmv.ml:type:instr', to: 'Ast_asmv.ml:type:gen', say: 'operands' },
+        { from: 'Ast_asmv.ml:type:instr', to: 'Ast_asmv.ml:type:vgen', say: 'loads, stores' },
+        { from: 'Ast_asmv.ml:type:instr', to: 'Ast_asmv.ml:def:branch_opd_of_instr', say: 'jumps found' },
+      ],
+    },
+  ],
+}

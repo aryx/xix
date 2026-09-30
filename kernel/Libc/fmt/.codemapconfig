@@ -1,0 +1,151 @@
+// kernel/Libc/fmt/: what the code map says of it (tinybox codemap). From
+// ~/principia/lib_core/libc/fmt/ (its config's judgement reused), the
+// same code, the syncweb markers removed. What the kernel leaves out:
+// print.c (the kernel's print is Port/devcons.c's devcons_print, over
+// vseprint), fltfmt.c (Port/print.c stubs _efgfmt: no %f in the kernel),
+// fmtlock.c (Port/print.c's lock), the smprint and rune families.
+local skeletons = import '../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "print's engine, principia's unchanged: dofmt writes into a Fmt buffer; the kernel prints via vseprint and snprint.",
+  files: {
+    'dofmt.c': {
+      summary: "dofmt, the engine, as principia's: the format copied into the Fmt buffer, each % to its verb; the standard verbs.",
+      digest: 'fd3b8cce5abe',
+      capitals: [{ at: 'def:dofmt', say: 'every print of the kernel ends here' }],
+      important: [
+        { at: 'code:"FMTCHAR(f, t, s, r)"', say: 'plain bytes copied, the buffer flushed when full', weight: 2 },
+        { at: 'code:"fmt = _fmtdispatch(f, fmt, 0)"', say: 'a %: flags, width, then the verb', weight: 3 },
+        { at: 'def:_fmtflush', say: "the buffer full: the Fmt's own flush called", weight: 2 },
+        { at: 'def:_fmtcpy', say: 'a converted string padded to width and copied', weight: 1 },
+        { at: 'def:_ifmt', say: '%d %x %o %b %p: integers in any base', weight: 2 },
+        { at: 'def:fmtstrcpy', say: 'what user verbs call to emit a string', weight: 1 },
+      ],
+      links: [{ from: 'def:dofmt', to: 'fmt.c:def:_fmtdispatch' }, { from: 'def:dofmt', to: 'def:_fmtflush' }],
+    },
+    'fmt.c': {
+      summary: "The table of verbs, as principia's: built-in ones installed on first use; fmtinstall adds more (the kernel's %q).",
+      digest: 'bbe59290cbb7',
+      important: [
+        { at: 'def:knownfmt', say: 'the built-in verbs, letter by letter', weight: 3 },
+        { at: 'def:_fmtdispatch', say: 'a directive parsed: flags, width, precision, verb', weight: 3 },
+        { at: 'code:"n = (*fmtfmt(r))(f)"', say: 'the verb called: 0 done, 1 a flag, go on', weight: 2 },
+        { at: 'def:fmtinstall', say: "a verb added: main.c's quotefmtinstall", weight: 2 },
+        { at: 'code:"while(p->fmt == nil)"', say: 'lock-free read: spins while another installs', weight: 1 },
+      ],
+    },
+    'fmtdef.h': {
+      summary: "fmt's private interface, as principia's: the verb functions, the lock, FMTCHAR/FMTRUNE, put a char or flush.",
+      digest: '97f907853d0b',
+      important: [
+        { at: 'comment:"dofmt -- format to a buffer"', say: "the Fmt's contract: flush resets or stops", weight: 2 },
+        { at: 'def:FMTCHAR', say: 'a byte in, the buffer flushed if full', weight: 2 },
+        { at: 'def:FMTRUNE', weight: 1 },
+      ],
+    },
+    'vseprint.c': {
+      summary: "vseprint, as principia's: into [buf, end), returning where it stopped; the kernel's print and pool messages.",
+      digest: 'd6db45d93b0c',
+      important: [{ at: 'def:vseprint', say: "devcons_print's formatter: a Fmt, no flush", weight: 2 }],
+    },
+    'vfprint.c': {
+      summary: "vfprint, as principia's: a stack Fmt flushed by write(); in the kernel write is fakes.c's, console only.",
+      digest: 'e66bf8ba2136',
+      important: [{ at: 'def:_fmtFdFlush', say: "write(): fakes.c's, fd 1 and 2 printed, else panic", weight: 2 }],
+    },
+    'fprint.c': { summary: "fprint, as principia's: to a fd through vfprint (fakes.c's write under it).", digest: '23666a4c94fb' },
+    'fmtfd.c': { summary: "fmtfdinit and fmtfdflush, as principia's: a Fmt aimed at a fd.", digest: 'e2d3e4d9871a' },
+    'sprint.c': { summary: "sprint, as principia's: into a buffer, unbounded; prefer snprint.", digest: '88daab0e5201' },
+    'snprint.c': { summary: "snprint, as principia's: into n bytes, cut to fit; trap.c's fault messages.", digest: '1cb9d9e72783' },
+    'vsnprint.c': { summary: "vsnprint, as principia's: a Fmt over the buffer with no flush.", digest: '328aa074ec5e' },
+    'fmtprint.c': { summary: "fmtprint, as principia's: formatting inside a verb (Libgeometry's %R and %P).", digest: '5a53fc5057fe' },
+    'fmtvprint.c': { summary: "fmtvprint, as principia's: fmtprint on a va_list, the Fmt's args saved and restored.", digest: '3d7e3b714b02' },
+    'fmtquote.c': {
+      summary: "%q and %Q, as principia's: strings quoted rc's way; main.c's quotefmtinstall turns them on.",
+      digest: '7670f597ab87',
+      important: [
+        { at: 'def:quotefmtinstall', say: "called once by the kernel's main", weight: 2 },
+        { at: 'def:_quotesetup', say: 'a first pass: must it be quoted, and how long', weight: 2 },
+        { at: 'def:qstrfmt', say: 'the second: quotes doubled', weight: 1 },
+      ],
+    },
+    'errfmt.c': { summary: "%r, as principia's: the last error string; in the kernel rerrstr is a panicking fake.", digest: '1cbe06597bb3' },
+  },
+  skeletons: [
+    skeletons.parts('fmt in the kernel: fronts, one engine, the verbs', [
+      ['vseprint.c', "the kernel's front: print and iprint"],
+      ['snprint.c', 'the other front: messages into buffers'],
+      ['vfprint.c', 'the fd front: fakes.c write'],
+      ['dofmt.c', 'the engine and the standard verbs'],
+      ['fmt.c', 'the verbs table and the directive parsed'],
+      ['fmtquote.c', '%q, installed by main'],
+      ['../../Port/devcons.c', 'devcons_print: the console'],
+    ], [
+      ['../../Port/devcons.c', 'vseprint.c', 'a buffer of 256'],
+      ['vseprint.c', 'dofmt.c', 'a Fmt over the buffer'],
+      ['snprint.c', 'dofmt.c', 'through vsnprint'],
+      ['vfprint.c', 'dofmt.c', 'a Fmt over a fd'],
+      ['dofmt.c', 'fmt.c', 'each %'],
+      ['fmt.c', 'fmtquote.c', '%q, once installed'],
+    ]),
+    skeletons.chain('print("%d\\n", n) in the kernel: to the screen', [
+      ['../../Port/devcons.c:def:devcons_print', 'print: a 256-byte buffer', ''],
+      ['vseprint.c:def:vseprint', 'a Fmt over it, no flush', 'the va_list'],
+      ['dofmt.c:def:dofmt', 'bytes copied up to the %', 'the Fmt'],
+      ['fmt.c:def:_fmtdispatch', 'flags and width read, the verb found', 'a %'],
+      ['dofmt.c:def:_ifmt', '%d: the digits', 'the verb'],
+      ['../../Port/devcons.c:def:putstrn', 'the buffer to the screen', 'the text'],
+    ]),
+    {
+      name: 'dofmt.c: the engine, its flush and its verbs',
+      bones: [
+        { at: 'dofmt.c:def:dofmt', role: 'the loop: text copied, % dispatched' },
+        { at: 'dofmt.c:def:_fmtflush', role: 'the buffer full: flush called' },
+        { at: 'fmt.c:def:_fmtdispatch', role: 'a directive: its verb (fmt.c)' },
+        { at: 'dofmt.c:def:_ifmt', role: 'integers' },
+        { at: 'dofmt.c:def:_strfmt', role: 'strings' },
+        { at: 'dofmt.c:def:_fmtcpy', role: 'padded to width, copied' },
+      ],
+      joints: [
+        { from: 'dofmt.c:def:dofmt', to: 'dofmt.c:def:_fmtflush', say: 'full' },
+        { from: 'dofmt.c:def:dofmt', to: 'fmt.c:def:_fmtdispatch', say: 'a %' },
+        { from: 'fmt.c:def:_fmtdispatch', to: 'dofmt.c:def:_ifmt', say: '%d' },
+        { from: 'fmt.c:def:_fmtdispatch', to: 'dofmt.c:def:_strfmt', say: '%s' },
+        { from: 'dofmt.c:def:_ifmt', to: 'dofmt.c:def:_fmtcpy', say: 'the digits' },
+        { from: 'dofmt.c:def:_strfmt', to: 'dofmt.c:def:_fmtcpy', say: 'the string' },
+      ],
+    },
+    {
+      name: 'fmt.c: the verbs table',
+      bones: [
+        { at: 'fmt.c:def:knownfmt', role: 'the built-in verbs' },
+        { at: 'fmt.c:def:fmtalloc', role: 'the installed ones' },
+        { at: 'fmt.c:def:fmtinstall', role: 'a verb added' },
+        { at: 'fmt.c:def:fmtfmt', role: 'a verb looked up' },
+        { at: 'fmt.c:def:_fmtdispatch', role: 'a directive parsed, its verb called' },
+      ],
+      joints: [
+        { from: 'fmt.c:def:fmtinstall', to: 'fmt.c:def:fmtalloc', say: 'a verb' },
+        { from: 'fmt.c:def:_fmtdispatch', to: 'fmt.c:def:fmtfmt', say: 'the letter' },
+        { from: 'fmt.c:def:fmtfmt', to: 'fmt.c:def:fmtalloc', say: 'looked up' },
+        { from: 'fmt.c:def:knownfmt', to: 'fmt.c:def:fmtalloc', say: 'on first use' },
+      ],
+    },
+    {
+      name: 'fmtquote.c: quoting for rc',
+      bones: [
+        { at: 'fmtquote.c:def:quotefmtinstall', role: '%q and %Q installed' },
+        { at: 'fmtquote.c:def:quotestrfmt', role: 'the %q verb' },
+        { at: 'fmtquote.c:def:_quotestrfmt', role: 'quote or not' },
+        { at: 'fmtquote.c:def:_quotesetup', role: 'measured: needs quotes? how long?' },
+        { at: 'fmtquote.c:def:qstrfmt', role: 'written, quotes doubled' },
+      ],
+      joints: [
+        { from: 'fmtquote.c:def:quotefmtinstall', to: 'fmtquote.c:def:quotestrfmt', say: 'fmtinstall' },
+        { from: 'fmtquote.c:def:quotestrfmt', to: 'fmtquote.c:def:_quotestrfmt', say: 'the string' },
+        { from: 'fmtquote.c:def:_quotestrfmt', to: 'fmtquote.c:def:_quotesetup', say: 'first pass' },
+        { from: 'fmtquote.c:def:_quotestrfmt', to: 'fmtquote.c:def:qstrfmt', say: 'second pass' },
+      ],
+    },
+  ],
+}

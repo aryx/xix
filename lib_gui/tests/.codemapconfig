@@ -1,0 +1,27 @@
+// lib_gui/tests/: the widget library's test, what the code map says of
+// it.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "A test of lib_gui: a window opened, then raise Todo: no widget to show yet.",
+  files: {
+    'hellogui.ml': {
+      summary: "Opens a Graphics window through lib_gui's Draw, then stops: raise Todo.",
+      digest: '43d2291495ac',
+      capitals: [{ at: 'def:main', say: 'a window, and nothing yet' }],
+      important: [
+        { at: 'code:"Draw.init \"Hello GUI\""', say: "lib_gui's Draw: a Graphics window", weight: 2 },
+        { at: 'code:"raise Todo"', say: 'the widgets are still to write', weight: 2 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.module('hellogui.ml', 'hellogui', [
+      ['_', 'the entry', ''],
+      ['main', 'Draw.init, then Todo', 'calls'],
+    ]) + {
+      bones+: [{ at: '../lib_graphics/draw/draw.ml:def:init', role: 'the window opened' }],
+      joints+: [{ from: 'hellogui.ml:def:main', to: '../lib_graphics/draw/draw.ml:def:init', say: 'a label' }],
+    },
+  ],
+}

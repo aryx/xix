@@ -1,0 +1,95 @@
+// lib_core/concurrency/todo/: what the code map says of it
+local skeletons = import '../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "OCaml 1.x's bytecode threads (1996-97), kept to port later: no dune, no mkfile, not built.",
+  files: {
+    'thread.mli': {
+      summary: 'Threads in the bytecode runtime: create, yield, join, wait on fds or pids.',
+      digest: '61da5c31cd0c',
+      important: [
+        { at: 'type:t', weight: 3 },
+        { at: 'def:critical_section', say: 'no preemption while set' },
+      ],
+    },
+    'thread.ml': {
+      summary: "The scheduler is in C (thread_*): OCaml wraps it, selects and waits are its loops.",
+      digest: '59218e6a1ae7',
+      important: [
+        { at: 'def:thread_new', say: 'the externals: the C scheduler', weight: 3 },
+        { at: 'def:critical_section', say: 'a global flag, not a lock', weight: 2 },
+        { at: 'def:select_aux', say: 'retried until the scheduler resumes it' },
+        { at: 'def:sleep' },
+        { at: 'def:wakeup' },
+      ],
+    },
+    'mutex.mli': {
+      summary: 'Mutexes over the threads: create, lock, try_lock, unlock.',
+      digest: 'd71dd5efc4fb',
+      important: [{ at: 'def:lock', weight: 3 }],
+    },
+    'mutex.ml': {
+      summary: 'A mutex as a flag and a list of waiting threads, safe inside critical_section.',
+      digest: '11af870ac170',
+      important: [
+        { at: 'def:lock', say: 'sleep until free, in a critical section', weight: 3 },
+        { at: 'def:unlock', say: 'wake up the waiters' },
+      ],
+    },
+    'condition.mli': {
+      summary: 'Condition variables: wait with a mutex, signal, broadcast.',
+      digest: '19893c3617ce',
+      important: [{ at: 'def:wait', weight: 3 }],
+    },
+    'condition.ml': {
+      summary: 'A condition as a list of sleeping threads, woken one or all.',
+      digest: '471913aad841',
+      important: [
+        { at: 'def:wait', say: 'unlock, sleep, relock', weight: 3 },
+        { at: 'def:signal' },
+      ],
+    },
+    'event.mli': {
+      summary: "CML's first-class events: channels, send, receive, choose, wrap, sync.",
+      digest: '8302d0acef8f',
+      important: [
+        { at: 'type:channel', say: "orio's threads talk over these (OCaml's own Event)", weight: 3 },
+        { at: 'def:sync', weight: 3 },
+        { at: 'def:select' },
+      ],
+    },
+    'event.ml': {
+      summary: 'Events as polls and suspensions under one master lock; a choice scrambled for fairness.',
+      digest: '6ef453bac7aa',
+      important: [
+        { at: 'def:basic_sync', say: 'poll all; else suspend on all, wait', weight: 3 },
+        { at: 'def:masterlock', say: 'one lock for every channel', weight: 2 },
+        { at: 'def:scramble_array', say: 'fairness among ready events' },
+        { at: 'def:send', say: 'a rendezvous: matched with a receiver' },
+        { at: 'def:receive' },
+        { at: 'def:wrap' },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts('The threads library, bottom up', [
+      ['thread.mli', 'threads, scheduled by the C runtime'],
+      ['mutex.mli', 'locks, over sleep and wakeup'],
+      ['condition.mli', 'waiting for a signal'],
+      ['event.mli', "CML's channels and events"],
+    ], [
+      ['mutex.mli', 'thread.mli', 'sleep, wakeup'],
+      ['condition.mli', 'thread.mli', 'sleep, wakeup'],
+      ['condition.mli', 'mutex.mli', 'unlock, relock'],
+      ['event.mli', 'condition.mli', 'wait for a partner'],
+      ['event.mli', 'mutex.mli', 'the master lock'],
+    ]),
+    skeletons.module('event.ml', 'A rendezvous synchronized', [
+      ['sync', 'the entry: an event performed', ''],
+      ['flatten_event', 'choices and wraps to basic events', 'an event'],
+      ['scramble_array', 'the order randomized', 'the list'],
+      ['basic_sync', 'poll, or suspend and wait', 'basic events'],
+      ['send', 'one basic event: a message offered', 'polled'],
+    ]),
+  ],
+}

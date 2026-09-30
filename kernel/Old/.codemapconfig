@@ -1,0 +1,63 @@
+// kernel/Old/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). The first steps of the port: booting a Raspberry Pi 2 under
+// QEMU with 9's start code alone. Bcm/start.s and Bcm/startv7.s are what
+// grew from it (the secondary CPUs' check, cache invalidation added);
+// dead code, kept for history.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Dead: the port's first boot experiment, 9's ARM start code alone; Bcm/ holds what grew from it.",
+  files: {
+    'start.s': {
+      summary: "The entry at the load address: SVC mode, interrupts off, a stack, then armstart (9's start.s).",
+      digest: 'eedb0d816c54',
+      important: [
+        { at: 'code:"TEXT _start"', say: 'where the firmware jumps', weight: 3 },
+        { at: 'code:"setR12"', say: 'MMU off: SB at its physical address', weight: 1 },
+        { at: 'code:"BL  armstart"', say: 'in startv7.s, not linked by the mkfile', weight: 1 },
+      ],
+    },
+    'startv7.s': {
+      summary: "The Cortex-A7's start (9's bcm/startv7.s): MMU on, into KZERO, main; the other CPUs' entry.",
+      digest: '47352b089a5d',
+      important: [
+        { at: 'code:"TEXT armstart"', say: 'MMU and caches off, TLB flushed', weight: 3 },
+        { at: 'def:_ramZ', say: 'the CPU page and page tables cleared', weight: 1 },
+        { at: 'code:"TEXT _startpg"', say: 'now running at KZERO: virtual', weight: 1 },
+        { at: 'code:"BL  main"', say: "C's main; missing from Old/", weight: 3 },
+        { at: 'code:"TEXT cpureset"', say: 'the other CPUs: their own page tables', weight: 1 },
+        { at: 'comment:"with WFI, local timer interrupts can be lost"', say: "why idle doesn't sleep the CPU", weight: 1 },
+      ],
+    },
+    'arm.h': {
+      summary: "The ARM's PSR modes and coprocessor 15 registers, a subset of 9's bcm/arm.h.",
+      digest: 'f91498760dd7',
+    },
+    'mem.h': {
+      summary: 'The memory map, cut to its minimum: KZERO at 0x80000000, the page size, the CPU page.',
+      digest: '4726fbd68c7c',
+      important: [{ at: 'def:KZERO', say: "0x80000000: Arch.ml's 0x40000000 differs", weight: 1 }],
+    },
+  },
+  skeletons: [
+    skeletons.parts('The first boot: start.s, then startv7.s', [
+      ['start.s', 'the entry: a stack, then armstart'],
+      ['startv7.s', 'MMU on, into KZERO, main'],
+      ['mem.h', 'the addresses'],
+      ['arm.h', 'the registers'],
+    ], [
+      ['start.s', 'startv7.s', 'BL armstart'],
+      ['start.s', 'mem.h', 'KZERO, CPUADDR'],
+      ['startv7.s', 'mem.h', 'KZERO, CPUADDR'],
+      ['startv7.s', 'arm.h', 'coprocessor registers'],
+    ]),
+    skeletons.chain('startv7.s: from physical to virtual, then C', [
+      ['startv7.s:code:"TEXT armstart"', 'MMU off, TLB flushed', ''],
+      ['startv7.s:def:_ramZ', 'the CPU page and tables zeroed', 'then'],
+      ['startv7.s:code:"BL  mmuinit"', 'the kernel mapped (C)', 'then'],
+      ['startv7.s:code:"TEXT _startpg"', 'MMU on: PC into KZERO', 'jump'],
+      ['startv7.s:code:"BL  main"', "C's main", 'then'],
+    ]),
+  ],
+}

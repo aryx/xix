@@ -1,0 +1,178 @@
+// lib_core/collections/: what the code map says of it (tinybox codemap)
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The stdlib's collections from OCaml 1.07, for ocaml-light: Set and Map without functors.",
+  files: {
+    'Array.ml': {
+      summary: 'Arrays from OCaml 1.07: C primitives for make and get, the rest in OCaml over unsafe_get.',
+      digest: 'e305f3c031bc',
+      important: [
+        { at: 'def:init', say: 'f 0 first: its value fills the array', weight: 3 },
+        { at: 'def:concat_aux', say: 'measure the total, then blit each', weight: 1 },
+        { at: 'def:blit', say: 'copies backwards when the ranges overlap', weight: 3 },
+        { at: 'def:of_list', say: 'the head fills, the rest is set', weight: 1 },
+      ],
+    },
+    'Array.mli': {
+      summary: 'The Array interface: make, of_list, blit, iter; the tables of the generators and the linker.',
+      digest: 'a17525944a6a',
+      capitals: [
+        { at: 'def:make', say: 'an array of one value' },
+        { at: 'def:of_list', say: 'from a list' },
+        { at: 'def:iteri', say: 'iterate with the index' },
+      ],
+      important: [{ at: 'def:unsafe_get', say: 'no bounds check: the inner loops', weight: 1 }],
+    },
+    'Hashtbl.ml': {
+      summary: 'Hash tables from OCaml 1.07: buckets as lists, doubled when one grows too long.',
+      digest: '0f58927e3983',
+      important: [
+        { at: 'def:hash', say: "1.07's hash_param rebased on 4.x's caml_hash", weight: 3 },
+        { at: 'type:t', say: 'the buckets and their max length', weight: 3 },
+        { at: 'def:resize', say: 'rehash into twice the buckets', weight: 1 },
+        { at: 'def:add', say: 'hides, not replaces: association-list meaning', weight: 1 },
+        { at: 'def:replace', say: 'ported from 3.12', weight: 1 },
+      ],
+      links: [{ from: 'def:add', to: 'def:resize' }],
+    },
+    'Hashtbl.mli': {
+      summary: "The Hashtbl interface, the generic one only: create, add, find, mem, replace; no functors.",
+      digest: '027826d5709d',
+      capitals: [
+        { at: 'type:t', say: 'a mutable table from keys to values' },
+        { at: 'def:add', say: 'hides the old binding' },
+        { at: 'def:find', say: 'or Not_found: no find_opt here' },
+      ],
+      important: [{ at: 'def:replace', say: 'removes the old binding', weight: 1 }],
+    },
+    'List.ml': {
+      summary: "Lists from OCaml 1.07, with 3.12's stable merge sort; rev_append kept private.",
+      digest: '5e49514b863a',
+      important: [
+        { at: 'def:rev_append', say: 'the tail-recursive base of rev', weight: 1 },
+        { at: 'def:map', say: 'not tail-recursive: deep on long lists', weight: 1 },
+        { at: 'def:sort_bool', say: "the old sort.ml, a boolean order", weight: 1 },
+        { at: 'def:stable_sort', say: "3.12's merge sort, sort's body", weight: 3 },
+        { at: 'def:find_all', say: 'filter: accumulate, then rev', weight: 1 },
+      ],
+    },
+    'List.mli': {
+      summary: "The List interface, the project's most named module: iter, map, fold_left, rev, sort.",
+      digest: 'fdd889910cd2',
+      capitals: [
+        { at: 'def:iter', say: 'the most called function of the project' },
+        { at: 'def:map', say: 'map, not tail-recursive' },
+        { at: 'def:fold_left', say: 'the accumulator' },
+      ],
+      important: [
+        { at: 'def:sort', say: 'stable, compare-style order', weight: 1 },
+        { at: 'def:sort_bool', say: 'the old boolean-order sort', weight: 1 },
+        { at: 'def:rev', say: 'no rev_append, rev_map, find_opt exported', weight: 1 },
+      ],
+    },
+    'Map.ml': {
+      summary: "Maps as AVL trees keyed by the polymorphic compare: 1.07's Map without its functor.",
+      digest: 'a5892ef1662c',
+      important: [
+        { at: 'type:t', say: 'the key type is a parameter, not a functor', weight: 3 },
+        { at: 'def:bal', say: 'one rotation when heights differ by 3', weight: 1 },
+        { at: 'def:add', say: 'compare, the polymorphic one', weight: 1 },
+      ],
+    },
+    'Map.mli': {
+      summary: "The Map interface over ('key, 'a) t, for ocaml-light: lex and yacc's tables use it.",
+      digest: '8740ef0a8113',
+      important: [{ at: 'comment:"does not use functors"', say: 'why no Map.Make', weight: 3 }],
+    },
+    'Queue.ml': {
+      summary: 'FIFO queues as a mutable linked list with head and tail: the schedulers\' run queues.',
+      digest: '5f71af533c99',
+      important: [{ at: 'type:queue_cell', say: 'a tail ref: add is O(1)', weight: 3 }],
+    },
+    'Queue.mli': { summary: 'The Queue interface: create, add, take, length; raises Empty.', digest: '86c040fe893d' },
+    'Set.ml': {
+      summary: "Sets as AVL trees ordered by the polymorphic compare: 1.07's Set without its functor.",
+      digest: '2df3d99e70f1',
+      important: [
+        { at: 'type:t', say: 'a node keeps its height', weight: 3 },
+        { at: 'def:bal', say: 'one rebalancing step', weight: 3 },
+        { at: 'def:join', say: 'rebalance until balanced', weight: 1 },
+        { at: 'def:split', say: 'the basis of union', weight: 1 },
+        { at: 'def:union', say: 'split the smaller by the root', weight: 1 },
+      ],
+    },
+    'Set.mli': {
+      summary: "The Set interface over 'elt t, for ocaml-light; advises xix to copy it as Set_ instead.",
+      digest: 'f6e3db46f467',
+      important: [{ at: 'comment:"does not use functors"', say: "yet builder/ names Set: dune's is a functor", weight: 3 }],
+    },
+    'Stack.ml': { summary: 'Stacks as a mutable list: push, pop, top; the LR parser engine keeps its states in one.', digest: 'df9ffad4635d' },
+    'Stack.mli': { summary: 'The Stack interface: create, push, pop, top, iter; raises Empty.', digest: '61de554f8f27' },
+  },
+  skeletons: [
+    skeletons.parts('The collections: lists under all, trees and tables beside', [
+      ['List.ml', 'the list functions: the hub'],
+      ['Array.ml', 'arrays, over C primitives'],
+      ['Hashtbl.ml', 'mutable tables: buckets in an array'],
+      ['Set.ml', 'balanced trees, by compare'],
+      ['Map.ml', 'balanced trees with values'],
+      ['Stack.ml', 'a list in a ref'],
+      ['Queue.ml', 'a linked list with a tail'],
+      ['../core/Stdlib.ml', 'compare, the order without a functor'],
+    ], [
+      ['Array.ml', 'List.ml', 'to_list, of_list'],
+      ['Hashtbl.ml', 'Array.ml', 'the buckets'],
+      ['Stack.ml', 'List.ml', 'its contents'],
+      ['Set.ml', '../core/Stdlib.ml', 'compare orders the elements'],
+      ['Map.ml', '../core/Stdlib.ml', 'compare orders the keys'],
+    ]),
+    {
+      name: 'Lists: the accumulator, then reversed; the sorts',
+      bones: [
+        { at: 'List.ml:def:rev_append', role: 'the tail-recursive accumulator' },
+        { at: 'List.ml:def:rev', role: 'rev_append onto []' },
+        { at: 'List.ml:def:find_all', role: 'filter: kept backwards, then rev' },
+        { at: 'List.ml:def:partition', role: 'two accumulators, each rev' },
+        { at: 'List.ml:def:stable_sort', role: "3.12's merge sort" },
+        { at: 'List.ml:def:sort', role: 'stable_sort, renamed' },
+      ],
+      joints: [
+        { from: 'List.ml:def:rev_append', to: 'List.ml:def:rev', say: 'the base' },
+        { from: 'List.ml:def:rev', to: 'List.ml:def:find_all', say: 'puts the kept back in order' },
+        { from: 'List.ml:def:rev', to: 'List.ml:def:partition', say: 'both halves in order' },
+        { from: 'List.ml:def:stable_sort', to: 'List.ml:def:sort', say: 'is' },
+      ],
+    },
+    skeletons.calls('Arrays: C allocates, OCaml fills', 'Array.ml:def:create', 'the C primitive, filled with one value', [
+      ['Array.ml:def:init', 'create with f 0, then f i', 'a fresh array'],
+      ['Array.ml:def:concat_aux', 'measure, create, blit each', 'a fresh array'],
+      ['Array.ml:def:of_list', 'create with the head, set the rest', 'a fresh array'],
+      ['Array.ml:def:copy', 'create with a.(0), then the rest', 'a fresh array'],
+    ]),
+    skeletons.module('Hashtbl.ml', 'A hash table: hash, bucket, resize', [
+      ['hash', 'the key to an int', ''],
+      ['add', 'consed onto its bucket', 'the bucket index'],
+      ['bucket_too_long', 'the trigger', 'the bucket'],
+      ['resize', 'every binding rehashed into twice the buckets', 'too long'],
+    ]) + { bones+: [{ at: 'Hashtbl.ml:def:find', role: 'hash, then walk the bucket' }, { at: 'Hashtbl.ml:type:t', role: 'the bucket array, the max length' }], joints+: [{ from: 'Hashtbl.ml:def:hash', to: 'Hashtbl.ml:def:find', say: 'the bucket index' }, { from: 'Hashtbl.ml:def:resize', to: 'Hashtbl.ml:type:t', say: 'the new data' }] },
+    {
+      name: 'A set: an AVL tree, rebalanced on every change',
+      bones: [
+        { at: 'Set.ml:def:create', role: 'a node with its height' },
+        { at: 'Set.ml:def:bal', role: 'one rotation if needed' },
+        { at: 'Set.ml:def:add', role: 'descend by compare, rebalance up' },
+        { at: 'Set.ml:def:join', role: 'bal until balanced' },
+        { at: 'Set.ml:def:split', role: 'the elements below and above x' },
+        { at: 'Set.ml:def:union', role: 'split by a root, union the halves' },
+      ],
+      joints: [
+        { from: 'Set.ml:def:create', to: 'Set.ml:def:bal', say: 'nodes' },
+        { from: 'Set.ml:def:bal', to: 'Set.ml:def:add', say: 'rebalances each step up' },
+        { from: 'Set.ml:def:bal', to: 'Set.ml:def:join', say: 'repeated' },
+        { from: 'Set.ml:def:split', to: 'Set.ml:def:union', say: 'the halves' },
+        { from: 'Set.ml:def:join', to: 'Set.ml:def:union', say: 'the halves rejoined' },
+      ],
+    },
+  ],
+}

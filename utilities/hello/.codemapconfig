@@ -1,0 +1,38 @@
+// utilities/hello/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). The template of a new xix program: Main.ml, CLI.mli, CLI.ml
+// with its Prelude, Caps, Main algorithm and Entry point sections.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: 'ohello, the template of a new xix program: Main, CLI with caps and logging flags, a core.',
+  files: {
+    'Main.ml': {
+      summary: "ohello's entry, the same in every program: Cap.main, then CLI.main with argv.",
+      digest: '14204b2ac5f7',
+      important: [{ at: 'code:"Cap.main"', say: 'every capability, given once', weight: 2 }],
+    },
+    'CLI.ml': {
+      summary: 'The template: its sections, its caps type, -verbose/-debug/-quiet, the core called.',
+      digest: '59a88f442e43',
+      important: [
+        { at: 'comment:"Toy hello program acting as a template"', say: "the sections a new program copies", weight: 3 },
+        { at: 'type:caps', say: 'what the program may touch: stdout only', weight: 2 },
+        { at: 'def:hello', say: 'the core: its capabilities in its type', weight: 2 },
+        { at: 'code:"Arg_.parse_argv caps argv"', say: 'flags parsed; may raise ExitCode', weight: 1 },
+        { at: 'code:"module Str = Re_str"', say: 'unused here: a template leftover', weight: 1 },
+      ],
+      links: [{ from: 'def:main', to: 'def:hello' }],
+    },
+    'CLI.mli': {
+      summary: "ohello's interface: the caps it needs, and main.",
+      digest: 'ec68038b5b1f',
+      important: [{ at: 'type:caps', say: 'the contract with Main', weight: 1 }],
+    },
+  },
+  skeletons: [
+    skeletons.cli('ohello: the shape of every xix program', [
+      ['CLI.ml:def:hello', 'the core: prints Hello', 'no arguments'],
+    ]),
+  ],
+}

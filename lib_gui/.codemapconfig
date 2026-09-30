@@ -1,0 +1,44 @@
+// lib_gui/: the start of a widget library, what the code map says of
+// it. The C original is ~/principia/lib_gui/ (libframe, libpanel, the
+// book Widgets.nw); here widget.ml, label.ml and button.ml are empty,
+// gui.ml an init doing nothing. lib_graphics/ below is a copy of
+// ../lib_graphics over OCaml's Graphics module instead of /dev/draw
+// (its pad.txt), to run widgets on Linux or macOS.
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "A widget library begun (libpanel's place): empty widgets, and libdraw's copy over OCaml's Graphics.",
+  files: {
+    'gui.ml': {
+      summary: 'The library\'s init: does nothing yet.',
+      digest: 'd5ea915957d0',
+    },
+    'widget.ml': {
+      summary: 'The widget type\'s place: empty.',
+      digest: 'd41d8cd98f00',
+    },
+    'label.ml': {
+      summary: 'A label widget\'s place: empty.',
+      digest: 'd41d8cd98f00',
+    },
+    'button.ml': {
+      summary: 'A button widget\'s place: empty.',
+      digest: 'd41d8cd98f00',
+    },
+  },
+  skeletons: [
+    skeletons.parts('lib_gui: widgets, over a libdraw that runs anywhere', [
+      ['widget.ml', 'the widget, to come'],
+      ['label.ml', 'a label, to come'],
+      ['button.ml', 'a button, to come'],
+      ['gui.ml', 'init'],
+      ['lib_graphics/', 'libdraw over Graphics'],
+      ['tests/', 'hellogui'],
+    ], [
+      ['label.ml', 'widget.ml', 'is a'],
+      ['button.ml', 'widget.ml', 'is a'],
+      ['widget.ml', 'lib_graphics/', 'drawn with'],
+      ['tests/', 'lib_graphics/', 'Draw.init'],
+    ]),
+  ],
+}

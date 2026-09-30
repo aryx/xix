@@ -1,0 +1,112 @@
+// kernel/concurrency/: what the code map says of it (tinybox codemap;
+// the format: ~/github/ocaml-elm-playground/docs/manual/codemap.md,
+// section 12). The functions over concurrency_/'s types: 9's taslock.c,
+// qlock.c, ref.c (~/principia/kernel/concurrency/). OCaml light has one
+// thread running at a time, so tas always wins: the spinning is written,
+// never run.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The kernel's locks (9's taslock.c, qlock.c, ref.c): spin, ilock, qlock, rwlock, ref, on tas.",
+  files: {
+    'Spinlock.ml': {
+      summary: "Spin locks (9's lock and unlock in taslock.c) on Tas, and with_lock where C had waserror.",
+      digest: '9544770190c5',
+      important: [
+        { at: 'def:lock', say: 'tas, else spin, else tas again', weight: 3 },
+        { at: 'code:"while not !(x.hold) do"', say: 'inverted: spins while free; never run', weight: 3 },
+        { at: 'code:"lock loop"', say: "9's lock loop message, as an exception", weight: 1 },
+        { at: 'def:unlock', say: 'checks the holder: stricter than 9', weight: 1 },
+        { at: 'def:with_lock', say: 'Fun.protect: unlocked on exceptions', weight: 1 },
+      ],
+    },
+    'Spinlock.mli': {
+      summary: 'Spin locks: alloc, lock, unlock, canlock, with_lock.',
+      digest: '95aa51494a65',
+      capitals: [
+        { at: 'def:lock', say: 'the lock under every other lock' },
+        { at: 'def:with_lock', say: "a critical section, exception-safe" },
+      ],
+    },
+    'Ilock.ml': {
+      summary: "Interrupt-safe spin locks (9's ilock): interrupts off first, the old level restored on unlock.",
+      digest: 'b79da241d9dd',
+      important: [
+        { at: 'def:lock', say: 'Spl.high raises Todo: ilock fails today', weight: 3 },
+        { at: 'code:"while not !(x.hold) do"', say: 'the same inverted spin as Spinlock', weight: 1 },
+        { at: 'code:"Spinlock.unlock: not locked"', say: "Spinlock's message, copied", weight: 1 },
+      ],
+    },
+    'Ilock.mli': { summary: 'Interrupt-safe locks: alloc, lock, unlock.', digest: '9bffda6b4e62' },
+    'Qlock.ml': {
+      summary: "Queueing locks (9's qlock.c): a waiter queued by pid, Queueing, and the scheduler called.",
+      digest: 'cc59b0ffe35b',
+      important: [
+        { at: 'def:lock', say: 'held: queue up, then sched through a hook', weight: 3 },
+        { at: 'def:unlock', say: 'the first waiter readied, the lock passed', weight: 1 },
+        { at: 'code:"!Hooks.Scheduler.sched ()"', say: 'never set: a contended qlock fails', weight: 1 },
+        { at: 'def:with_lock', say: 'better than waserror/nexterror', weight: 1 },
+      ],
+    },
+    'Qlock.mli': { summary: 'Queueing locks: alloc, lock, unlock, canlock, with_lock.', digest: 'c58e5df68765' },
+    'Rwlock.ml': {
+      summary: "Readers-writer locks (9's rlock, wlock): many readers or one writer, the rest queued; half Todo.",
+      digest: 'ba3f48d10756',
+      important: [
+        { at: 'def:rlock', say: 'readers wait behind any queued writer', weight: 1 },
+        { at: 'def:wunlock', say: 'raises Todo: no writer ever unlocks', weight: 3 },
+        { at: 'def:canrlock', say: 'Todo', weight: 1 },
+      ],
+    },
+    'Rwlock.mli': { summary: 'Readers-writer locks, abstract, with no alloc yet: unusable outside.', digest: '0a6ab54d07f1' },
+    'Ref.ml': {
+      summary: "Reference counts (9's incref, decref) under their spin lock, which also locks their owner.",
+      digest: '3537b7987f68',
+      important: [
+        { at: 'def:dec_and_is_zero', say: 'the last reference: free the owner', weight: 3 },
+        { at: 'def:lock', say: "a Ref's lock is its owner's lock too", weight: 1 },
+      ],
+    },
+    'Ref.mli': { summary: 'Reference counts: alloc, inc, dec, dec_and_is_zero, lock.', digest: '257ecade0afe' },
+    'Counter.ml': {
+      summary: 'A counter handing out numbers: pids, from a Ref.',
+      digest: 'c382bb95def3',
+    },
+    'Counter.mli': { summary: 'Counters: alloc and gen, the next number.', digest: 'edbb83f9fdcf' },
+    'Spl.ml': {
+      summary: "Interrupt levels (9's splhi, spllo, splx): all raise Todo, the C's spl.s not yet reached.",
+      digest: 'b0dbcb814624',
+      important: [{ at: 'def:high', say: 'raises Todo: an external to spl.s due', weight: 3 }],
+    },
+    'Spl.mli': { summary: 'Interrupt levels: high, low, set, is_low.', digest: 'cd699a392f15' },
+    'Tas.ml': {
+      summary: "Test-and-set, the building block: always wins, since one OCaml thread runs at a time.",
+      digest: '9120521fd7c0',
+      important: [
+        { at: 'comment:"external arch_tas"', say: "to become the ARM's ldrex/strex", weight: 3 },
+        { at: 'def:tas', say: 'sets and returns false: never contended', weight: 1 },
+      ],
+    },
+    'Tas.mli': { summary: 'tas: set a flag, return its old value.', digest: 'd45e1e2f6014' },
+  },
+  skeletons: [
+    skeletons.parts('The locks, from test-and-set up', [
+      ['Tas.ml', 'the one atomic step'],
+      ['Spl.ml', 'interrupts off and on'],
+      ['Spinlock.ml', 'spin until tas wins'],
+      ['Ilock.ml', 'a spin lock, interrupts off'],
+      ['Qlock.ml', 'sleep until it is yours'],
+      ['Rwlock.ml', 'readers together, a writer alone'],
+      ['Ref.ml', 'a count, locked'],
+      ['Counter.ml', 'numbers handed out'],
+    ], [
+      ['Spinlock.ml', 'Tas.ml', 'tas'],
+      ['Ilock.ml', 'Tas.ml', 'tas'],
+      ['Ilock.ml', 'Spl.ml', 'high, then set back'],
+      ['Qlock.ml', 'Spinlock.ml', 'guards its queue'],
+      ['Rwlock.ml', 'Spinlock.ml', 'guards its queue'],
+      ['Ref.ml', 'Spinlock.ml', 'guards its count'],
+      ['Counter.ml', 'Ref.ml', 'inc'],
+    ]),
+  ],
+}

@@ -1,0 +1,17 @@
+// kernel/arch/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). Neither dune nor the mkfile builds it.
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "A sketch of the Raspberry Pi's constants, not built: core/Arch.ml is the one used.",
+  files: {
+    'arm.ml': {
+      summary: "The Pi's memory-mapped IO addresses: a sketch that would not compile (no Types, a record untyped).",
+      digest: '096f9d0401cc',
+      important: [
+        { at: 'def:physIO', say: 'Pi 2 IO at 0x3F000000 (Pi 1: 0x20000000)', weight: 3 },
+        { at: 'def:arch', say: 'a record of no type: a placeholder', weight: 1 },
+      ],
+    },
+  },
+}

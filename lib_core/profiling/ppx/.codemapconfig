@@ -1,0 +1,29 @@
+// lib_core/profiling/ppx/: what the code map says of it
+local skeletons = import '../../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "A ppx turning let f x = ... [@@profiling] into a call wrapped by Profiling.profile_code.",
+  files: {
+    'ppx_profiling.ml': {
+      summary: 'The rewriter over ppxlib: each top-level function marked is redefined, timed.',
+      digest: '96e1d2ff7e28',
+      important: [
+        { at: 'def:impl', say: 'the structure mapped, item by item', weight: 3 },
+        { at: 'def:parameters', say: 'the params, labels and all, to re-apply', weight: 3 },
+        { at: 'def:mk_params', say: 'the new function takes the same' },
+        { at: 'def:mk_args', say: 'and passes them all: no partial app' },
+        { at: 'def:module_name_of_filename', say: "the category's X in X.foo" },
+        { at: 'comment:"UPDATE: does not work anymore"', say: "the header's usage is stale" },
+        { at: 'code:"Driver.register_transformation"' },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.module('ppx_profiling.ml', 'A function marked, rewritten', [
+      ['impl', 'finds let f = ... [@@profiling]', ''],
+      ['parameters', "f's parameters, with labels", 'the body'],
+      ['mk_params', 'the wrapper takes them', 'them'],
+      ['mk_args', 'and applies f to them in profile_code', 'them'],
+    ]),
+  ],
+}

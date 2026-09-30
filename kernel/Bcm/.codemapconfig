@@ -1,0 +1,336 @@
+// kernel/Bcm/: what the code map says of it (tinybox codemap).
+// The Raspberry Pi 2 (BCM2836, Cortex-A7) side of the kernel's C,
+// gathered in one directory from ~/principia/kernel/*/arm/ (init/,
+// interrupts/, memory/, time/, arch/, devices/screen/...), the syncweb
+// markers mostly gone (exceptions.s, principia's lexception.s, keeps
+// them). xix's changes: one CPU, caches off, the clock rewritten for
+// QEMU's generic timer, faults and system calls left as panics for the
+// OCaml kernel to take. arminstr.ha (assembler macros) is no source.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The Raspberry Pi 2's kernel C and assembly: boot, MMU, traps, the timer, the framebuffer.",
+  files: {
+    // boot
+    'start.s': {
+      summary: "The kernel's first instruction (~/principia's init/arm/start.s): SVC mode, a stack, armstart.",
+      digest: '790f79168913',
+      capitals: [{ at: 'code:"_start"', say: 'the boot: where the Pi jumps' }],
+      important: [
+        { at: 'comment:"load physical base for SB addressing while mmu is off"', say: 'R12 physical until the MMU is on', weight: 2 },
+        { at: 'comment:"start stack at top of"', say: 'the stack lives in the Cpu page', weight: 1 },
+      ],
+    },
+    'startv7.s': {
+      summary: "armstart for the Cortex-A7 (~/principia's): page tables, MMU on, main; caches and SMP left off.",
+      digest: '8a8ffa7c479a',
+      capitals: [{ at: 'code:"armstart"', say: 'MMU on, then C main' }],
+      important: [
+        { at: 'comment:"if not cpu0, go to secondary startup"', say: 'xix: other CPUs just spin at reset', weight: 2 },
+        { at: 'def:_ramZ', say: 'Cpu page and page tables zeroed', weight: 1 },
+        { at: 'code:"CpChv|CpCmmu"', say: 'xix: MMU on, D and I caches off', weight: 3 },
+        { at: 'code:"_startpg"', say: 'now at KZERO: calls main', weight: 2 },
+        { at: 'def:reset', say: 'secondary CPUs: loop forever', weight: 1 },
+      ],
+    },
+    'raspi2.c': {
+      summary: "The Pi 2's Soc (~/principia's init/arm/raspi2.c, cut down): addresses; no SMP, no cpuid print.",
+      digest: '7c79dcca38f3',
+      important: [{ at: 'def:soc', say: 'RAM size, I/O and bus addresses', weight: 2 }],
+    },
+    'globals.c': {
+      summary: "xix's own: the globals Plan 9's main.c defined (conf, cpus, print, palloc), for the C.",
+      digest: 'd42febe3fee0',
+      important: [{ at: 'def:print', say: 'nil until main.c sets devcons_print', weight: 2 }],
+    },
+
+    // memory
+    'mmu.c': {
+      summary: "The ARM MMU (~/principia's): RAM at KZERO by 1MB sections, now uncached; kmap added.",
+      digest: 'fc6cc6297f53',
+      important: [
+        { at: 'def:mmuinit', say: 'called from startv7.s, MMU off: identity and KZERO', weight: 3 },
+        { at: 'def:mmuinit1', say: "main.c: the boot's identity map removed", weight: 2 },
+        { at: 'code:"l1[L1X(va)] = pa|Dom0|L1AP(Krw)|Section;"', say: 'xix: no cache attributes', weight: 2 },
+        { at: 'def:mmukmap', say: "xix's addition: I/O mapped into the kernel", weight: 1 },
+        { at: 'def:arch_mmuswitch', say: "a process's L1 entries swapped in", weight: 1 },
+      ],
+    },
+    'mmuinvalidate.s': {
+      summary: "The TLB invalidated, whole or for one address (~/principia's).",
+      digest: '16483b191dde',
+    },
+    'mem.h': {
+      summary: "The address map for C and assembly (~/principia's): KZERO, the Cpu page, L1, 4KB pages.",
+      digest: 'f48ed36612e8',
+      important: [
+        { at: 'def:KZERO', say: 'the kernel at 2GB, RAM mapped from 0', weight: 2 },
+        { at: 'def:CPUADDR', say: 'the Cpu structure: R10 points there', weight: 2 },
+      ],
+    },
+    'arm.h': {
+      summary: "ARMv6/v7 definitions for C and assembly (~/principia's): modes, CP15 registers, MMU bits.",
+      digest: 'b6eb3022559b',
+    },
+
+    // traps and interrupts
+    'exceptions.s': {
+      summary: "The exception vectors (~/principia's lexception.s, markers kept): a Ureg built, then C.",
+      digest: '2eb68b90636a',
+      capitals: [{ at: 'comment:"global vectors(arm)"', say: 'every interrupt and trap enters here' }],
+      important: [
+        { at: 'comment:"global vtable(arm)"', say: 'just after vectors: pc-relative loads', weight: 2 },
+        { at: 'comment:"function _vsvc(arm)"', say: 'SWI: a system call, to arch__syscall', weight: 2 },
+        { at: 'def:_vswitch', say: 'IRQ and aborts: registers saved, to arch__trap', weight: 3 },
+        { at: 'comment:"function _vfiq(arm)"', say: 'FIQ: its own banked registers', weight: 1 },
+      ],
+      related: ['../Include/arm/ureg.h'],
+    },
+    'fault_helpers.s': {
+      summary: "The fault status and address registers read, for faultarm (~/principia's).",
+      digest: 'aa39723253c9',
+    },
+    'trap.c': {
+      summary: "Traps and IRQs (~/principia's): IRQs dispatched; faults left a panic for OCaml; Debug on.",
+      digest: '7837b486e548',
+      capitals: [{ at: 'def:arch__trap', say: 'every IRQ and abort, from _vswitch' }],
+      important: [
+        { at: 'def:arch__trapinit', say: 'main.c: vectors copied, IRQs off', weight: 2 },
+        { at: 'def:irq', say: 'each enabled handler polled, the clock one too', weight: 3 },
+        { at: 'code:"iprint("', say: 'debug print on every interrupt', weight: 2 },
+        { at: 'def:fault', say: 'xix: a panic, TODO in OCaml', weight: 3 },
+        { at: 'code:"Debug = 1"', say: 'turned on in xix', weight: 1 },
+        { at: 'def:irqenable', say: 'arch_intrenable: a Vctl registered', weight: 2 },
+        { at: 'def:faultarm', say: 'data and prefetch aborts', weight: 1 },
+      ],
+    },
+    'spl.s': {
+      summary: "Interrupt levels (~/principia's): splhi, spllo, splx set the CPSR I bit; coherence.",
+      digest: 'a5a92f6c330b',
+    },
+    'syscall.c': {
+      summary: "arch__syscall is a panic in xix; Plan 9's notify, noted, execregs kept under #ifdef NOTDEFINED.",
+      digest: '3f62bcfa7f11',
+      important: [
+        { at: 'def:arch__syscall', say: 'no user programs yet: SWI panics', weight: 3 },
+        { at: 'code:"#ifdef NOTDEFINED"', say: "dead from here: principia's syscall.c", weight: 3 },
+        { at: 'def:arch__notify', say: 'dead: a note delivered to user mode', weight: 1 },
+      ],
+    },
+
+    // time
+    'clock.c': {
+      summary: "The tick (~/principia's, rewritten): QEMU only wires the generic timer, so the Pi's are off.",
+      digest: 'b2560d117644',
+      important: [
+        { at: 'comment:"The problem is that under QEMU only the Cortex-a7 generic timers"', say: 'why the system timers were dropped', weight: 3 },
+        { at: 'def:clockinit', say: 'main.c: the generic timer on IRQcntps', weight: 2 },
+        { at: 'def:localclockintr', say: 'the interrupt: rearmed, then timerintr', weight: 3 },
+        { at: 'code:"print("', say: 'debug prints left in, every tick', weight: 2 },
+        { at: 'def:arch_timerset', say: 'the next interrupt, for portclock.c', weight: 1 },
+        { at: 'def:clock_arch_fastticks', say: 'the fast clock: main.c sets the pointer', weight: 1 },
+      ],
+    },
+    'time_raspi2.s': {
+      summary: "The cycle counter on the Pi 2, arch_lcycles (~/principia's).",
+      digest: 'efdccd8fffc5',
+    },
+    'misc.s': {
+      summary: "xix's own: the generic timer's compare register read and set with MRRC/MCRR, and probes.",
+      digest: '3eec4751ad0b',
+      important: [{ at: 'code:"xxxset"', say: 'an experiment left in: unused', weight: 1 }],
+    },
+
+    // screen
+    'vcore.c': {
+      summary: "The VideoCore GPU through its mailbox (~/principia's, caches off): framebuffer, RAM size.",
+      digest: 'f56fe26f4be2',
+      important: [
+        { at: 'def:vcreq', say: 'a property request: tags in, answer in place', weight: 2 },
+        { at: 'def:fbinit', say: 'the GPU allocates the framebuffer', weight: 3 },
+        { at: 'def:getramsize', say: 'main.c asks the GPU how much RAM', weight: 1 },
+        { at: 'def:dmaaddr', say: "xix's own: a kernel address as the GPU sees it", weight: 1 },
+      ],
+    },
+    'screen.c': {
+      summary: "The Pi's screen (~/principia's, no cursor): the framebuffer as gscreen, then the text console.",
+      digest: 'b31ae5546165',
+      important: [
+        { at: 'def:arch__screeninit', say: 'main.c: fbinit, gscreen, swconsole', weight: 3 },
+        { at: 'code:"screenputs = swconsole_screenputs"', say: 'from now on print draws text', weight: 2 },
+        { at: 'def:hwdraw', say: 'no blitter: memdraw does it all', weight: 1 },
+      ],
+    },
+
+    // processor pieces
+    'vfp3.c': {
+      summary: "The VFP float unit (~/principia's, notes removed): fpinit in main.c, for scheduler.c's floats.",
+      digest: 'ffca18b27167',
+      important: [
+        { at: 'def:fpinit', say: 'main.c: the OCaml runtime needs floats', weight: 3 },
+        { at: 'def:fpcfg', say: 'the rounding mode and traps chosen', weight: 1 },
+        { at: 'def:fpuemu', say: "Plan 9's lazy enabling on a user fault", weight: 1 },
+      ],
+    },
+    'coproc.c': {
+      summary: "Any coprocessor register read or written (~/principia's): the MRC/MCR built in memory, called.",
+      digest: '1558f49e0ff1',
+      important: [
+        { at: 'def:setupcpop', say: 'self-modifying: 5c has no asm()', weight: 3 },
+        { at: 'def:cprdsc', say: 'clock.c reads the generic timer with it', weight: 1 },
+      ],
+    },
+    'concurrency_raspi2.c': {
+      summary: "Atomic increment, decrement, compare-and-swap (~/principia's), over Libc/arm/atom.s.",
+      digest: 'd5cd62a96db9',
+    },
+    'tas_raspi2.s': {
+      summary: "Test-and-set on the Pi 2 with LDREX/STREX (~/principia's): what lock spins on.",
+      digest: '523aa1325d94',
+    },
+
+    // headers
+    'dat.h': {
+      summary: "The kernel C's data (~/principia's arm dat.h): pad's address types, then every portdat_*.h.",
+      digest: '09dbd1e77ee6',
+      important: [
+        { at: 'comment:"DO NOT switch those declarations"', say: 'cpu in R10, up in R9: 5c and mem.h agree', weight: 3 },
+        { at: 'type:phys_addr', say: "pad's address kinds: phys, virt, kern", weight: 1 },
+      ],
+    },
+    'fns.h': {
+      summary: "The kernel C's functions (~/principia's arm fns.h): every portfns_*.h, then the ARM ones.",
+      digest: '352c8d137c91',
+      important: [{ at: 'def:arch_intrenable', say: "a macro: trap.c's irqenable", weight: 1 }],
+    },
+    'dat_core.h': {
+      summary: "Arch_Cpu, the ARM part of a Cpu (~/principia's): MMU, VFP state, exception save areas.",
+      digest: '339b674c80cc',
+      important: [{ at: 'comment:"do not change the first field"', say: 'the assembly reads mmul1 at offset 0', weight: 2 }],
+    },
+    'dat_forward.h': { summary: "Ureg, Arch_FPsave and Soc named ahead (~/principia's).", digest: '8c4f55142b94' },
+    'dat_memory.h': { summary: "The MMU's part of a Proc (~/principia's): its level-2 tables.", digest: 'ef2e765371a1' },
+    'dat_processes.h': { summary: "ARM's a.out magic and the saved FP state (~/principia's).", digest: '01e0ead69e9f' },
+    'dat_time.h': { summary: "The tick rate, Arch_HZ (~/principia's).", digest: '5bd0a46ec804' },
+    'dat_arch.h': { summary: "Soc: what differs between Pis, addresses and RAM (~/principia's).", digest: '1c5a7ab125c5' },
+    'io.h': { summary: "The Pi's interrupt numbers and DMA flags (~/principia's).", digest: '8640c3b31a22' },
+  },
+  skeletons: [
+    skeletons.chain("The Pi boots: assembly to C main to OCaml", [
+      ['start.s:code:"_start"', 'the first instruction: SVC mode, a stack', ''],
+      ['startv7.s:code:"armstart"', 'page tables, MMU on', 'BL armstart'],
+      ['mmu.c:def:mmuinit', 'the L1 table: identity and KZERO', 'BL mmuinit'],
+      ['../main.c:def:main', 'C: memory, screen, traps, clock, VFP', '_startpg calls main'],
+      ['../Byterun/interp.c:def:interprete', 'the bytecode run: the OCaml kernel', 'caml_startup'],
+    ]),
+    skeletons.chain('An interrupt: the vector to the OCaml scheduler', [
+      ['exceptions.s:comment:"global vectors(arm)"', 'the hardware jumps here', ''],
+      ['exceptions.s:def:_vswitch', 'a Ureg pushed', 'IRQ'],
+      ['trap.c:def:arch__trap', 'which trap', 'the Ureg'],
+      ['trap.c:def:irq', 'the handlers polled', 'an IRQ'],
+      ['clock.c:def:localclockintr', 'the generic timer rearmed', 'the Vctl clock.c registered'],
+      ['../Port/portclock.c:def:hzclock', 'the tick: SIGVTALRM for OCaml', 'via timerintr'],
+    ]),
+    skeletons.parts("The Pi 2's side of the kernel", [
+      ['start.s', 'the entry'],
+      ['startv7.s', 'MMU on, then main'],
+      ['mmu.c', 'the page tables'],
+      ['exceptions.s', 'vectors: a Ureg for C'],
+      ['trap.c', 'dispatch: IRQs, aborts'],
+      ['clock.c', 'the timer interrupt'],
+      ['vcore.c', 'the GPU mailbox'],
+      ['screen.c', 'the framebuffer as a Memimage'],
+      ['dat.h', 'the C types: Port/portdat_*.h'],
+    ], [
+      ['start.s', 'startv7.s', 'armstart'],
+      ['startv7.s', 'mmu.c', 'mmuinit'],
+      ['exceptions.s', 'trap.c', 'arch__trap'],
+      ['trap.c', 'clock.c', 'the clock handler'],
+      ['screen.c', 'vcore.c', 'fbinit'],
+      ['clock.c', 'dat.h', 'Cpu'],
+    ]),
+    skeletons.module('trap.c', 'A trap dispatched', [
+      ['arch__trapinit', 'vectors in place, IRQs masked', ''],
+      ['arch__trap', 'from _vswitch: what kind', 'then traps arrive'],
+      ['irq', 'the enabled handlers', 'an IRQ'],
+    ]) + {
+      bones+: [
+        { at: 'trap.c:def:irqenable', role: 'a handler registered' },
+        { at: 'trap.c:def:faultarm', role: 'an abort' },
+        { at: 'trap.c:def:fault', role: 'xix: panic, for OCaml to do' },
+      ],
+      joints+: [
+        { from: 'trap.c:def:irqenable', to: 'trap.c:def:irq', say: 'the vctl list' },
+        { from: 'trap.c:def:arch__trap', to: 'trap.c:def:faultarm', say: 'data or prefetch abort' },
+        { from: 'trap.c:def:faultarm', to: 'trap.c:def:fault', say: 'the address' },
+      ],
+    },
+    skeletons.module('exceptions.s', 'Vectors to C', [
+      ['_vswitch', 'registers saved as a Ureg', ''],
+      ['_userexcep', 'from user mode: the other stack', 'user mode'],
+    ]) + {
+      bones+: [
+        { at: 'exceptions.s:comment:"global vectors(arm)"', role: 'eight jumps' },
+        { at: 'exceptions.s:comment:"function _vsvc(arm)"', role: 'a system call' },
+      ],
+      joints+: [
+        { from: 'exceptions.s:comment:"global vectors(arm)"', to: 'exceptions.s:def:_vswitch', say: 'IRQ, aborts' },
+        { from: 'exceptions.s:comment:"global vectors(arm)"', to: 'exceptions.s:comment:"function _vsvc(arm)"', say: 'SWI' },
+      ],
+    },
+    skeletons.module('mmu.c', 'Kernel page tables', [
+      ['mmuinit', 'boot: sections at KZERO, MMU off', ''],
+      ['mmuinit1', 'after boot: the identity map dropped', 'main.c'],
+      ['mmukmap', 'an I/O range mapped', 'later'],
+    ]) + { bones+: [{ at: 'mmu.c:def:arch_mmuswitch', role: 'a process switched in' }], joints+: [{ from: 'mmu.c:def:arch_flushmmu', to: 'mmu.c:def:arch_mmuswitch', say: 'flush' }], } + {
+      bones+: [{ at: 'mmu.c:def:arch_flushmmu', role: 'hzclock asks it' }],
+    },
+    skeletons.module('clock.c', 'The generic timer', [
+      ['clockinit', 'the timer on IRQcntps', ''],
+      ['localclockintr', 'rearm, then timerintr', 'each interrupt'],
+    ]) + {
+      bones+: [
+        { at: 'clock.c:def:arch_timerset', role: 'the next deadline' },
+        { at: 'clock.c:def:clock_arch_fastticks', role: 'the fast clock' },
+      ],
+      joints+: [{ from: 'clock.c:def:arch_timerset', to: 'clock.c:def:localclockintr', say: 'when it fires' }],
+    },
+    skeletons.module('vcore.c', 'Asking the GPU', [
+      ['fbinit', 'a framebuffer requested', ''],
+      ['vcreq', 'a property message', 'tags'],
+      ['vcwrite', 'into the mailbox', 'the buffer'],
+    ]) + { bones+: [{ at: 'vcore.c:def:vcread', role: 'the answer' }], joints+: [{ from: 'vcore.c:def:vcreq', to: 'vcore.c:def:vcread', say: 'waits' }] },
+    skeletons.module('screen.c', 'The screen at boot', [
+      ['arch__screeninit', 'the framebuffer made gscreen', ''],
+      ['screensize', 'the wanted size', 'asks'],
+    ]) + {
+      bones+: [
+        { at: 'vcore.c:def:fbinit', role: 'the GPU allocates it' },
+        { at: '../Port/swconsole.c:def:swconsole_init', role: 'the text console' },
+      ],
+      joints+: [
+        { from: 'screen.c:def:arch__screeninit', to: 'vcore.c:def:fbinit', say: 'size and depth' },
+        { from: 'screen.c:def:arch__screeninit', to: '../Port/swconsole.c:def:swconsole_init', say: 'gscreen' },
+      ],
+    },
+    skeletons.module('vfp3.c', 'The float unit', [
+      ['fpinit', 'boot: on and configured', ''],
+      ['fpononly', 'the coprocessor enabled', 'if havefp'],
+      ['fpcfg', 'rounding, traps', 'then'],
+    ]) + { bones+: [{ at: 'vfp3.c:def:fpuemu', role: "a user's FP fault: Plan 9's lazy path" }] },
+    skeletons.module('coproc.c', 'Coprocessor access without asm()', [
+      ['cprdsc', 'a system control register read', ''],
+      ['cprd', 'the instruction built', 'op'],
+      ['setupcpop', 'MRC encoded, then called', 'fills'],
+    ]) + { bones+: [{ at: 'coproc.c:def:fprd', role: 'the same for the VFP' }] },
+    skeletons.module('syscall.c', 'System calls: not yet', [
+      ['arch__syscall', 'the stub: a panic', ''],
+    ]) + {
+      bones+: [
+        { at: 'syscall.c:code:"#ifdef NOTDEFINED"', role: "principia's code, compiled out" },
+        { at: 'syscall.c:def:arch__notify', role: 'dead' },
+      ],
+      joints+: [{ from: 'syscall.c:code:"#ifdef NOTDEFINED"', to: 'syscall.c:def:arch__notify', say: 'encloses' }],
+    },
+  ],
+}

@@ -1,0 +1,58 @@
+// vcs/todo/: what the code map says of it (tinybox codemap; the format:
+// ~/github/ocaml-elm-playground/docs/manual/codemap.md, section 12).
+// Unbuilt: neither dune nor the mkfile compiles these files. They are
+// empty (cmd_mv.ml and config.ml hold one comment each): placeholders
+// naming what ogit.nw's table of files plans (pack.ml, server.ml,
+// config.ml, ignore.ml, tag.ml) and the commands still missing.
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "ogit's to-do list as empty files, not built: the commands and features git has and ogit lacks.",
+  files: {
+    'cmd_archive.ml': { summary: 'git archive, to write: empty placeholder, not built.', digest: 'd41d8cd98f00' },
+    'cmd_bisect.ml': { summary: 'git bisect, to write: empty placeholder, not built.', digest: 'd41d8cd98f00' },
+    'cmd_blame.ml': { summary: 'git blame, to write: empty placeholder, not built.', digest: 'd41d8cd98f00' },
+    'cmd_grep.ml': { summary: 'git grep, to write: empty placeholder, not built.', digest: 'd41d8cd98f00' },
+    'cmd_mv.ml': {
+      summary: "git mv, to write (ogit.nw has a section for it): one comment, not built.",
+      digest: '786bca71e56d',
+      important: [{ at: 'comment:"should handle moving directories too"', say: 'the only line: a reminder', weight: 1 }],
+    },
+    'cmd_rebase.ml': { summary: 'git rebase, to write: empty placeholder, not built.', digest: 'd41d8cd98f00' },
+    'cmd_revert.ml': { summary: 'git revert, to write: empty placeholder, not built.', digest: 'd41d8cd98f00' },
+    'cmd_stash.ml': { summary: 'git stash, to write: empty placeholder, not built.', digest: 'd41d8cd98f00' },
+    'cmd_tag.ml': { summary: 'git tag, to write: empty placeholder, not built.', digest: 'd41d8cd98f00' },
+    'config.ml': {
+      summary: 'Reading .git/config and ~/.gitconfig, to write: one comment; the author is hardcoded meanwhile.',
+      digest: 'd9190063949e',
+      important: [{ at: 'comment:"but also ~/.gitconfig"', say: 'the two files git merges', weight: 1 }],
+    },
+    'hooks.ml': { summary: 'Hooks (pre-commit, commit-msg...), to write: empty; commit_index has todos for them.', digest: 'd41d8cd98f00' },
+    'ignore.ml': { summary: '.gitignore, to write: empty; git status lists every file meanwhile.', digest: 'd41d8cd98f00' },
+    'pack.ml': { summary: 'Pack files and delta compression (a chapter of ogit.nw), to write: empty.', digest: 'd41d8cd98f00' },
+    'protocol.ml': { summary: "The git wire protocol, to write: empty; Client_git raises Todo meanwhile.", digest: 'd41d8cd98f00' },
+    'rebase.ml': { summary: 'Rebasing commits, to write: empty placeholder, not built.', digest: 'd41d8cd98f00' },
+    'reflog.ml': { summary: 'The reflog, to write: empty placeholder, not built.', digest: 'd41d8cd98f00' },
+    'server.ml': { summary: 'The server side of fetch and push (ogit.nw: client/server), to write: empty.', digest: 'd41d8cd98f00' },
+    'tag.ml': { summary: 'Tag objects, to write: empty; Objects.t has no Tag case yet.', digest: 'd41d8cd98f00' },
+  },
+  skeletons: [
+    {
+      name: 'What ogit lacks, and where it would plug in',
+      bones: [
+        { at: 'pack.ml', role: 'packs: the other half of .git/objects' },
+        { at: 'protocol.ml', role: 'the network: git://, fetch and push' },
+        { at: 'server.ml', role: 'the other end of the protocol' },
+        { at: 'tag.ml', role: 'a fourth kind of object' },
+        { at: 'cmd_tag.ml', role: 'its command' },
+        { at: 'config.ml', role: 'who the author is, where origin is' },
+        { at: 'ignore.ml', role: 'what status must not list' },
+      ],
+      joints: [
+        { from: 'protocol.ml', to: 'pack.ml', say: 'objects sent packed' },
+        { from: 'server.ml', to: 'protocol.ml', say: 'speaks it' },
+        { from: 'cmd_tag.ml', to: 'tag.ml', say: 'creates' },
+        { from: 'config.ml', to: 'protocol.ml', say: 'the remote url' },
+      ],
+    },
+  ],
+}

@@ -1,0 +1,370 @@
+// compiler/: what the code map says of it
+// The data flow (occ.nw): tokens -> AST -> typed AST + env -> assembly
+// AST -> marshalled object file. The back end is written once over
+// Arch_compiler.t, a record filled by ArchX.ml per architecture: 5
+// (ARM), v (MIPS), i (RISC-V).
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "occ, 5c's port: C to an object file for ARM, MIPS and RISC-V, each pass its own module over one AST.",
+  files: {
+    'Main.ml': {
+      summary: "occ's entry: Cap.main hands the capabilities to CLI.main.",
+      digest: 'f6e02aa51b1a',
+      important: [{ at: 'code:"Cap.main"', say: 'the only place all capabilities exist', weight: 3 }],
+    },
+    'CLI.ml': {
+      summary: "The command line and the passes: frontend (parse, check, typecheck), backend (rewrite, codegen), save.",
+      digest: '85d66d1d17ff',
+      capitals: [{ at: 'def:compile', say: 'frontend, backend, then the object saved' }],
+      important: [
+        { at: 'comment:"Main limitations compared to 5c/vc/..."', say: 'what the port left out, and why', weight: 3 },
+        { at: 'def:frontend', say: 'C to a typed AST: 5c did it while parsing', weight: 3 },
+        { at: 'def:backend', say: 'the typed AST to assembly, no text between', weight: 3 },
+        { at: 'code:"-> Arch.Arm"', say: 'the arch from the program name', weight: 1 },
+        { at: 'def:do_action', say: '-test_parser: a debugging action', weight: 1 },
+      ],
+    },
+    'CLI.mli': {
+      summary: "What occ needs: files in (and #include's: 5c preprocesses itself), the object out, INCLUDE.",
+      digest: '845c8e9fa920',
+      important: [{ at: 'type:caps', say: 'open_in for #include: cpp is built in', weight: 3 }],
+    },
+    'Ast.ml': {
+      summary: "C's AST, already named: scopes resolved while parsing, structs, enums and typedefs lifted to the top.",
+      digest: 'a061e9cea8b8',
+      capitals: [
+        { at: 'type:program', say: "the parser's result, every pass's input" },
+        { at: 'type:expr', say: 'an expression and its type, set by Typecheck' },
+        { at: 'type:fullname', say: 'a name and its block: scope resolved once' },
+      ],
+      important: [
+        { at: 'comment:"This AST is actually more a named AST"', say: "C's typedef ambiguity: naming during parsing", weight: 3 },
+        { at: 'comment:"5c: uses a reference to a symbol in a symbol table"', say: "a blockid instead of 5c's symbol pointers", weight: 3 },
+        { at: 'type:stmt', say: 'statements, with labels and switch', weight: 1 },
+        { at: 'type:func_def', say: 'what Codegen compiles one at a time', weight: 1 },
+        { at: 'type:toplevel', say: 'struct, typedef, enum, var, func', weight: 1 },
+        { at: 'type:typ', say: 'types as written, before Typecheck', weight: 1 },
+      ],
+    },
+    'Type.ml': {
+      summary: "C's types once resolved: integers by kind and sign, pointers, arrays, functions, structs by name.",
+      digest: '845d1134878a',
+      capitals: [
+        { at: 'type:t', say: 'the resolved type every expression carries' },
+        { at: 'type:structdef', say: 'fields kept beside, not inside, the type' },
+      ],
+      important: [
+        { at: 'comment:"TODO? rename to Type_.ml"', say: 'clashes with OCaml 5 Type', weight: 1 },
+        { at: 'type:integer_type', say: 'char, short, int, long, vlong', weight: 1 },
+      ],
+    },
+    'Storage.ml': {
+      summary: "Where a name lives: local, parameter, extern, global or static (a typedef is none).",
+      digest: '3fa1b13515f9',
+      important: [{ at: 'type:t', say: 'set by Typecheck, used by Codegen', weight: 3 }],
+    },
+    'Lexer.mll': {
+      summary: "C's lexer (ocamllex): a name is a type name when Globals.hids says so, C not being context-free.",
+      digest: 'b1533508f53e',
+      important: [
+        { at: 'code:"if Hashtbl.mem Globals.hids s"', say: "the lexer hack: typedefs known to the lexer", weight: 3 },
+        { at: 'def:token', say: 'the tokens, for Parse under cpp', weight: 3 },
+        { at: 'comment:"Limitations compared to 5c"', say: 'no L"" strings, no \\x escapes', weight: 1 },
+        { at: 'def:inttype_of_suffix', say: 'U, L, UL: the literal types', weight: 1 },
+      ],
+    },
+    'Parser.mly': {
+      summary: "C's grammar (ocamlyacc), doing little but naming: scopes, blockids, definitions lifted.",
+      digest: 'df669bda7519',
+      important: [
+        { at: 'comment:"The original 5c does many things during parsing"', say: 'the port does the minimum here', weight: 3 },
+        { at: 'type:env', say: 'ids and tags: the two namespaces', weight: 3 },
+        { at: 'def:add_id', say: 'tells the lexer a typedef was seen', weight: 1 },
+        { at: 'def:new_scope', say: 'a fresh blockid per block', weight: 1 },
+        { at: 'def:gensym', say: 'names for anonymous structs', weight: 1 },
+        { at: 'def:prog', say: 'the entry: a program', weight: 1 },
+      ],
+    },
+    'Parse.ml': {
+      summary: "C parsed under the preprocessor: Lexer and Parser plugged into Parse_cpp's hooks.",
+      digest: '1908d549f0ff',
+      important: [
+        { at: 'def:parse', say: 'cpp drives the lexer and the grammar', weight: 3 },
+        { at: 'def:parse_no_cpp', say: 'for tests', weight: 1 },
+      ],
+    },
+    'Parse.mli': {
+      summary: "The parser's entry: a C file, preprocessed, to an Ast.program.",
+      digest: '83e59265024b',
+    },
+    'Globals.ml': {
+      summary: "The one global shared by lexer and parser: which names are typedefs.",
+      digest: '88dc572b3a3b',
+      important: [{ at: 'def:hids', say: 'written by Parser, read by Lexer', weight: 3 }],
+    },
+    'Check.ml': {
+      summary: "Every name used is defined, none redefined inconsistently, locals used, labels paired.",
+      digest: '8c7a59573546',
+      important: [
+        { at: 'def:check_usedef', say: 'the walk: definitions against uses', weight: 3 },
+        { at: 'def:check_inconsistent_or_redefined_id', say: 'redeclarations, prototypes vs bodies', weight: 3 },
+        { at: 'def:check_unused_locals', say: 'warnings, not errors', weight: 1 },
+        { at: 'def:check_labels', say: 'every goto has its label', weight: 1 },
+        { at: 'type:error', say: 'the error type the later passes share', weight: 1 },
+        { at: 'def:check_program', say: 'the entry, from CLI.frontend', weight: 1 },
+      ],
+    },
+    'Check.mli': {
+      summary: "The checker's entry and the compiler's error type, shared by Typecheck, Rewrite and Codegen.",
+      digest: '84861630e56b',
+      important: [{ at: 'def:check_program', say: 'after parsing, before typechecking', weight: 3 }],
+    },
+    'Typecheck.ml': {
+      summary: "Types and storage resolved for every name, a type on every expression, the AST desugared on the way.",
+      digest: '84ea48217830',
+      capitals: [{ at: 'def:check_and_annotate_program', say: 'the typed program: the backend input' }],
+      important: [
+        { at: 'comment:"it returns a typed AST and also transforms this AST"', say: 'desugaring: arrays to pointers, casts', weight: 3 },
+        { at: 'def:expr', say: 'an expression typed, maybe rewritten', weight: 3 },
+        { at: 'comment:"no struct equality by field equality"', say: 'stricter than 5c: name equality', weight: 1 },
+        { at: 'def:merge_storage_toplevel', say: 'extern then global: one storage', weight: 1 },
+        { at: 'def:array_to_pointer', say: 'the implicit & added', weight: 1 },
+        { at: 'def:check_compatible_binary', say: "C's operand rules", weight: 1 },
+        { at: 'def:stmt', say: 'return checked against the function', weight: 1 },
+      ],
+    },
+    'Typecheck.mli': {
+      summary: "The typed program: ids with type, storage and initializer, struct definitions, typed functions.",
+      digest: 'bcd924af2784',
+      capitals: [{ at: 'type:typed_program', say: 'what frontend hands backend' }],
+      important: [{ at: 'type:idinfo', say: 'type, storage, location, initializer', weight: 3 }],
+    },
+    'Eval_const.ml': {
+      summary: "Constant expressions evaluated: array sizes, enum values, case labels.",
+      digest: 'ee4ca9a2e628',
+      important: [
+        { at: 'def:eval', say: 'called by Typecheck', weight: 3 },
+        { at: 'comment:"TODO: use Int64.t (vlong) like in 5c"', say: 'OCaml ints for now', weight: 1 },
+      ],
+    },
+    'Eval_const.mli': {
+      summary: "The evaluator's entry: an expression and the enum constants, to an integer or NotAConstant.",
+      digest: 'cdfa75742f5d',
+    },
+    'Rewrite.ml': {
+      summary: "A pass between Typecheck and Codegen, now mostly sanity checks; pointer arithmetic and casts to come.",
+      digest: '7b932166b1ea',
+      important: [
+        { at: 'comment:"todo mandatory:"', say: 'the rewriting itself is still to write', weight: 3 },
+        { at: 'def:rewrite', say: 'maps each function, keeps the rest', weight: 3 },
+        { at: 'code:"Impossible: ArrayAccess removed in Typecheck.ml"', say: "checks Typecheck's desugaring", weight: 1 },
+        { at: 'def:map_expr', say: 'every expression must have a type', weight: 1 },
+      ],
+    },
+    'Rewrite.mli': { summary: "The rewrite pass: a typed program in, a typed program out.", digest: 'ebbd6bdf379f' },
+    'Codegen.ml': {
+      summary: "The typed AST to assembly for any arch: Sethi-Ullman ordering, registers, gotos patched.",
+      digest: '88d928a7fe3d',
+      capitals: [{ at: 'def:codegen', say: 'each function to assembly lines' }],
+      important: [
+        { at: 'comment:"can\'t depend on Ast_Asm5 or Ast_asmv here!"', say: 'one back end; ArchX fills the gaps', weight: 3 },
+        { at: 'def:expr', say: "5c's cgen: an expression into a register", weight: 3 },
+        { at: 'def:complexity', say: 'Sethi-Ullman: the harder side first', weight: 3 },
+        { at: 'def:env_of_tp', say: 'the arch record chosen, Obj.magic', weight: 1 },
+        { at: 'def:gmove', say: "5c's gmove: moves between operands", weight: 1 },
+        { at: 'def:regalloc', say: 'registers from regs_initial', weight: 1 },
+        { at: 'def:patch_fake_goto', say: 'forward jumps patched later', weight: 1 },
+        { at: 'def:stmt', say: 'control flow to jumps', weight: 1 },
+        { at: 'comment:"sanity check register allocation"', say: 'a register left allocated is a bug', weight: 1 },
+      ],
+    },
+    'Codegen.mli': { summary: "The code generator's entry: an arch and a typed program to an assembly program.", digest: 'bbf09a593e3e' },
+    'Arch_compiler.ml': {
+      summary: "What the code generator asks of an architecture: sizes, registers, arithmetic and move instructions.",
+      digest: '743d2d2a3807',
+      capitals: [{ at: 'type:t', say: 'the back end per arch, as a record' }],
+      important: [
+        { at: 'type:opd', say: 'an operand: constant, register, name, address', weight: 3 },
+        { at: 'comment:"in original 5c, but I think it should"', say: 'Addr: a change from 5c', weight: 1 },
+      ],
+    },
+    'Arch5.ml': {
+      summary: "ARM for occ: widths, reserved registers, arithmetic and MOVW instructions, every one unconditional (AL).",
+      digest: '5a0ba6aab628',
+      important: [
+        { at: 'def:arch', say: 'the record Codegen uses for o5c', weight: 3 },
+        { at: 'def:move_instr_of_opds', say: "part of 5c's gins()", weight: 1 },
+        { at: 'def:regs_initial', say: 'SP, LINK, PC... reserved', weight: 1 },
+      ],
+    },
+    'Arch5.mli': { summary: "ARM's record for the code generator.", digest: 'fb09001b2d10' },
+    'Archv.ml': {
+      summary: "MIPS for occ: widths, reserved registers, arithmetic and move instructions.",
+      digest: 'b3565d89ca2a',
+      important: [{ at: 'def:arch', say: 'the record Codegen uses for ovc', weight: 3 }],
+    },
+    'Archv.mli': { summary: "MIPS's record for the code generator.", digest: '4b106c8acdd7' },
+    'Archi.ml': {
+      summary: "RISC-V for occ: widths, reserved registers, arithmetic and move instructions.",
+      digest: 'a5632bad76c3',
+      important: [{ at: 'def:arch', say: 'the record Codegen uses for oic', weight: 3 }],
+    },
+    'Archi.mli': { summary: "RISC-V's record for the code generator.", digest: '0618ce7b882b' },
+    'Error.ml': {
+      summary: "Warnings (as errors with -w) and the exit on error, with the location after cpp.",
+      digest: '1b2f5c6cc1d2',
+    },
+    'Error.mli': { summary: "Warnings and the error exit, shared by the passes.", digest: '5ad453b228f5' },
+    'Flags.ml': {
+      summary: "The debugging switches: dump tokens, the AST, the typed AST, the assembly; warnings.",
+      digest: '4510da7ec44b',
+    },
+    'Dumper_.ml': {
+      summary: "The AST printed, with or without types, for -dump_ast and -dump_typed_ast.",
+      digest: 'eef41a26bb2f',
+    },
+    'Dumper_.mli': { summary: "The AST printers' interface.", digest: '09200474d20c' },
+  },
+  dirs: {
+    docs: { summary: "occ.nw, the compiler's literate book (Principia Softwarica's 5c), still a stub, and its LaTeX." },
+  },
+  skeletons: [
+    skeletons.cli('occ: C to an object file', [
+      ['CLI.ml:def:compile', 'the two halves, then the save', 'the file, the arch'],
+      ['CLI.ml:def:frontend', 'parse, check, typecheck', 'the C file'],
+      ['CLI.ml:def:backend', 'rewrite, generate code', 'the typed program'],
+      ['../assembler/objects/Object_file.ml:def:save', 'the assembly AST marshalled', 'the assembly program'],
+    ]),
+    skeletons.parts('The passes: tokens, AST, typed AST, assembly (occ.nw)', [
+      ['../macroprocessor/', 'cpp, around the parser'],
+      ['Parser.mly', 'the grammar: a named AST'],
+      ['Ast.ml', 'the AST every pass reads'],
+      ['Check.ml', 'uses and definitions'],
+      ['Typecheck.ml', 'types, storage, desugaring'],
+      ['Rewrite.ml', 'sanity checks, later rewrites'],
+      ['Codegen.ml', 'the typed AST to assembly'],
+      ['Arch_compiler.ml', 'what an arch must give'],
+      ['../assembler/objects/', 'the assembly AST and object file'],
+    ], [
+      ['../macroprocessor/', 'Parser.mly', 'the tokens, expanded'],
+      ['Parser.mly', 'Ast.ml', 'builds'],
+      ['Ast.ml', 'Check.ml', 'the program'],
+      ['Check.ml', 'Typecheck.ml', 'a consistent program'],
+      ['Typecheck.ml', 'Rewrite.ml', 'the typed program'],
+      ['Rewrite.ml', 'Codegen.ml', 'the typed program'],
+      ['Arch_compiler.ml', 'Codegen.ml', 'the arch record'],
+      ['Codegen.ml', '../assembler/objects/', 'Ast_asm lines'],
+    ]),
+    {
+      name: "C's AST: a program of named toplevels",
+      bones: [
+        { at: 'Ast.ml:type:program', role: 'the whole file' },
+        { at: 'Ast.ml:type:toplevel', role: 'struct, typedef, enum, var, function' },
+        { at: 'Ast.ml:type:func_def', role: 'a function: type and body' },
+        { at: 'Ast.ml:type:stmt', role: 'statements' },
+        { at: 'Ast.ml:type:expr', role: 'expressions, typed later' },
+        { at: 'Ast.ml:type:fullname', role: 'every name, with its block' },
+      ],
+      joints: [
+        { from: 'Ast.ml:type:program', to: 'Ast.ml:type:toplevel', say: 'a list of' },
+        { from: 'Ast.ml:type:toplevel', to: 'Ast.ml:type:func_def', say: 'FuncDef' },
+        { from: 'Ast.ml:type:func_def', to: 'Ast.ml:type:stmt', say: 'the body' },
+        { from: 'Ast.ml:type:stmt', to: 'Ast.ml:type:expr', say: 'holds' },
+        { from: 'Ast.ml:type:expr', to: 'Ast.ml:type:fullname', say: 'Id' },
+      ],
+    },
+    skeletons.calls('occ: the command line', 'CLI.ml:def:main', 'flags, cpp conf, arch', [
+      ['CLI.ml:def:compile', 'a .c to an object', 'the file'],
+      ['CLI.ml:def:do_action', 'a debugging action', '-test_parser'],
+    ]) + { bones+: [{ at: 'CLI.ml:def:frontend', role: 'parse, check, typecheck' }, { at: 'CLI.ml:def:backend', role: 'rewrite, codegen' }],
+           joints+: [{ from: 'CLI.ml:def:compile', to: 'CLI.ml:def:frontend', say: 'the file' }, { from: 'CLI.ml:def:frontend', to: 'CLI.ml:def:backend', say: 'the typed program' }] },
+    {
+      name: 'The use/def check',
+      bones: [
+        { at: 'Check.ml:def:check_program', role: 'the entry' },
+        { at: 'Check.ml:def:check_usedef', role: 'the walk over the AST' },
+        { at: 'Check.ml:type:usedef', role: 'a name: defined? used?' },
+        { at: 'Check.ml:def:check_inconsistent_or_redefined_id', role: 'redeclarations' },
+        { at: 'Check.ml:def:check_unused_locals', role: 'at scope end' },
+        { at: 'Check.ml:def:check_labels', role: 'at function end' },
+      ],
+      joints: [
+        { from: 'Check.ml:def:check_program', to: 'Check.ml:def:check_usedef', say: 'the program' },
+        { from: 'Check.ml:def:check_usedef', to: 'Check.ml:type:usedef', say: 'records' },
+        { from: 'Check.ml:def:check_usedef', to: 'Check.ml:def:check_inconsistent_or_redefined_id', say: 'each declaration' },
+        { from: 'Check.ml:def:check_usedef', to: 'Check.ml:def:check_unused_locals', say: 'each block' },
+        { from: 'Check.ml:def:check_usedef', to: 'Check.ml:def:check_labels', say: 'each function' },
+      ],
+    },
+    {
+      name: 'Typechecking: toplevels, statements, expressions',
+      bones: [
+        { at: 'Typecheck.ml:def:check_and_annotate_program', role: 'the entry: toplevels merged' },
+        { at: 'Typecheck.ml:type:env', role: 'typedefs, enums, the return type' },
+        { at: 'Typecheck.ml:def:type_', role: 'an AST type to a Type.t' },
+        { at: 'Typecheck.ml:def:stmt', role: 'a statement checked' },
+        { at: 'Typecheck.ml:def:expr', role: 'an expression typed, desugared' },
+        { at: 'Typecheck.ml:def:check_compatible_binary', role: "C's operator rules" },
+        { at: 'Typecheck.ml:type:typed_program', role: 'the result' },
+      ],
+      joints: [
+        { from: 'Typecheck.ml:def:check_and_annotate_program', to: 'Typecheck.ml:def:type_', say: 'declarations' },
+        { from: 'Typecheck.ml:def:check_and_annotate_program', to: 'Typecheck.ml:def:stmt', say: 'function bodies' },
+        { from: 'Typecheck.ml:def:stmt', to: 'Typecheck.ml:def:expr', say: 'each expression' },
+        { from: 'Typecheck.ml:def:expr', to: 'Typecheck.ml:def:check_compatible_binary', say: 'binary operators' },
+        { from: 'Typecheck.ml:type:env', to: 'Typecheck.ml:def:expr', say: 'the context' },
+        { from: 'Typecheck.ml:def:check_and_annotate_program', to: 'Typecheck.ml:type:typed_program', say: 'ids, structs, funcs' },
+      ],
+    },
+    skeletons.module('Rewrite.ml', 'The rewrite: a map over the typed functions', [
+      ['rewrite', 'the entry', ''],
+      ['map_func_def', 'a function', 'each function'],
+      ['map_stmt', 'a statement', 'the body'],
+      ['map_expr', 'an expression, checked typed', 'each expression'],
+    ]),
+    {
+      name: 'Code generation: a function at a time, expressions by complexity',
+      bones: [
+        { at: 'Codegen.ml:def:codegen', role: 'the entry: all functions' },
+        { at: 'Codegen.ml:type:env', role: 'code array, registers, labels' },
+        { at: 'Codegen.ml:def:codegen_func', role: 'TEXT, the body, RET' },
+        { at: 'Codegen.ml:def:stmt', role: 'control flow to jumps' },
+        { at: 'Codegen.ml:def:expr', role: 'an expression to a register' },
+        { at: 'Codegen.ml:def:complexity', role: 'Sethi-Ullman numbers' },
+        { at: 'Codegen.ml:def:gmove', role: 'a move, via the arch' },
+        { at: 'Codegen.ml:def:opd_regalloc', role: 'a register for an operand' },
+      ],
+      joints: [
+        { from: 'Codegen.ml:def:codegen', to: 'Codegen.ml:def:codegen_func', say: 'each function' },
+        { from: 'Codegen.ml:def:codegen_func', to: 'Codegen.ml:def:stmt', say: 'the body' },
+        { from: 'Codegen.ml:def:stmt', to: 'Codegen.ml:def:expr', say: 'each expression' },
+        { from: 'Codegen.ml:def:expr', to: 'Codegen.ml:def:complexity', say: 'which side first' },
+        { from: 'Codegen.ml:def:expr', to: 'Codegen.ml:def:gmove', say: 'operands moved' },
+        { from: 'Codegen.ml:def:expr', to: 'Codegen.ml:def:opd_regalloc', say: 'a register' },
+        { from: 'Codegen.ml:type:env', to: 'Codegen.ml:def:codegen_func', say: 'fresh per function' },
+      ],
+    },
+    skeletons.calls('One back end, an architecture a record', 'Arch_compiler.ml:type:t', 'what Codegen needs', [
+      ['Arch5.ml:def:arch', 'ARM', 'filled by'],
+      ['Archv.ml:def:arch', 'MIPS', 'filled by'],
+      ['Archi.ml:def:arch', 'RISC-V', 'filled by'],
+    ]),
+  ],
+  tours: [
+    {
+      name: 'A C file through occ',
+      stops: [
+        { at: 'CLI.ml:def:main', say: 'The architecture comes from the program name: o5c, ovc, oic.' },
+        { at: 'Parse.ml:def:parse', say: 'The C lexer and grammar run under the preprocessor, through hooks.' },
+        { at: 'Parser.mly:type:env', say: 'Scopes are resolved while parsing: C needs to know its typedefs.' },
+        { at: 'Ast.ml:type:fullname', say: 'Every name carries its block: later passes never see scopes.' },
+        { at: 'Check.ml:def:check_usedef', say: 'Uses against definitions, as a pass of its own.' },
+        { at: 'Typecheck.ml:def:expr', say: 'Each expression typed, and desugared on the way.' },
+        { at: 'Codegen.ml:def:expr', say: 'The harder subexpression first, into registers.' },
+        { at: 'Arch5.ml:def:arch', say: 'What is ARM about the code: a record the generator calls.' },
+        { at: 'CLI.ml:def:compile', say: 'The assembly AST saved as the object: no assembly text between occ and olk.' },
+      ],
+    },
+  ],
+}

@@ -1,0 +1,26 @@
+// lib_core/profiling/ppx/tests/: what the code map says of it
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "One-line inputs for ppx_profiling: a function plain, labelled, with an optional argument.",
+  files: {
+    'basic.ml': { summary: 'A plain two-argument function marked [@@profiling].', digest: 'df8507d431fa' },
+    'label.ml': { summary: 'A labelled argument: the rewriter must pass ~a on.', digest: 'd4cecc5a7cb0' },
+    'optional_param.ml': { summary: 'An optional argument: ?a passed on, though ocaml-light forbids them.', digest: '3c1d837e6a2b' },
+  },
+  skeletons: [
+    {
+      name: 'The three cases the rewriter handles',
+      bones: [
+        { at: 'basic.ml', role: 'positional arguments' },
+        { at: 'label.ml', role: '~labelled' },
+        { at: 'optional_param.ml', role: '?optional' },
+        { at: '../ppx_profiling.ml:def:parameters', role: 'what tells them apart' },
+      ],
+      joints: [
+        { from: 'basic.ml', to: '../ppx_profiling.ml:def:parameters', say: 'rewritten by' },
+        { from: 'label.ml', to: '../ppx_profiling.ml:def:parameters', say: 'rewritten by' },
+        { from: 'optional_param.ml', to: '../ppx_profiling.ml:def:parameters', say: 'rewritten by' },
+      ],
+    },
+  ],
+}

@@ -1,0 +1,42 @@
+// tests/: what the code map says of it (tinybox codemap; the format:
+// ~/github/ocaml-elm-playground/docs/manual/codemap.md, section 12).
+// Only Test.ml is on the map: the subdirectories (assembler/,
+// compiler/, mk/, rc/, snapshots/...) are the tests' inputs and
+// expected outputs, data, left out by .codemapignore. The tests
+// themselves live beside what they test (builder/tests/Test_mk.ml,
+// shell/tests/, compiler/tests/, lib_core/regexps/tests/).
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The test suite's entry (Testo), and the inputs the tests feed the programs: C, assembly, mkfiles.",
+  files: {
+    'Test.ml': {
+      summary: "The ./test program: every suite's tests gathered (mk, rc, the compiler, regexps) and run by Testo.",
+      digest: '41b63443aa13',
+      capitals: [{ at: 'def:tests', say: 'the suites of the whole project' }],
+      important: [
+        { at: 'comment:"to run all the OCaml tests containing"', say: './test -s <pattern>: a subset', weight: 2 },
+        { at: 'def:test_hello', say: 'the smallest test: the harness works', weight: 1 },
+        { at: 'code:"Testo.interpret_argv"', say: 'Testo parses argv and runs', weight: 2 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.cli('./test: the suites gathered, Testo runs them', [
+      ['Test.ml:def:tests', "each directory's suite, flattened", 'caps'],
+    ], main='Test.ml:code:"let () = Cap.main"', cli='Test.ml:def:main') + {
+      bones+: [
+        { at: '../builder/tests/Test_mk.ml:def:tests', role: 'omk run on mkfiles' },
+        { at: '../shell/tests/Test_shell.ml:def:tests', role: 'orc run on scripts' },
+        { at: '../compiler/tests/Test_compiler.ml:def:tests', role: 'occ, oas, olk on C files' },
+        { at: '../lib_core/regexps/tests/Test_re.ml:def:tests', role: 'the regexp engines' },
+      ],
+      joints+: [
+        { from: '../builder/tests/Test_mk.ml:def:tests', to: 'Test.ml:def:tests', say: 'Testo tests' },
+        { from: '../shell/tests/Test_shell.ml:def:tests', to: 'Test.ml:def:tests', say: 'Testo tests' },
+        { from: '../compiler/tests/Test_compiler.ml:def:tests', to: 'Test.ml:def:tests', say: 'Testo tests' },
+        { from: '../lib_core/regexps/tests/Test_re.ml:def:tests', to: 'Test.ml:def:tests', say: 'Testo tests' },
+      ],
+    },
+  ],
+}

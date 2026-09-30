@@ -1,0 +1,28 @@
+// utilities/misc/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). tree.ml has no dune or mkfile: not built, and it cannot be (its
+// last lines are the expected output pasted as text, and it uses an
+// optional argument, which ocaml-light does not parse).
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: 'A sketch toward tree(1): drawing a tree of strings as the Unix tree command does; not built.',
+  files: {
+    'tree.ml': {
+      summary: "A tree drawn with |-- and `-- (from Shayne Fletcher's blog): not built, and not valid OCaml.",
+      digest: '639bf5fadbd1',
+      important: [
+        { at: 'type:tree', say: 'a polymorphic variant: ocaml-light has none', weight: 2 },
+        { at: 'def:print_tree', say: 'the prefix grows with each level', weight: 3 },
+        { at: 'code:"?(pad"', say: 'an optional argument: not in ocaml-light', weight: 1 },
+        { at: 'code:"The output of the above looks like this"', say: 'prose after the code: does not compile', weight: 2 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.module('tree.ml', 'tree: an example drawn', [
+      ['tree', 'the example tree, printed at load', ''],
+      ['print_tree', 'a node, then its children with a longer pad', 'the tree'],
+    ]),
+  ],
+}

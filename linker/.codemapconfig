@@ -1,0 +1,449 @@
+// linker/: what the code map says of it
+// Each architecture repeats one pattern, X being 5 (ARM), 6 (amd64), 7
+// (ARM64), v (MIPS), i (RISC-V, also j for 64 bits): CLI.linkX runs
+// the shared passes (Load, Resolve, Profile, Layout.layout_data, Check,
+// Datagen, Execgen) around three of its own: RewriteX (TEXT and RET
+// expanded), LayoutX (pcs, literal pools), CodegenX (the encodings);
+// TypesX names the node type.
+local skeletons = import '../skeletons.libsonnet';
+
+// CodegenX.ml's own skeleton: the rules, used twice
+local codegen(x, extra=[]) = {
+  name: 'Encoding ' + x + ': one table of rules, used twice',
+  bones: [
+    { at: 'Codegen' + x + '.ml:def:rules', role: 'an instruction to its size and bits' },
+    { at: 'Codegen' + x + '.ml:def:size_of_instruction', role: "the rule's size, for layout" },
+    { at: 'Codegen' + x + '.ml:def:gen', role: "the rule's bits, pc checked" },
+  ] + [{ at: 'Codegen' + x + '.ml:' + e[0], role: e[1] } for e in extra],
+  joints: [
+    { from: 'Codegen' + x + '.ml:def:rules', to: 'Codegen' + x + '.ml:def:size_of_instruction', say: 'the size only' },
+    { from: 'Codegen' + x + '.ml:def:rules', to: 'Codegen' + x + '.ml:def:gen', say: 'the words' },
+  ] + [{ from: 'Codegen' + x + '.ml:' + e[0], to: 'Codegen' + x + '.ml:def:rules', say: e[2] } for e in extra],
+};
+local rewrite_steps(x, name, extra=[]) = {
+  name: name,
+  bones: [
+    { at: 'Rewrite' + x + '.ml:def:rewrite', role: 'the entry, by side effect on the graph' },
+    { at: 'Rewrite' + x + '.ml:comment:"step1: mark"', role: 'leaf functions found, NOPs removed' },
+    { at: 'Rewrite' + x + '.ml:comment:"step2: transform"', role: 'TEXT and RET expanded' },
+  ] + [{ at: 'Rewrite' + x + '.ml:' + e[0], role: e[1] } for e in extra],
+  joints: [
+    { from: 'Rewrite' + x + '.ml:def:rewrite', to: 'Rewrite' + x + '.ml:comment:"step1: mark"', say: 'first pass' },
+    { from: 'Rewrite' + x + '.ml:comment:"step1: mark"', to: 'Rewrite' + x + '.ml:comment:"step2: transform"', say: 'leaf or not' },
+  ] + [{ from: 'Rewrite' + x + '.ml:comment:"step2: transform"', to: 'Rewrite' + x + '.ml:' + e[0], say: e[2] } for e in extra],
+};
+local rewrite_file(arch, digest, extra=[]) = {
+  summary: arch + ": TEXT and RET expanded into prologues and epilogues, a leaf saving no link register.",
+  digest: digest,
+  important: [
+    { at: 'def:rewrite', say: 'the frame decided here, not by the compiler', weight: 3 },
+    { at: 'comment:"step1: mark"', say: 'a leaf makes no call', weight: 1 },
+    { at: 'comment:"step2: transform"', say: 'virtual RET to real instructions', weight: 1 },
+  ] + extra,
+};
+local types_file(arch, digest) = {
+  summary: arch + "'s instruction plugged into the shared node type, with a printer (no deriving in OCaml-light).",
+  digest: digest,
+};
+local layout_mli(arch, digest) = { summary: arch + "'s text layout: every node its real pc, text symbols defined.", digest: digest };
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "olk, 5l's port: objects to an a.out or ELF executable for five architectures; the real work of the toolchain.",
+  files: {
+    'Main.ml': {
+      summary: "olk's entry: Cap.main hands the capabilities to CLI.main.",
+      digest: '606b9b75f6ce',
+      important: [{ at: 'code:"Cap.main"', say: 'the only place all capabilities exist', weight: 3 }],
+    },
+    'CLI.ml': {
+      summary: "The command line (-H format, -T -D -R addresses, -p profiling), then one pipeline per arch.",
+      digest: 'a67e3b76559a',
+      capitals: [{ at: 'def:link', say: 'the arch picks its pipeline' }],
+      important: [
+        { at: 'comment:"An OCaml port of 5l/vl, the Plan 9 ARM/MIPS linkers."', say: 'stale: RISC-V, ARM64 and amd64 now too', weight: 1 },
+        { at: 'def:link5', say: 'the pipeline, the model for the others', weight: 3 },
+        { at: 'comment:"setR12 must sit Codegen5.big"', say: 'a bug found linking libc: SB off by 4092', weight: 3 },
+        { at: 'def:config_of_header_type_and_flags', say: 'a.out or ELF: addresses per arch', weight: 3 },
+        { at: 'code:"let default_entry_point"', say: '_main: libc runs before main', weight: 1 },
+        { at: 'def:link6', say: 'bytes not words, no SB register', weight: 1 },
+        { at: 'def:main', say: 'flags, then link into the executable', weight: 1 },
+      ],
+    },
+    'CLI.mli': {
+      summary: "What olk needs: object and library files in, the executable out.",
+      digest: '972b4c6f7562',
+    },
+    'Types.ml': {
+      summary: "The linker's world: symbols before and after layout, code as a graph of nodes, data apart.",
+      digest: 'bafcbd2e144d',
+      capitals: [
+        { at: 'type:node', say: 'an instruction, its next and its branch, as 5l' },
+        { at: 'type:symbol_table', say: 'symbols by virtual pc, before layout' },
+        { at: 'type:symbol_table2', say: 'symbols by real address, after layout' },
+      ],
+      important: [
+        { at: 'comment:"we opted for a mutable field"', say: 'naming reuses the AST: priv mutated', weight: 3 },
+        { at: 'type:code_bis', say: 'TEXT, WORD, virtual, or an instruction', weight: 1 },
+        { at: 'type:section', say: 'SText, SData, SXref: undefined yet', weight: 1 },
+        { at: 'type:data', say: 'DATA kept apart from code', weight: 1 },
+        { at: 'def:bytes_of_words', say: "each arch's endianness, MIPS big", weight: 1 },
+        { at: 'def:lookup', say: 'a symbol entered as SXref on first use', weight: 1 },
+      ],
+    },
+    'Types5.ml': types_file('ARM', '790cc5ed3891'),
+    'Types6.ml': types_file('amd64', '03144e68e7e3'),
+    'Types7.ml': types_file('ARM64', '174ff5188dd1'),
+    'Typesi.ml': types_file('RISC-V', '49dd573e24ef'),
+    'Typesv.ml': types_file('MIPS', '69d98311b39e'),
+    'Load.ml': {
+      summary: "Objects and libraries loaded, split into code and data, private symbols named, symbols entered.",
+      digest: '75d926c078ca',
+      capitals: [{ at: 'def:load', say: 'every object into one code array' }],
+      important: [
+        { at: 'comment:"load() performs a few things"', say: 'load, split, relocate, name', weight: 3 },
+        { at: 'def:process_global', say: "a static's priv set to its file", weight: 1 },
+      ],
+    },
+    'Load.mli': { summary: "Loading: files to a code array, a data list and the symbol table.", digest: '631deca40269' },
+    'Resolve.ml': {
+      summary: "The code array turned into a graph: every jump points at its target node.",
+      digest: '43fc7b25bc2e',
+      important: [
+        { at: 'def:build_graph', say: "5l's pointers: next and branch", weight: 3 },
+        { at: 'def:resolve_branch_operand', say: 'a symbol jump to its TEXT', weight: 1 },
+      ],
+    },
+    'Resolve.mli': {
+      summary: "Building the code graph, resolving SymbolJumps in place.",
+      digest: 'd1d63f6c46e1',
+      important: [{ at: 'comment:"will modify the code"', say: 'side effect on the AST refs', weight: 1 }],
+    },
+    'Check.ml': {
+      summary: "No symbol left undefined, once the layout has defined etext, edata and end.",
+      digest: '7f64731cc22b',
+      important: [{ at: 'def:check', say: 'SXref left: an undefined symbol', weight: 3 }],
+    },
+    'Check.mli': { summary: "The undefined-symbol check.", digest: '75ebb19e01d6' },
+    'Profile.ml': {
+      summary: "Profiling (-p): calls counted at each TEXT, written once for all archs with virtual instructions.",
+      digest: '26985e16ef36',
+      important: [
+        { at: 'comment:"we are able to factorize code across archs"', say: 'Load, Store, AddI: virtual, portable', weight: 3 },
+        { at: 'def:rewrite', say: 'new code and a new data counter', weight: 1 },
+      ],
+    },
+    'Rewrite.ml': {
+      summary: "What the RewriteX passes share: the first real instruction after NOPs.",
+      digest: 'be49d4bf89c6',
+    },
+    'Rewrite5.ml': rewrite_file('ARM', '7c65d10f0c8e', [
+      { at: 'comment:"decrement SP and save rLINK in one operation"', say: "ARM's MOVW.W: push in one instruction", weight: 1 },
+    ]),
+    'Rewrite5.mli': { summary: "ARM's rewrite: TEXT and RET by whether a function is a leaf.", digest: '167d89079483' },
+    'Rewrite6.ml': {
+      summary: "amd64: stack frames synthesized, float immediates moved to hidden data (6l's obj.c).",
+      digest: 'b893ecd9da63',
+      important: [
+        { at: 'comment:"this pass used to be a real no-op"', say: 'RET is real here; libc showed frames missing', weight: 3 },
+        { at: 'def:add_prologue_epilogue', say: 'SUB SP and ADD SP around the body', weight: 3 },
+        { at: 'def:synthetic_global_name', say: 'a DATA per float constant', weight: 1 },
+        { at: 'def:rewrite', say: 'returns new data too', weight: 1 },
+      ],
+    },
+    'Rewrite7.ml': rewrite_file('ARM64', 'c99fd43030fa', [
+      { at: 'comment:"TWO distinct return-shaped mnemonics"', say: 'RET is real, RETURN virtual', weight: 3 },
+      { at: 'def:round_up_stackalign', say: 'SP kept 16-byte aligned', weight: 1 },
+    ]),
+    'Rewritei.ml': rewrite_file('RISC-V', '8b93a41bf316', [
+      { at: 'comment:"has THREE cases"', say: 'leaf, leaf with locals, not leaf', weight: 3 },
+      { at: 'def:padded_declared_size', say: "il's padding, for byte equality", weight: 1 },
+    ]),
+    'Rewritev.ml': rewrite_file('MIPS', '5b72ac6ce98b'),
+    'Rewritev.mli': { summary: "MIPS's rewrite: TEXT and RET by whether a function is a leaf.", digest: '714774fce510' },
+    'Layout.ml': {
+      summary: "Data laid out (DATA, then BSS) and the special symbols defined: etext, edata, end, setSB.",
+      digest: '18da0ddad1bf',
+      important: [
+        { at: 'def:layout_data', say: 'offsets in data and bss', weight: 3 },
+        { at: 'def:xdefine', say: 'a symbol the linker makes up', weight: 1 },
+      ],
+    },
+    'Layout.mli': { summary: "The data layout, and the linker's own symbols.", digest: 'bc95f5bb662e' },
+    'Layout5.ml': {
+      summary: "ARM's text laid out: real pcs, and the literal pool spliced where big constants are loaded.",
+      digest: 'e6b89756f899',
+      important: [
+        { at: 'def:layout_text', say: 'sizes from the codegen rules', weight: 3 },
+        { at: 'comment:"mechanism, ported from"', say: "5l's addpool and flushpool", weight: 3 },
+        { at: 'comment:"TODO: seems reusable"', say: 'the five layouts differ little', weight: 1 },
+      ],
+    },
+    'Layout5.mli': layout_mli('ARM', '312fc5220e6b'),
+    'Layout6.ml': {
+      summary: "amd64's text laid out, jumps relaxed from short to near until nothing changes.",
+      digest: 'c87329ef556f',
+      important: [
+        { at: 'def:relax', say: 'a fixed point: jumps only ever grow', weight: 3 },
+        { at: 'def:layout_text', say: 'no literal pool on amd64', weight: 1 },
+      ],
+    },
+    'Layout7.ml': {
+      summary: "ARM64's text laid out, with a literal pool of 8-byte entries flushed at the end of the program.",
+      digest: '042d313c6368',
+      important: [
+        { at: 'def:layout_text', say: "ported from Layout5's pool", weight: 3 },
+        { at: 'comment:"flush the pool at the true end"', say: 'one pool: must stay small for now', weight: 3 },
+        { at: 'comment:"real AArch64 gotcha"', say: 'the pool 8-byte aligned', weight: 1 },
+      ],
+    },
+    'Layouti.ml': {
+      summary: "RISC-V's text laid out: no literal pool, big constants built inline with LUI.",
+      digest: 'cbf74703ec07',
+      important: [{ at: 'def:layout_text', say: "a port of vl's simpler layout", weight: 3 }],
+    },
+    'Layouti.mli': layout_mli('RISC-V', '68a04a394cfa'),
+    'Layoutv.ml': {
+      summary: "MIPS's text laid out: every node its real pc.",
+      digest: '6db9d5c81b31',
+      important: [{ at: 'comment:"TODO: factorize with Layout5.ml"', say: 'still one layout per arch', weight: 1 }],
+    },
+    'Layoutv.mli': layout_mli('MIPS', 'fc5811ec8292'),
+    'Codegen.ml': {
+      summary: "What the encoders share: an action (size and bits), the environment, the pseudo-instructions' rules.",
+      digest: 'c8e9e791ab7a',
+      capitals: [{ at: 'type:action', say: 'a size now, the bits later' }],
+      important: [
+        { at: 'def:default_rules', say: 'TEXT and WORD, for every arch', weight: 3 },
+        { at: 'type:env', say: 'symbols after layout, the frame size', weight: 1 },
+      ],
+    },
+    'Codegen5.ml': {
+      summary: "ARM encodings, 5l's asm.c case by case: pattern matching instead of optab and oplook.",
+      digest: '9fad002ebb6b',
+      capitals: [{ at: 'def:rules', say: "5l's optab as one match" }],
+      important: [
+        { at: 'comment:"No need for optab/oplook/ocmp/cmp"', say: 'OCaml patterns replace the tables', weight: 3 },
+        { at: 'def:immrot', say: "ARM's rotated 8-bit immediates", weight: 3 },
+        { at: 'def:gload_from_pool', say: 'a big constant: a load from the pool', weight: 1 },
+        { at: 'def:offset_to_R12', say: 'SB-relative via R12, biased by big', weight: 1 },
+        { at: 'def:gcond', say: 'the condition in the top 4 bits', weight: 1 },
+        { at: 'def:gen', say: 'layout and codegen must agree', weight: 1 },
+      ],
+    },
+    'Codegen5.mli': {
+      summary: "ARM's encoder: sizes and the pool for layout, the words for the executable.",
+      digest: '006074e0cfc8',
+      important: [{ at: 'type:pool', say: 'what the layout must splice', weight: 1 }],
+    },
+    'Codegen6.ml': {
+      summary: "amd64 encodings from 6l's span.c: REX, ModRM, SIB, variable-length bytes instead of words.",
+      digest: 'c9222a3af445',
+      capitals: [{ at: 'def:rules', say: 'an instruction to its bytes' }],
+      important: [
+        { at: 'comment:"THE central departure"', say: 'bytes, not 32-bit words', weight: 3 },
+        { at: 'def:encode_rm', say: 'ModRM and SIB: the x86 operand', weight: 3 },
+        { at: 'def:rex_opt', say: 'the 64-bit prefix, when needed', weight: 1 },
+        { at: 'def:resolve_gen_full', say: 'globals to absolute addresses: no SB', weight: 1 },
+        { at: 'def:arith_rules', say: 'rules split by family', weight: 1 },
+      ],
+    },
+    'Codegen7.ml': {
+      summary: "ARM64 encodings from 7l's asmout.c, whole words computed as in goken's C helpers.",
+      digest: '5361decce68a',
+      capitals: [{ at: 'def:rules', say: 'an instruction to its words' }],
+      important: [
+        { at: 'comment:"style note"', say: 'why words, not Bits fields, here', weight: 3 },
+        { at: 'def:gload_from_pool', say: 'big constants and addresses: the pool', weight: 1 },
+        { at: 'def:opbfm', say: 'bitfield moves: shifts and extends', weight: 1 },
+      ],
+    },
+    'Codegeni.ml': {
+      summary: "RISC-V encodings from il's asm.c: big constants inline with LUI, no compressed instructions.",
+      digest: '60d2460087cb',
+      capitals: [{ at: 'def:rules', say: 'an instruction to its words' }],
+      important: [
+        { at: 'comment:"never emits compressed instructions"', say: 'compare with goken il -c', weight: 3 },
+        { at: 'def:gen_upper_and_low_via', say: 'LUI and a 12-bit low part', weight: 3 },
+        { at: 'def:big', say: 'the SB bias, shared with CLI', weight: 1 },
+        { at: 'def:op_itype', say: 'the I-type format', weight: 1 },
+      ],
+    },
+    'Codegeni.mli': { summary: "RISC-V's encoder: sizes, words, and the SB bias.", digest: 'bb04a2a7bacd' },
+    'Codegenv.ml': {
+      summary: "MIPS encodings, vl's asm.c case by case.",
+      digest: 'efb9832a782c',
+      capitals: [{ at: 'def:rules', say: 'an instruction to its words' }],
+      important: [
+        { at: 'def:op_irr', say: 'the I format, 87 uses', weight: 3 },
+        { at: 'def:base_and_offset_of_entity', say: 'SB via R30, FP and SP', weight: 1 },
+        { at: 'def:gbranch_offset', say: 'branches relative to pc+4', weight: 1 },
+      ],
+    },
+    'Codegenv.mli': { summary: "MIPS's encoder: sizes for layout, words for the executable.", digest: '97466f1e044b' },
+    'Datagen.ml': {
+      summary: "The data segment's bytes: each DATA's value written at its symbol's offset, in the arch's endianness.",
+      digest: '1e57a787a078',
+      important: [
+        { at: 'def:gen', say: 'ints, floats, strings, addresses', weight: 3 },
+        { at: 'def:fill_bytes_for_int', say: 'negative values as bit patterns', weight: 1 },
+        { at: 'comment:"TODO: what about 64 bits arch?"', say: 'an address DATA: 4 bytes only?', weight: 1 },
+      ],
+    },
+    'Datagen.mli': { summary: "The data segment's generator.", digest: 'e1811988728f' },
+    'Execgen.ml': {
+      summary: "The executable written: header (a.out or ELF), text, data, symbol table.",
+      digest: 'b8ad6df45424',
+      important: [{ at: 'def:gen', say: 'the entry point must be TEXT', weight: 3 }],
+    },
+    'Execgen.mli': { summary: "The executable's writer.", digest: '4b6c2786b041' },
+    'Flags.ml': {
+      summary: "Debugging switches (-debug_layout, -debug_gen) and ARM's kencc and VFP modes.",
+      digest: '84c0a653369b',
+    },
+    'Optimize.ml': {
+      summary: "Optimizations still to write: ADD -N to SUB N, following jumps, branch chains.",
+      digest: 'b4c523c9290e',
+    },
+    'Optimize5.ml': { summary: "Empty: ARM's optimizations, to come.", digest: 'd41d8cd98f00' },
+    'Optimizev.ml': { summary: "Empty: MIPS's optimizations, to come.", digest: 'd41d8cd98f00' },
+  },
+  dirs: {
+    docs: { summary: "olk.nw, the linker's literate book (Principia Softwarica's 5l), and its LaTeX." },
+  },
+  skeletons: [
+    skeletons.cli('olk: objects to an executable (ARM)', [
+      ['CLI.ml:def:link', 'the arch picks the pipeline', 'the files, the config'],
+      ['CLI.ml:def:link5', "ARM's pipeline (one per arch)", 'ARM'],
+      ['Load.ml:def:load', 'objects to code, data, symbols', 'the files'],
+      ['Resolve.ml:def:build_graph', 'the code as a graph', 'the code array'],
+      ['Rewrite5.ml:def:rewrite', 'prologues and epilogues', 'the graph'],
+      ['Layout.ml:def:layout_data', 'data offsets', 'the data'],
+      ['Layout5.ml:def:layout_text', 'real pcs, the pool', 'symbols2'],
+      ['Codegen5.ml:def:gen', 'the words', 'the laid-out graph'],
+      ['Datagen.ml:def:gen', 'the data bytes', 'the text'],
+      ['Execgen.ml:def:gen', 'the file: header, text, data', 'text and data'],
+    ]),
+    skeletons.calls('olk: one pipeline per architecture', 'CLI.ml:def:link', 'argv[0] chose the arch', [
+      ['CLI.ml:def:link5', 'ARM (o5l)', 'Arm'],
+      ['CLI.ml:def:link6', 'amd64 (o6l)', 'Amd64'],
+      ['CLI.ml:def:link7', 'ARM64 (o7l)', 'Arm64'],
+      ['CLI.ml:def:linkv', 'MIPS (ovl)', 'Mips'],
+      ['CLI.ml:def:linki', 'RISC-V (oil, ojl)', 'Riscv'],
+    ]),
+    skeletons.parts("The linker's passes: shared, and per arch", [
+      ['Load.ml', 'objects in, symbols named'],
+      ['Resolve.ml', 'the code graph'],
+      ['Profile.ml', '-p: counters added'],
+      ['Rewrite5.ml', 'frames (per arch: 5 here)'],
+      ['Layout.ml', 'data laid out'],
+      ['Layout5.ml', 'text laid out (per arch)'],
+      ['Codegen5.ml', 'encodings (per arch)'],
+      ['Datagen.ml', 'data bytes'],
+      ['Execgen.ml', 'the file written'],
+      ['Types.ml', 'what they all pass along'],
+      ['executables/', 'a.out and ELF'],
+      ['libraries/', '.a files: objects together'],
+      ['tools/', 'ar, nm on the same formats'],
+    ], [
+      ['Load.ml', 'Resolve.ml', 'code array'],
+      ['Resolve.ml', 'Profile.ml', 'graph'],
+      ['Profile.ml', 'Rewrite5.ml', 'graph'],
+      ['Rewrite5.ml', 'Layout.ml', 'then data'],
+      ['Layout.ml', 'Layout5.ml', 'symbols2'],
+      ['Layout5.ml', 'Codegen5.ml', 'real pcs'],
+      ['Codegen5.ml', 'Datagen.ml', 'then data'],
+      ['Datagen.ml', 'Execgen.ml', 'bytes'],
+      ['Execgen.ml', 'executables/', 'the headers'],
+      ['Load.ml', 'libraries/', 'reads .a'],
+    ]),
+    {
+      name: 'Symbols and code: before and after layout',
+      bones: [
+        { at: 'Types.ml:type:symbol_table', role: 'by virtual pc, before layout' },
+        { at: 'Types.ml:type:section', role: 'text, data, or undefined' },
+        { at: 'Types.ml:type:symbol_table2', role: 'by real address, after' },
+        { at: 'Types.ml:type:code_graph', role: 'the first node' },
+        { at: 'Types.ml:type:node', role: 'instr, next, branch, real_pc' },
+        { at: 'Types.ml:type:code_bis', role: 'what a node holds' },
+        { at: 'Types.ml:type:data', role: 'DATA, apart from code' },
+      ],
+      joints: [
+        { from: 'Types.ml:type:symbol_table', to: 'Types.ml:type:section', say: 'each symbol' },
+        { from: 'Types.ml:type:symbol_table', to: 'Types.ml:type:symbol_table2', say: 'layout' },
+        { from: 'Types.ml:type:code_graph', to: 'Types.ml:type:node', say: 'next, branch' },
+        { from: 'Types.ml:type:node', to: 'Types.ml:type:code_bis', say: 'instr' },
+      ],
+    },
+    codegen('5', [['def:immrot', 'rotated immediates', 'operands'], ['def:gload_from_pool', 'constants from the pool', 'big constants'], ['def:gcond', 'the condition bits', 'every instruction']]),
+    codegen('6', [['def:encode_rm', 'ModRM and SIB', 'operands'], ['def:rex_opt', 'the REX prefix', '64-bit operands'], ['def:arith_rules', 'arithmetic', 'by family']]),
+    codegen('7', [['def:gload_from_pool', 'constants from the pool', 'big constants'], ['def:opirr_addsub', 'immediate add and sub', 'operands'], ['type:pool', 'the pool entry', 'for layout']]),
+    codegen('i', [['def:gen_upper_and_low_via', 'LUI and the low 12 bits', 'big constants'], ['def:op_itype', 'the I-type format', 'encodings'], ['def:resolve_entities', 'SB, SP, FP offsets', 'operands']]),
+    codegen('v', [['def:op_irr', 'the I format', 'encodings'], ['def:op_rrr', 'the R format', 'encodings'], ['def:base_and_offset_of_entity', 'SB via R30', 'operands']]),
+    rewrite_steps('5', "ARM's frames: leaf or not", [['comment:"decrement SP and save rLINK in one operation"', 'the prologue', 'a non-leaf']]),
+    rewrite_steps('7', "ARM64's frames: RETURN expanded", [['def:mk_node', 'new nodes', 'prologue, epilogue'], ['def:round_up_stackalign', '16-byte frames', 'frame size']]),
+    rewrite_steps('i', "RISC-V's frames: three cases", [['def:padded_declared_size', "il's padding", 'frame size']]),
+    rewrite_steps('v', "MIPS's frames: leaf or not"),
+    skeletons.module('Rewrite6.ml', "amd64's rewrite: frames and float constants", [
+      ['rewrite', 'the entry: graph and new data', ''],
+      ['add_prologue_epilogue', 'SUB and ADD SP', 'the graph'],
+      ['synthetic_global_name', 'a hidden DATA per float', 'each float immediate'],
+    ]),
+    {
+      name: "ARM's text layout: pcs and the literal pool",
+      bones: [
+        { at: 'Layout5.ml:def:layout_text', role: 'every node its real pc' },
+        { at: 'Layout5.ml:comment:"splice the pending pool"', role: 'pool entries put in the stream' },
+        { at: 'Layout5.ml:comment:"checkpool(): flush"', role: 'flushed before out of range' },
+        { at: 'Codegen5.ml:def:size_of_instruction', role: 'each size, and pool needs' },
+      ],
+      joints: [
+        { from: 'Codegen5.ml:def:size_of_instruction', to: 'Layout5.ml:def:layout_text', say: 'size, pool entry' },
+        { from: 'Layout5.ml:def:layout_text', to: 'Layout5.ml:comment:"checkpool(): flush"', say: 'too far' },
+        { from: 'Layout5.ml:comment:"checkpool(): flush"', to: 'Layout5.ml:comment:"splice the pending pool"', say: 'the entries' },
+      ],
+    },
+    {
+      name: "ARM64's text layout: pcs and one pool at the end",
+      bones: [
+        { at: 'Layout7.ml:def:layout_text', role: 'every node its real pc' },
+        { at: 'Layout7.ml:comment:"flush the pool at the true end"', role: 'the pool after the code' },
+        { at: 'Layout7.ml:comment:"real AArch64 gotcha"', role: 'aligned to 8' },
+        { at: 'Codegen7.ml:def:size_of_instruction', role: 'each size, and pool needs' },
+      ],
+      joints: [
+        { from: 'Codegen7.ml:def:size_of_instruction', to: 'Layout7.ml:def:layout_text', say: 'size, pool entry' },
+        { from: 'Layout7.ml:def:layout_text', to: 'Layout7.ml:comment:"flush the pool at the true end"', say: 'the entries' },
+        { from: 'Layout7.ml:comment:"flush the pool at the true end"', to: 'Layout7.ml:comment:"real AArch64 gotcha"', say: 'padding' },
+      ],
+    },
+    {
+      name: "The data segment's bytes",
+      bones: [
+        { at: 'Datagen.ml:def:gen', role: 'each DATA at its offset' },
+        { at: 'Datagen.ml:def:fill_bytes_for_int', role: 'an int in 1, 2, 4 or 8 bytes' },
+        { at: 'Datagen.ml:comment:"a real float/double constant"', role: 'floats as IEEE bits' },
+        { at: 'Types.ml:type:data', role: 'what Load kept apart' },
+      ],
+      joints: [
+        { from: 'Types.ml:type:data', to: 'Datagen.ml:def:gen', say: 'each DATA' },
+        { from: 'Datagen.ml:def:gen', to: 'Datagen.ml:def:fill_bytes_for_int', say: 'ints, addresses' },
+        { from: 'Datagen.ml:def:gen', to: 'Datagen.ml:comment:"a real float/double constant"', say: 'floats' },
+      ],
+    },
+  ],
+  tours: [
+    {
+      name: 'Objects linked into an ARM executable',
+      stops: [
+        { at: 'CLI.ml:def:config_of_header_type_and_flags', say: 'The format and the addresses: a.out for Plan 9, ELF for Linux.' },
+        { at: 'CLI.ml:def:link5', say: 'The whole pipeline in one function, the same shape for every arch.' },
+        { at: 'Load.ml:def:load', say: 'Objects are marshalled ASTs: loading is reading them back and naming statics.' },
+        { at: 'Resolve.ml:def:build_graph', say: 'Code becomes a graph of nodes, as in 5l: jumps point at nodes, not pcs.' },
+        { at: 'Rewrite5.ml:def:rewrite', say: 'The linker, not the compiler, decides frames: leaf functions save nothing.' },
+        { at: 'Layout5.ml:def:layout_text', say: 'Real pcs assigned, big constants put in a literal pool.' },
+        { at: 'Codegen5.ml:def:rules', say: "5l's instruction table becomes one pattern match: size and bits together." },
+        { at: 'Execgen.ml:def:gen', say: 'Header, text, data, symbols: the executable written.' },
+      ],
+    },
+  ],
+}

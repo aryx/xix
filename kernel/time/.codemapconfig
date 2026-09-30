@@ -1,0 +1,132 @@
+// kernel/time/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). 9's portclock.c (timers, timerintr, hzclock), alarm.c and the
+// sleep and alarm of sysproc.c (~/principia/kernel/time/). The C timers
+// still run the kernel (Port/portclock.c, called from main.c): these are
+// their OCaml port, not yet reached from an interrupt.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Time (9's portclock.c, alarm.c): sorted timers, the clock tick, sleep and alarm; much still Todo.",
+  files: {
+    'Time.ml': {
+      summary: 'The units and their conversions: ticks, fast ticks, ms, ns.',
+      digest: '17b42f17a431',
+      important: [
+        { at: 'def:ms_to_ns', say: 'a bug: times 100000, not 1000000', weight: 3 },
+        { at: 'def:ms_to_tick', say: '+ 500: rounded to the nearest tick', weight: 1 },
+        { at: 'def:ns_to_fastticks', say: 'Todo: every timer added raises', weight: 1 },
+      ],
+    },
+    'Time.mli': {
+      summary: 'Time units, from Types, and their conversions.',
+      digest: '3b6f155a885e',
+      capitals: [
+        { at: 'def:tick_to_ms', say: "9's TK2MS" },
+        { at: 'def:ms_to_tick', say: "9's MS2TK" },
+      ],
+    },
+    'Timer.ml': {
+      summary: "A timer made, and added to or deleted from a sorted list (9's timeradd); insertion is Todo.",
+      digest: '6886b81c8a56',
+      important: [
+        { at: 'def:add', say: 'its expiry computed, then raise Todo', weight: 3 },
+        { at: 'code:"Periodic timer must be at least 100 micro seconds"', say: "9's check, as failwith", weight: 1 },
+      ],
+    },
+    'Timer.mli': { summary: 'Timers: alloc, add to a list, del from one.', digest: '7fe51cfcf068' },
+    'Timers.ml': {
+      summary: "Each CPU's sorted timers (9's Timers), and add and del, which reprogram the hardware timer.",
+      digest: '716c72ee95cf',
+      capitals: [{ at: 'def:add', say: 'a timer armed on this CPU' }],
+      important: [
+        { at: 'def:cpus_timers', say: 'one sorted list per CPU', weight: 1 },
+        { at: 'code:"Arch.timerset fasttk"', say: 'a new head: the timer reprogrammed', weight: 3 },
+        { at: 'comment:"!lock ordering!"', say: 'the timer before its list', weight: 1 },
+      ],
+    },
+    'Timers.mli': { summary: "Timers: the CPUs' lists, add.", digest: '36c284251060' },
+    'Timer_interrupt.ml': {
+      summary: "The timer interrupt (9's timerintr): the due timers run, the clock ticked, the next one set.",
+      digest: 'd38e30534e9b',
+      important: [
+        { at: 'def:_timer_interrupt', say: 'unused: the C timerintr still runs', weight: 3 },
+        { at: 'comment:"no Ilock.lock timer.l here!"', say: 'why the timer is not locked: deadlock', weight: 1 },
+        { at: 'code:"Hz_clock.hz_clock ()"', say: 'the tick, after the lock is released', weight: 1 },
+      ],
+    },
+    'Timer_interrupt.mli': { summary: 'Empty: the interrupt is not exported yet.', digest: 'd41d8cd98f00' },
+    'Hz_clock.ml': {
+      summary: "The clock tick (9's hzclock): ticks counted, then maybe preempt the running process.",
+      digest: 'cfd755f9330f',
+      important: [
+        { at: 'code:"Hz_sched.hz_sched ()"', say: 'the tick may reschedule', weight: 3 },
+        { at: 'comment:"todo: check alarms"', say: "9's checkalarms not ported", weight: 1 },
+      ],
+    },
+    'Hz_clock.mli': { summary: 'hz_clock, the tick.', digest: 'bfef249d7c11' },
+    'Time_rendez.ml': {
+      summary: "Sleep for a time (9's tsleep): a timer that wakes a Rendez, and the sleep on it.",
+      digest: 'eed7e6a84cb8',
+      important: [
+        { at: 'def:sleep', say: 'a timer armed, then Rendez.sleep', weight: 3 },
+        { at: 'comment:"can have race between timer trigger and sleep"', say: "Rendez's condition covers it", weight: 1 },
+      ],
+    },
+    'Time_rendez.mli': { summary: 'sleep on a Rendez, for at most some ms.', digest: '560f37da9c34' },
+    'syssleep.ml': {
+      summary: "sleep(2): 0 yields, else at least a tick, on a fresh Rendez nobody else wakes.",
+      digest: '548a72c08cb5',
+      important: [{ at: 'code:"(fun _ -> false)"', say: 'only the timer ends the sleep', weight: 1 }],
+    },
+    'syssleep.mli': { summary: 'syscall_sleep: ms.', digest: '56e70beaf00a' },
+    'sysalarm.ml': {
+      summary: "alarm(2): the old alarm's remaining ms returned, the process put in Alarms; cleared at exit.",
+      digest: '552686ab0998',
+      important: [
+        { at: 'def:_init', say: 'a hook in sysexits: the alarm forgotten', weight: 1 },
+        { at: 'code:"Alarms.add_proc up when_"', say: 'Todo inside: every alarm raises', weight: 3 },
+      ],
+    },
+    'sysalarm.mli': { summary: 'syscall_alarm: ms, or None to cancel.', digest: '1e505ffcb561' },
+    'Alarms.ml': {
+      summary: "The processes with an alarm, sorted by time (9's alarms); adding and removing are Todo.",
+      digest: 'a78e626410f3',
+      important: [
+        { at: 'comment:"possible memory leak"', say: 'a killed process kept alive by its alarm', weight: 1 },
+        { at: 'def:_rendez', say: "for the alarm kproc, not written", weight: 1 },
+      ],
+    },
+    'Alarms.mli': { summary: 'The alarms list, add_proc, del_proc.', digest: 'acb4b2c1b084' },
+    'Alarms_kproc.ml': { summary: "Empty: the kernel process posting alarm notes (9's alarmkproc), to come.", digest: 'd41d8cd98f00' },
+    'Hz_alarms.ml': { summary: "Empty: the tick's alarm check (9's checkalarms), to come.", digest: 'd41d8cd98f00' },
+  },
+  skeletons: [
+    skeletons.parts('Time: timers, the tick, and who sleeps', [
+      ['Time.ml', 'the units'],
+      ['Timer.ml', 'a timer, and a sorted list'],
+      ['Timers.ml', "each CPU's list, the hardware armed"],
+      ['Timer_interrupt.ml', 'the due timers run'],
+      ['Hz_clock.ml', 'the tick'],
+      ['Time_rendez.ml', 'sleep, with a timeout'],
+      ['syssleep.ml', 'sleep(2)'],
+      ['sysalarm.ml', 'alarm(2)'],
+      ['Alarms.ml', 'the processes with an alarm'],
+    ], [
+      ['Timers.ml', 'Timer.ml', 'insert, delete'],
+      ['Timer_interrupt.ml', 'Timers.ml', 'the head, due'],
+      ['Timer_interrupt.ml', 'Hz_clock.ml', 'a tick'],
+      ['syssleep.ml', 'Time_rendez.ml', 'a rendez and ms'],
+      ['Time_rendez.ml', 'Timers.ml', 'a timer that wakes'],
+      ['sysalarm.ml', 'Alarms.ml', 'the process, by time'],
+      ['Timer.ml', 'Time.ml', 'ns to fast ticks'],
+    ]),
+    skeletons.chain('sleep(2): a timer, a rendezvous, a tick', [
+      ['syssleep.ml:def:syscall_sleep', 'at least a tick', ''],
+      ['Time_rendez.ml:def:sleep', 'a timer whose callback wakes', 'ms'],
+      ['Timers.ml:def:add', "on this CPU's list", 'the timer'],
+      ['Timer_interrupt.ml:def:_timer_interrupt', 'due: the callback run', 'later'],
+      ['../scheduler/Rendez.ml:def:wakeup', 'the sleeper readied', 'Rendez.wakeup'],
+    ]),
+  ],
+}

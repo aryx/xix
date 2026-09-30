@@ -1,0 +1,118 @@
+// lib_core/compression/: what the code map says of it
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "zlib for ogit's objects: inflate in pure OCaml (extlib's unzip), deflate through camlzip's C.",
+  files: {
+    'compression.mli': {
+      summary: 'The two calls ogit makes: decompress an object, compress one.',
+      digest: '5a9e6c7c797c',
+      capitals: [{ at: 'def:decompress', say: 'every git object read goes through it' }],
+      important: [{ at: 'def:compress', weight: 3 }],
+    },
+    'compression.ml': {
+      summary: 'The choice made: Unzip.inflate to read, Zlib.compress (C) to write; the header lists the others.',
+      digest: '90652907c535',
+      important: [
+        { at: 'def:decompress', say: 'pure OCaml', weight: 3 },
+        { at: 'def:compress', say: "C's zlib: zip.ml can't deflate yet", weight: 3 },
+        { at: 'comment:"Currently used solutions are marked"' },
+      ],
+    },
+    'unzip.mli': {
+      summary: 'inflate (RFC 1950 and 1951) as an IO.input: decompressed bytes read on demand.',
+      digest: '6dde10af16ac',
+      important: [
+        { at: 'def:inflate', weight: 3 },
+        { at: 'type:Error', say: 'a corrupt stream' },
+      ],
+    },
+    'unzip.ml': {
+      summary: "extlib's inflate, annotated for ogit's book: a state machine over bits and a 32K window.",
+      digest: '1aa74856069a',
+      important: [
+        { at: 'def:inflate_loop', say: 'the state machine: Head, Block, CData...', weight: 3 },
+        { at: 'type:state', say: 'where inflate_loop is in the stream', weight: 3 },
+        { at: 'def:make_huffman', say: 'a code table from code lengths' },
+        { at: 'def:apply_huffman', say: 'bits walked down the tree' },
+        { at: 'def:fixed_huffman', say: "block type 1's fixed codes" },
+        { at: 'def:add_dist', say: 'LZ77: copy from the window' },
+        { at: 'def:adler32_update', say: "zlib's checksum, checked at the end" },
+        { at: 'def:inflate', say: 'an IO.input pulling from inflate_data' },
+      ],
+    },
+    'zip.mli': {
+      summary: 'deflate as an IO.input, the pure OCaml compressor still to finish.',
+      digest: 'df45b23e33d3',
+    },
+    'zip.ml': {
+      summary: "An LZ77 matcher from ocaml-lz77, not yet DEFLATE: its output is debug text.",
+      digest: '5b39e59e5a9f',
+      important: [
+        { at: 'def:compress', say: 'buffer and back-references, in order', weight: 3 },
+        { at: 'def:compress_offset', say: 'the longest match in the window', weight: 2 },
+        { at: 'def:deflate', say: 'Insert printed as "[i;j]": a stub', weight: 3 },
+        { at: 'code:"raise Todo"', say: 'the real deflate_data, to write' },
+      ],
+    },
+    'zlib.mli': {
+      summary: "camlzip's zlib binding: streams, deflate and inflate, compress with callbacks.",
+      digest: 'ea1f48ed2b82',
+      important: [
+        { at: 'def:compress', weight: 3 },
+        { at: 'type:stream', say: "a z_stream, C's, behind a custom block" },
+      ],
+    },
+    'zlib.ml': {
+      summary: "camlzip's zlib.ml: externals to zlibstubs.c, and compress's refill and flush loop.",
+      digest: '2b779397cdde',
+      important: [
+        { at: 'def:compress', say: 'refill, deflate, flush until Z_FINISH', weight: 3 },
+        { at: 'code:"Callback.register_exception"', say: 'so C can raise Zlib.Error' },
+        { at: 'def:buffer_size' },
+      ],
+    },
+    'zlibstubs.c': {
+      summary: "camlzip's C stubs over the system's libz; built by vcs/mkfile, dune uses opam's camlzip.",
+      digest: '5ab8798ad5bc',
+      important: [
+        { at: 'def:camlzip_deflate', say: 'one deflate call on OCaml buffers', weight: 3 },
+        { at: 'def:camlzip_inflate' },
+        { at: 'def:camlzip_new_stream', say: 'a z_stream in a finalized custom block', weight: 2 },
+        { at: 'def:camlzip_error', say: 'raises Zlib.Error with the message' },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.parts('Compression: OCaml to read, C to write', [
+      ['compression.mli', "ogit's two calls"],
+      ['unzip.mli', 'inflate, pure OCaml'],
+      ['zlib.mli', 'deflate, bound to C'],
+      ['zlibstubs.c', "the stubs over libz"],
+      ['zip.mli', 'a pure deflate, unfinished, unused'],
+    ], [
+      ['compression.mli', 'unzip.mli', 'decompress'],
+      ['compression.mli', 'zlib.mli', 'compress'],
+      ['zlib.mli', 'zlibstubs.c', 'externals'],
+    ]),
+    skeletons.module('unzip.ml', 'Inflate: bits to bytes', [
+      ['inflate', 'an IO.input over the stream', ''],
+      ['inflate_data', 'fills the caller\'s buffer', 'on read'],
+      ['inflate_loop', 'one state step: header, block, codes, data', 'until full'],
+      ['make_huffman', 'the dynamic block\'s tables', 'code lengths'],
+      ['apply_huffman', 'a symbol decoded', 'a table'],
+      ['add_dist', 'a match copied from the window', 'a length, a distance'],
+    ]),
+    skeletons.module('zip.ml', 'LZ77, the half of deflate written', [
+      ['deflate', 'reads all, compresses, prints as text', ''],
+      ['compress', 'walks the buffer, emitting literals or matches', 'the bytes'],
+      ['compress_offset', 'the best match at an offset', 'an offset'],
+      ['longest_substring', 'a candidate measured', 'candidates'],
+    ]),
+    skeletons.module('zlibstubs.c', 'A z_stream from OCaml', [
+      ['camlzip_new_stream', 'the stream, a custom block', ''],
+      ['camlzip_deflate', 'one step, buffers from OCaml', 'the stream'],
+      ['camlzip_error', 'failures raised as Zlib.Error', 'on error'],
+    ]),
+  ],
+}

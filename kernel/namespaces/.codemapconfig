@@ -1,0 +1,24 @@
+// kernel/namespaces/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). 9's bind, mount and unmount (sysfile.c, the Pgrp's mount table),
+// not begun: Process_.t has no namespace yet.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The namespace calls to come (9's bind, mount, unmount): empty files, no mount table yet.",
+  files: {
+    'sysbind.ml': { summary: 'Empty: bind(2), one name made to stand for another.', digest: 'd41d8cd98f00' },
+    'sysmount.ml': { summary: 'Empty: mount(2), a 9P server attached at a name.', digest: 'd41d8cd98f00' },
+    'sysumount.ml': { summary: 'Empty: unmount(2), a binding undone.', digest: 'd41d8cd98f00' },
+  },
+  skeletons: [
+    skeletons.parts("The namespace calls, placeholders", [
+      ['sysbind.ml', 'a name onto another'],
+      ['sysmount.ml', 'a server onto a name'],
+      ['sysumount.ml', 'either undone'],
+    ], [
+      ['sysumount.ml', 'sysbind.ml', 'undoes'],
+      ['sysumount.ml', 'sysmount.ml', 'undoes'],
+    ]),
+  ],
+}

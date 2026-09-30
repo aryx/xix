@@ -1,0 +1,31 @@
+// kernel/files/: what the code map says of it (tinybox codemap; the
+// format: ~/github/ocaml-elm-playground/docs/manual/codemap.md, section
+// 12). The port of 9's sysfile.c and chan.c
+// (~/principia/kernel/files/), not begun: each system call has its file,
+// empty, and Syscall.Request its constructor; dispatch raises Todo.
+local skeletons = import '../../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "The file system calls to come (9's sysfile.c, chan.c): open, close, pread, pwrite, seek; empty files.",
+  files: {
+    'Chan.ml': { summary: "Channels' functions (9's chan.c), to come: one comment, eqqid and eqchan.", digest: '7c0098a8854d' },
+    'sysopen.ml': { summary: "Empty: open(2), 9's sysopen (namec, then the device's open).", digest: 'd41d8cd98f00' },
+    'sysclose.ml': { summary: "Empty: close(2), 9's sysclose.", digest: 'd41d8cd98f00' },
+    'syspread.ml': { summary: "Empty: pread(2), 9's syspread, a device's read at an offset.", digest: 'd41d8cd98f00' },
+    'syspwrite.ml': { summary: "Empty: pwrite(2), 9's syspwrite.", digest: 'd41d8cd98f00' },
+    'sysseek.ml': { summary: "Empty: seek(2), 9's sysseek.", digest: 'd41d8cd98f00' },
+  },
+  skeletons: [
+    skeletons.parts('The file calls, placeholders around the channel', [
+      ['Chan.ml', "the channel's functions"],
+      ['sysopen.ml', 'a name to a channel'],
+      ['syspread.ml', 'read through it'],
+      ['syspwrite.ml', 'write through it'],
+      ['sysseek.ml', 'its offset'],
+      ['sysclose.ml', 'let go of it'],
+    ], [
+      ['sysopen.ml', 'Chan.ml', 'namec'],
+      ['sysclose.ml', 'Chan.ml', 'cclose'],
+    ]),
+  ],
+}

@@ -1,0 +1,37 @@
+// scripts/: what the code map says of it (tinybox codemap; the format:
+// ~/github/ocaml-elm-playground/docs/manual/codemap.md, section 12).
+// Only hello_script.ml is a source to the map. The others: diff-<arch>.sh
+// (amd64, arm, arm64, mips, riscv, riscv64) assemble and link one .s
+// with goken's C 6a/6l, 5a/5l... and with xix's o6a/o6l..., compare the
+// executables byte for byte and run both under qemu; diff-c-program.sh
+// and build-c-program.py do it for a whole C program and its libc
+// closure (find-c-closure.py); remove_xix_open.sh is the preprocessor
+// bootstrap-mk.sh uses for ocaml-light; skeleton_latex.rc lists a
+// book's sectioning.
+local skeletons = import '../skeletons.libsonnet';
+{
+  generated: { by: 'claude-opus-5-5', on: '2026-09-30' },
+  summary: "Scripts: differential tests of the toolchain against goken's C, the ocaml-light build, an OCaml script demo.",
+  files: {
+    'hello_script.ml': {
+      summary: 'OCaml as a scripting language: topfind, ppx_subliner, feather, semgrep libs; not built by xix.',
+      digest: '985975d958d3',
+      capitals: [{ at: 'def:run', say: 'the script itself: log, then a shell pipeline' }],
+      important: [
+        { at: 'comment:"possible to write scripts in OCaml"', say: 'run by ocaml directly, #require-ing', weight: 2 },
+        { at: 'comment:"make install-semgrep-libs"', say: "semgrep's commons, not xix's: outside the build", weight: 2 },
+        { at: 'type:conf', say: 'the flags, derived by ppx_subliner', weight: 3 },
+        { at: 'code:"[@defaul false]"', say: 'a typo: the attribute is silently ignored', weight: 1 },
+        { at: 'def:simple_shell_programming_demo', say: 'ps | map | grep, in OCaml with feather', weight: 2 },
+        { at: 'code:"Sys.argv.(0)"', say: 'argv bare, semgrep rule silenced', weight: 1 },
+      ],
+    },
+  },
+  skeletons: [
+    skeletons.module('hello_script.ml', 'hello_script: flags, then the demo', [
+      ['main', 'Cap.main, then cmdliner evaluates', ''],
+      ['run', 'the conf logged, the demo run', 'the conf from the flags'],
+      ['simple_shell_programming_demo', 'a pipeline of processes', ''],
+    ]),
+  ],
+}

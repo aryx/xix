@@ -6,9 +6,7 @@ system, and more.**
 
 Website: **[aryx.github.io/xix](https://aryx.github.io/xix/)**, with a
 [code map](https://aryx.github.io/xix/codemap.html) of the whole
-repository to explore in the browser.
-
-[![The code map of XIX: every folder a region, every file a block](docs/pics/codemap.png)](https://aryx.github.io/xix/codemap.html)
+repository to explore in the browser ([below](#the-code-map)).
 
 XIX is XIX: the first fully recursive acronym for a project. It is a
 port of the C source code of the major
@@ -21,6 +19,25 @@ OCaml port has its own book.
 It is not finished: some programs are mature (`omk` and `orc` build
 XIX itself; `orio` can take the place of `rio` on Plan 9), others are
 still being written.
+
+## The code map
+
+The [code map](https://aryx.github.io/xix/codemap.html) shows the
+whole repository as a map, in the browser: each folder a region, each
+file a block the size of its code, each block the code itself once you
+zoom in. `x` shows each program's skeleton, `/` searches, a click on a
+name shows its definition, `g` the dependencies between the parts, `h`
+every key.
+
+[![The code map of XIX: every folder a region, every file a block](docs/pics/codemap.png)](https://aryx.github.io/xix/codemap.html)
+
+A link can open it anywhere:
+[omk](https://aryx.github.io/xix/codemap.html?focus=builder),
+[orc](https://aryx.github.io/xix/codemap.html?focus=shell),
+[omk running a recipe](https://aryx.github.io/xix/codemap.html?focus=builder&def=exec_recipe);
+the table below links each program so. It is tinybox's code map, from
+[ocaml-elm-playground](https://github.com/aryx/ocaml-elm-playground),
+after my [codemap](https://github.com/aryx/codemap).
 
 ## The programs
 

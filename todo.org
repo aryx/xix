@@ -13,6 +13,9 @@ finish rc enough so can use it with mk on xix itself! remove dependency to 9base
 TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.nw
   need implement globbing, subshell, etc.
 
+*** get orio working on plan9
+# can then do screenshot (orio + oterminal running ocamlrun opwd)
+
 ** Overview
 # add c-- target to occ! so better than plan 9! factorized code
 #  among 5c/6c/... once and for all, and reusable in OCaml too (and tiger)!
